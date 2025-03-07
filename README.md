@@ -1,6 +1,9 @@
-# TCdatalogger
+"""TCdatalogger application package.
 
-A Python-based data pipeline that fetches data from the [Torn City API](https://api.torn.com/) and loads it into Google BigQuery for analysis.
+This package contains modules for:
+- Data processing and configuration management
+- Service provider integrations (Google, TornCity)
+- Common utilities and helpers
 
 ## Features
 
@@ -11,40 +14,22 @@ A Python-based data pipeline that fetches data from the [Torn City API](https://
 - Automatic schema updates in BigQuery
 - Type inference and preservation
 - Comprehensive error handling and logging
+- Containerized deployment with scheduled execution
 
 ## Prerequisites
 
-- Python 3.8+
+- Docker
 - Google Cloud Platform account with BigQuery enabled
 - Torn City API key with appropriate permissions
 - Google Cloud credentials file
 
-## Installation
-
-1. Clone the repository:
-```bash
-git clone <repository-url>
-cd TCdatalogger
-```
-
-2. Create a virtual environment and activate it:
-```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-```
-
-3. Install dependencies:
-```bash
-pip install -r requirements.txt
-```
-
 ## Configuration
 
-1. Create a `config` directory in the project root if it doesn't exist
-2. Add the following configuration files:
-   - `config/credentials.json`: Google Cloud service account credentials
-   - `config/TC_API_key.txt`: Your Torn City API key
-   - `config/TC_API_config.json`: API endpoint configuration (example provided)
+1. Create a `config` directory with the following files:
+   - `credentials.json`: Google Cloud service account credentials
+   - `TC_API_key.txt`: Your Torn City API key
+   - `TC_API_config.json`: API endpoint configuration
+   - `crontab`: Cron schedule configuration (provided)
 
 Example `TC_API_config.json`:
 ```json
@@ -62,19 +47,50 @@ Example `TC_API_config.json`:
 ]
 ```
 
-## Usage
+## Docker Deployment
 
-Run the data pipeline:
+1. Build the Docker image:
+```bash
+docker build -t tcdatalogger .
+```
+
+2. Run the container:
+```bash
+docker run -d \
+  --name tcdatalogger \
+  --restart unless-stopped \
+  -v /path/to/your/config:/app/config \
+  tcdatalogger
+```
+
+The container will:
+- Run the data pipeline immediately on startup
+- Execute the pipeline every 15 minutes (configurable via crontab)
+- Log all operations to the container's log
+- Automatically restart on failure
+
+View logs:
+```bash
+docker logs -f tcdatalogger
+```
+
+## Local Development
+
+1. Create a virtual environment and activate it:
+```bash
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+```
+
+2. Install dependencies:
+```bash
+pip install -r requirements.txt
+```
+
+3. Run the data pipeline:
 ```bash
 python main.py
 ```
-
-The script will:
-1. Load configuration from the config directory
-2. Fetch data from configured Torn City API endpoints
-3. Process and flatten the data
-4. Upload the data to BigQuery
-5. Log all operations to both console and `tcdata.log`
 
 ## Project Structure
 
@@ -94,12 +110,15 @@ TCdatalogger/
 ├── config/
 │   ├── TC_API_config.json    # API endpoint configuration
 │   ├── credentials.json      # GCP credentials (not in repo)
-│   └── TC_API_key.txt       # Torn City API key (not in repo)
+│   ├── TC_API_key.txt       # Torn City API key (not in repo)
+│   └── crontab              # Cron schedule configuration
 ├── tests/                    # Unit tests
+├── Dockerfile               # Container definition
+├── start.sh                # Container startup script
 ├── .gitignore
-├── requirements.txt          # Project dependencies
-├── main.py                  # Main application entry point
-└── README.md                # Project documentation
+├── requirements.txt         # Project dependencies
+├── main.py                 # Main application entry point
+└── README.md               # Project documentation
 ```
 
 ## Development
