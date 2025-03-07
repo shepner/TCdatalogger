@@ -1,14 +1,19 @@
-
-# Needed by Google
+# Needed by Google BigQuery
 google-cloud-bigquery
 #google~=3.0.0
 google-api-python-client
 google-auth-httplib2
 google-auth-oauthlib
+pyarrow  # Required for pandas DataFrame to BigQuery upload
+pandas-gbq  # Required for pandas-BigQuery integration
 
-# Needed by common
+# Needed by data processing
 pandas
+numpy
 
-# Needed by TornCity
+# Needed by TornCity API
 requests
 #json
+
+# Development dependencies
+pytest  # For testing
