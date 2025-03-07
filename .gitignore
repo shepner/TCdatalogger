@@ -1,0 +1,35 @@
+# [gitignore documentation](https://git-scm.com/docs/gitignore)
+
+config/credentials.json
+config/crime_ids.txt
+config/token.json
+config/TC_API_key.txt
+
+# MacOS
+*.DS_Store
+
+# PyCharm
+.idea/
+
+# Python
+venv/
+**/__pycache__
+
+# Git
+.git
+.gitlab
+
+# Project
+.flaskenv
+
+# uvicorn
+/*.pem
+
+# GCP
+/*.json
+
+# Okta
+!.env-template
+.env
+.env*
+/config/TC_API_key.txt

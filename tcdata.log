@@ -1,0 +1,12 @@
+2025-03-07 16:40:37,200 - INFO - Starting TCdatalogger
+2025-03-07 16:40:37,200 - INFO - Using configuration from: ./config
+2025-03-07 16:40:37,200 - INFO - Processing endpoint: v2_faction_crimes
+2025-03-07 16:40:37,482 - INFO - Processing data for v2_faction_crimes
+2025-03-07 16:40:37,563 - INFO - Uploading data to BigQuery table: torncity-402423.torn_data.v2_faction_crimes
+2025-03-07 16:40:38,838 - ERROR - Error processing v2_faction_crimes: This method requires pyarrow to be installed
+2025-03-07 16:40:38,838 - INFO - Processing endpoint: v2_faction_members
+2025-03-07 16:40:39,235 - INFO - Processing data for v2_faction_members
+2025-03-07 16:40:39,250 - INFO - Uploading data to BigQuery table: torncity-402423.torn_data.v2_faction_members
+2025-03-07 16:40:40,168 - ERROR - Error processing v2_faction_members: This method requires pyarrow to be installed
+2025-03-07 16:40:40,168 - INFO - Processing completed in 0:00:02.968798
+2025-03-07 16:40:40,168 - INFO - Successfully processed 0 out of 2 endpoints
