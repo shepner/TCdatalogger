@@ -1,5 +1,11 @@
 # [gitignore documentation](https://git-scm.com/docs/gitignore)
 
+# Logs
+var/
+*.log
+tcdata.log
+
+# Config files
 config/credentials.json
 config/crime_ids.txt
 config/token.json
@@ -14,6 +20,27 @@ config/TC_API_key.txt
 # Python
 venv/
 **/__pycache__
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
 
 # Git
 .git

@@ -1,45 +1,34 @@
 FROM python:3.13-slim-bullseye
 
-# Install Python dependencies
-RUN apt-get update && apt-get install -y python3-pip
-COPY requirements.txt /app/
-RUN pip install --no-cache-dir -r /app/requirements.txt
-
-
-# Install Python dependencies
-COPY requirements.txt /app/
-RUN pip install --no-cache-dir -r /app/requirements.txt
+# Install required packages
+RUN apt-get update && \
+    apt-get install -y \
+    cron \
+    && rm -rf /var/lib/apt/lists/*
 
 # Set the working directory
 WORKDIR /app
 
-# Copy application into the image
-WORKDIR /app/config
-COPY config ./
-WORKDIR /app/TCdatalogger
-COPY TCdatalogger ./
+# Copy application files from src directory
+COPY src/app/ /app/app/
+COPY src/tests/ /app/tests/
+COPY src/main.py src/requirements.txt /app/
 
-# Install the dependencies
-WORKDIR /app
-COPY requirements.txt ./
+# Create directory for config
+RUN mkdir -p /app/config
+
+# Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Install cron
-RUN apt-get update && apt-get install -y cron && rm -rf /var/lib/apt/lists/*
+# Copy start script
+COPY start.sh /app/start.sh
+RUN chmod +x /app/start.sh
 
-# Copy the crontab file
-COPY config/crontab /etc/cron.d/my-cron-job
+# Set environment variable for Python to buffer stdout/stderr
+ENV PYTHONUNBUFFERED=1
 
-# Give execution rights on the cron job
-RUN chmod 0644 /etc/cron.d/my-cron-job
+# Create volume mount points
+VOLUME ["/app/config", "/var/log/tcdatalogger"]
 
-# Create the log file to be able to run tail
-RUN touch /var/log/cron.log
-
-# Apply cron job
-RUN crontab /etc/cron.d/my-cron-job
-
-# Start the cron service and the application
-CMD cron && tail -f /var/log/cron.log
-
-CMD ["python", "app.py"]
+# Start cron and tail logs
+CMD ["/app/start.sh"]
