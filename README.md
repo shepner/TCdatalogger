@@ -49,12 +49,20 @@ TCdatalogger/
 
 ## Docker Deployment
 
-1. Build the Docker image:
+### Option 1: Building from GitHub
+
+1. Clone the repository:
+```bash
+git clone https://github.com/your-username/TCdatalogger.git
+cd TCdatalogger
+```
+
+2. Build the Docker image:
 ```bash
 docker build -t tcdatalogger .
 ```
 
-2. Create required directories:
+3. Create required directories:
 ```bash
 # Create config directory
 mkdir -p config
@@ -64,7 +72,7 @@ mkdir -p var/log/tcdatalogger
 chmod -R 777 var/log  # Ensure container can write to logs
 ```
 
-3. Set up configuration:
+4. Set up configuration:
 ```bash
 # Copy your configuration files to ./config/
 cp path/to/your/credentials.json config/
@@ -72,7 +80,7 @@ cp path/to/your/TC_API_key.txt config/
 cp path/to/your/TC_API_config.json config/
 ```
 
-4. Run the container:
+5. Run the container:
 ```bash
 docker run -d \
   --name tcdatalogger \
@@ -82,12 +90,38 @@ docker run -d \
   tcdatalogger
 ```
 
+### Option 2: Using Pre-built Image
+
+If you prefer to use a pre-built image (when available):
+
+```bash
+# Create project directory
+mkdir TCdatalogger && cd TCdatalogger
+
+# Create required directories
+mkdir -p config var/log/tcdatalogger
+chmod -R 777 var/log
+
+# Set up your configuration files in ./config/
+# ... copy your config files as described in Configuration Setup ...
+
+# Pull and run the container
+docker run -d \
+  --name tcdatalogger \
+  --restart unless-stopped \
+  -v "$(pwd)/config:/app/config:ro" \
+  -v "$(pwd)/var/log/tcdatalogger:/var/log/tcdatalogger" \
+  ghcr.io/your-username/tcdatalogger:latest
+```
+
 The container will:
 - Validate all required configuration files on startup
 - Run the data pipeline immediately
 - Execute the pipeline every 15 minutes (configurable via crontab)
 - Log all operations to var/log/tcdatalogger/app.log
 - Automatically restart on failure
+
+### Managing the Container
 
 View logs:
 ```bash
@@ -96,6 +130,24 @@ docker logs -f tcdatalogger
 
 # Or view the log file directly
 tail -f var/log/tcdatalogger/app.log
+```
+
+Other useful commands:
+```bash
+# Stop the container
+docker stop tcdatalogger
+
+# Start the container
+docker start tcdatalogger
+
+# Remove the container
+docker rm tcdatalogger
+
+# View container status
+docker ps -a | grep tcdatalogger
+
+# View container resource usage
+docker stats tcdatalogger
 ```
 
 ## Configuration Setup
