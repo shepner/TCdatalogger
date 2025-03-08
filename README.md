@@ -97,3 +97,101 @@ docker logs -f tcdatalogger
 # Or view the log file directly
 tail -f var/log/tcdatalogger/app.log
 ```
+
+## Configuration Setup
+
+The application requires several configuration files to be placed in the `config/` directory:
+
+### 1. Google Cloud Credentials (`credentials.json`)
+1. Go to the [Google Cloud Console](https://console.cloud.google.com)
+2. Create a new project or select an existing one
+3. Enable the BigQuery API for your project
+4. Create a service account:
+   - Navigate to IAM & Admin > Service Accounts
+   - Click "Create Service Account"
+   - Grant the following roles:
+     - BigQuery Data Editor
+     - BigQuery Job User
+5. Create and download the service account key:
+   - Select your service account
+   - Go to the "Keys" tab
+   - Click "Add Key" > "Create New Key"
+   - Choose JSON format
+   - Save the downloaded file as `config/credentials.json`
+
+### 2. Torn City API Key (`TC_API_key.txt`)
+1. Log into [Torn City](https://www.torn.com)
+2. Go to your API Key page: [https://www.torn.com/preferences.php#tab=api](https://www.torn.com/preferences.php#tab=api)
+3. Generate a new API key or use an existing one
+4. Create `config/TC_API_key.txt` and paste your API key:
+   ```bash
+   echo "your-api-key-here" > config/TC_API_key.txt
+   ```
+   The API key requires the following permissions:
+   - Faction access
+   - Basic user info
+
+### 3. API Configuration (`TC_API_config.json`)
+Create `config/TC_API_config.json` with your desired endpoints:
+```json
+[
+  {
+    "name": "v2_faction_crimes",
+    "url": "https://api.torn.com/v2/faction/crimes?key={API_KEY}&cat=all&offset=0&sort=ASC",
+    "table": "your-project.your_dataset.v2_faction_crimes"
+  },
+  {
+    "name": "v2_faction_members",
+    "url": "https://api.torn.com/v2/faction/members?key={API_KEY}&striptags=true",
+    "table": "your-project.your_dataset.v2_faction_members"
+  }
+]
+```
+Replace:
+- `your-project` with your Google Cloud project ID
+- `your_dataset` with your BigQuery dataset name
+
+### 4. Cron Schedule (`crontab`)
+Create `config/crontab` to define the data collection schedule:
+```bash
+# Run TCdatalogger every 15 minutes
+*/15 * * * * cd /app && /usr/local/bin/python /app/main.py >> /var/log/tcdatalogger/app.log 2>&1
+```
+Adjust the schedule as needed using [crontab syntax](https://crontab.guru/).
+
+### Configuration Checklist
+Before running the container, ensure:
+- [ ] `credentials.json` exists and contains valid GCP service account credentials
+- [ ] `TC_API_key.txt` exists and contains a valid Torn City API key
+- [ ] `TC_API_config.json` exists and contains properly configured endpoints
+- [ ] `crontab` exists and contains the desired schedule
+- [ ] BigQuery API is enabled in your Google Cloud project
+- [ ] The specified BigQuery dataset exists in your project
+
+### File Permissions
+Set appropriate permissions for configuration files:
+```bash
+chmod 600 config/credentials.json config/TC_API_key.txt
+chmod 644 config/TC_API_config.json config/crontab
+```
+
+### Testing Configuration
+To verify your configuration:
+1. Create the required directories:
+   ```bash
+   mkdir -p config var/log/tcdatalogger
+   chmod -R 777 var/log
+   ```
+
+2. Run a test container:
+   ```bash
+   docker run --rm \
+     -v "$(pwd)/config:/app/config:ro" \
+     -v "$(pwd)/var/log/tcdatalogger:/var/log/tcdatalogger" \
+     tcdatalogger
+   ```
+
+3. Check the logs for any errors:
+   ```bash
+   tail -f var/log/tcdatalogger/app.log
+   ```
