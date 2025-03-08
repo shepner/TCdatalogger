@@ -1,4 +1,8 @@
-"""TCdatalogger application package.
+# TCdatalogger
+
+A Python application for collecting Torn City API data and storing it in Google BigQuery.
+
+## Overview
 
 This package contains modules for:
 - Data processing and configuration management
