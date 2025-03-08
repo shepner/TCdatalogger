@@ -101,9 +101,21 @@ def upload_to_bigquery(config: Dict[str, Any], df: pd.DataFrame, table_id: str) 
     dataset_ref = bigquery.DatasetReference(project_id, dataset_id)
     table_ref = dataset_ref.table(table_name)
 
+    # Create dataset if it does not exist
     try:
-        # Get existing table
+        client.get_dataset(dataset_ref)
+        logging.info("Dataset %s exists", dataset_id)
+    except Exception:
+        dataset = bigquery.Dataset(dataset_ref)
+        client.create_dataset(dataset, exists_ok=True)
+        logging.info("Dataset %s created", dataset_id)
+
+    # Check if table exists and handle schema
+    try:
         table = client.get_table(table_ref)
+        logging.info("Table %s exists, checking schema...", table_name)
+        
+        # Get existing schema
         existing_schema = {field.name: field.field_type for field in table.schema}
         
         # Generate new schema
@@ -129,23 +141,16 @@ def upload_to_bigquery(config: Dict[str, Any], df: pd.DataFrame, table_id: str) 
             table.schema = new_schema
             client.update_table(table, ["schema"])
             logging.info("Schema updated for %s", table_name)
-
     except Exception as e:
-        logging.info("Table %s does not exist. Creating it now...", table_name)
-
-        # Create dataset if it does not exist
-        try:
-            client.get_dataset(dataset_ref)
-        except Exception:
-            dataset = bigquery.Dataset(dataset_ref)
-            client.create_dataset(dataset, exists_ok=True)
-            logging.info("Dataset %s created", dataset_id)
-
-        # Create table with initial schema
-        schema = get_bigquery_schema(df)
-        table = bigquery.Table(table_ref, schema=schema)
-        client.create_table(table)
-        logging.info("Table %s created", table_name)
+        if "Not found" in str(e):
+            logging.info("Table %s does not exist. Creating it now...", table_name)
+            # Create table with initial schema
+            schema = get_bigquery_schema(df)
+            table = bigquery.Table(table_ref, schema=schema)
+            client.create_table(table)
+            logging.info("Table %s created", table_name)
+        else:
+            raise e
 
     # Configure the load job
     job_config = bigquery.LoadJobConfig(
