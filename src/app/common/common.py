@@ -19,6 +19,7 @@ import json
 import logging
 import numpy as np
 import sys
+import re
 from typing import Dict, Any, List, Optional, Union
 from datetime import datetime
 
@@ -81,34 +82,41 @@ def process_api_endpoint(config: Dict, api_config: Dict, tc_api_key: str) -> boo
         bool: True if processing was successful, False otherwise.
     """
     try:
-        logging.info(f"Processing endpoint: {api_config['name']}")
+        # Mask sensitive data in logs
+        masked_config = {
+            **api_config,
+            'url': re.sub(r'key=[^&]+', 'key=***', api_config['url'])
+        }
+        logging.info("Processing endpoint: %s", masked_config['name'])
+        logging.debug("Endpoint configuration: %s", 
+                     {k: v for k, v in masked_config.items() if k != 'url'})
         
         # Fetch data from API
         data = tc_fetch_api_data(api_config["url"], tc_api_key)
         if not data:
-            logging.error(f"Failed to fetch data for {api_config['name']}")
+            logging.error("Failed to fetch data for %s", api_config['name'])
             return False
             
         # Process the data
-        logging.info(f"Processing data for {api_config['name']}")
+        logging.info("Processing data for %s", api_config['name'])
         df = process_data(api_config["name"], data)
         if df.empty:
-            logging.error(f"No data processed for {api_config['name']}")
+            logging.error("No data processed for %s", api_config['name'])
             return False
             
         # Upload to BigQuery
-        logging.info(f"Uploading data to BigQuery table: {api_config['table']}")
+        logging.info("Uploading data to BigQuery table: %s", api_config['table'])
         upload_to_bigquery(config, df, api_config["table"])
         
-        logging.info(f"Successfully processed {api_config['name']}")
-        logging.info(f"Records processed: {len(df)}")
-        logging.info(f"Columns: {len(df.columns)}")
-        logging.info(f"Data types: {df.dtypes.value_counts().to_dict()}")
+        logging.info("Successfully processed %s", api_config['name'])
+        logging.info("Records processed: %d", len(df))
+        logging.info("Columns: %d", len(df.columns))
+        logging.info("Data types: %s", df.dtypes.value_counts().to_dict())
         
         return True
         
     except Exception as e:
-        logging.error(f"Error processing {api_config['name']}: {str(e)}")
+        logging.error("Error processing %s: %s", api_config['name'], str(e))
         return False
 
 def find_config_directory(directories: List[str]) -> Optional[str]:

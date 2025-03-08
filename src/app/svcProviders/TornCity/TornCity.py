@@ -12,6 +12,7 @@ authentication and error cases appropriately.
 import json
 import logging
 from typing import Optional, Dict, Any
+import re
 
 import requests
 
@@ -41,44 +42,47 @@ def tc_load_api_key(tc_api_key_file: str) -> Optional[str]:
         return None
 
 
-def tc_fetch_api_data(url: str, tc_api_key: str) -> Optional[Dict[str, Any]]:
-    """Fetch data from Torn City API.
-
-    Makes an authenticated request to the Torn City API and handles
-    various response cases and errors.
-
+def mask_sensitive_url(url: str) -> str:
+    """Mask sensitive information in URLs.
+    
     Args:
-        url: The API endpoint URL with {API_KEY} placeholder.
-        tc_api_key: The API key to use for authentication.
-
+        url: The URL containing sensitive information.
+        
     Returns:
-        Dict[str, Any]: The API response data if successful, None otherwise.
-
-    Raises:
-        requests.RequestException: If there's an error making the HTTP request.
-
-    Example:
-        >>> url = "https://api.torn.com/v2/faction/members?key={API_KEY}"
-        >>> data = tc_fetch_api_data(url, "your-api-key")
-        >>> if data:
-        ...     print(f"Found {len(data.get('members', []))} members")
+        str: URL with sensitive information masked.
     """
-    if tc_api_key is None:
-        logging.error("Error: API key is missing. Cannot proceed with API call.")
-        return None
+    # Mask API key
+    masked_url = re.sub(r'key=[^&]+', 'key=***', url)
+    return masked_url
 
-    # Replace placeholder `{API_KEY}` with the actual key
-    formatted_url = url.replace("{API_KEY}", tc_api_key)
-    logging.info("Fetching data from: %s", formatted_url)
 
+def tc_fetch_api_data(url: str, api_key: str) -> Optional[Dict]:
+    """Fetch data from Torn City API.
+    
+    Args:
+        url: API endpoint URL with {API_KEY} placeholder.
+        api_key: Torn City API key.
+        
+    Returns:
+        Optional[Dict]: API response data if successful, None otherwise.
+    """
     try:
-        response = requests.get(formatted_url)
+        # Replace API key placeholder
+        full_url = url.replace("{API_KEY}", api_key)
+        
+        # Log masked URL
+        logging.info("Fetching data from: %s", mask_sensitive_url(full_url))
+        
+        response = requests.get(full_url)
         response.raise_for_status()
+        
         return response.json()
-    except requests.RequestException as e:
-        logging.error("Error fetching data: %s", str(e))
-        return None
-    except json.JSONDecodeError as e:
-        logging.error("Error decoding JSON response: %s", str(e))
+        
+    except requests.exceptions.RequestException as e:
+        # Mask any sensitive data in error message
+        error_msg = str(e)
+        if api_key in error_msg:
+            error_msg = error_msg.replace(api_key, "***")
+        logging.error("API request failed: %s", error_msg)
         return None
 
