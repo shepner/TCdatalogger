@@ -1,0 +1,4 @@
+# Run data collection every 5 minutes
+*/5 * * * * cd /app && python3 main.py >> /var/log/cron.log 2>&1
+
+# Empty line at end of file is required for cron to work 

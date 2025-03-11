@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  tcdatalogger:
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+    container_name: tcdatalogger
+    restart: unless-stopped
+    volumes:
+      - ./app/config:/app/config
+      - ./app/var:/app/var
+      - ./app/queries:/app/queries 
