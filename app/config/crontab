@@ -1,5 +1,0 @@
-# Run TCdatalogger every 15 minutes
-*/15 * * * * cd /app && /usr/local/bin/python /app/main.py >> /var/log/tcdatalogger/app.log 2>&1
-# Run TCdatalogger every minute for testing
-* * * * * cd /app && /usr/local/bin/python /app/main.py >> /var/log/tcdatalogger/app.log 2>&1
-# Empty line required at end of crontab 

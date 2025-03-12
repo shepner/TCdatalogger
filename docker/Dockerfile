@@ -1,11 +1,5 @@
 FROM python:3.13-slim-bullseye
 
-# Install required packages
-RUN apt-get update && \
-    apt-get install -y \
-    cron \
-    && rm -rf /var/lib/apt/lists/*
-
 # Set the working directory
 WORKDIR /app
 
@@ -30,5 +24,5 @@ ENV PYTHONUNBUFFERED=1
 # Create volume mount points
 VOLUME ["/app/config", "/app/var", "/var/log/tcdatalogger"]
 
-# Start cron and tail logs
+# Start the application
 CMD ["/app/start.sh"]

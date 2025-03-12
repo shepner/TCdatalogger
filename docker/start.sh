@@ -10,7 +10,7 @@ check_required_files() {
     local missing_files=0
     
     # Check for required config files
-    for file in "crontab" "credentials.json" "TC_API_key.txt" "TC_API_config.json"; do
+    for file in "credentials.json" "TC_API_key.txt" "TC_API_config.json"; do
         if [ ! -f "/app/config/$file" ]; then
             log "ERROR: Required file /app/config/$file not found"
             missing_files=$((missing_files + 1))
@@ -35,33 +35,6 @@ if ! check_required_files; then
     exit 1
 fi
 
-# Copy crontab from mounted config volume
-log "INFO: Setting up cron job..."
-cp /app/config/crontab /etc/cron.d/tcdatalogger
-chmod 0644 /etc/cron.d/tcdatalogger
-
-# Update crontab to use correct paths and logging
-sed -i 's|python3|/usr/local/bin/python|g' /etc/cron.d/tcdatalogger
-sed -i 's|/app/main.py|/app/src/main.py|g' /etc/cron.d/tcdatalogger
-sed -i 's|/var/log/cron.log|/var/log/tcdatalogger/app.log|g' /etc/cron.d/tcdatalogger
-
-# Apply crontab
-if ! crontab /etc/cron.d/tcdatalogger; then
-    log "ERROR: Failed to apply crontab"
-    exit 1
-fi
-
-# Start cron
-log "INFO: Starting cron service..."
-if ! service cron start; then
-    log "ERROR: Failed to start cron service"
-    exit 1
-fi
-
-# Run the initial job
-log "INFO: Running initial job..."
-cd /app && /usr/local/bin/python /app/src/main.py >> /var/log/tcdatalogger/app.log 2>&1
-
-# Monitor logs and cron service
-log "INFO: Container startup complete. Monitoring logs..."
-exec tail -f /var/log/tcdatalogger/app.log 
+# Start the Python application
+log "INFO: Starting TCdatalogger application..."
+cd /app && exec /usr/local/bin/python /app/src/main.py 

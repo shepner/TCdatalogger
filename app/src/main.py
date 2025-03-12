@@ -3,12 +3,12 @@
 This module orchestrates the data pipeline:
 1. Sets up logging
 2. Loads configuration
-3. Processes API endpoints
+3. Processes API endpoints according to their schedules
 4. Reports results
 
 The application will:
 - Load configuration from the first valid config directory
-- Process each configured API endpoint
+- Process each configured API endpoint on its defined schedule
 - Upload data to BigQuery
 - Report success/failure for each endpoint
 """
@@ -16,14 +16,53 @@ The application will:
 import os
 import sys
 import json
+import time
 import logging
 import argparse
-from datetime import datetime
-from typing import NoReturn
+import threading
+from datetime import datetime, timedelta
+from typing import NoReturn, Dict
+import isodate
+import schedule
 
 from app.common.common import setup_logging, load_config, process_api_endpoint
 from app.svcProviders.TornCity.TornCity import tc_load_api_key
 from app.svcProviders.Google.Google import drop_tables
+
+def schedule_endpoint(config: Dict, api_config: Dict, tc_api_key: str) -> None:
+    """Schedule and process an API endpoint.
+    
+    Args:
+        config: Application configuration
+        api_config: API endpoint configuration
+        tc_api_key: Torn City API key
+    """
+    logging.info(f"Processing endpoint: {api_config['name']}")
+    if not process_api_endpoint(config, api_config, tc_api_key):
+        logging.error(f"Failed to process endpoint: {api_config['name']}")
+
+def setup_schedules(config: Dict, api_configs: list, tc_api_key: str) -> None:
+    """Set up schedules for all endpoints.
+    
+    Args:
+        config: Application configuration
+        api_configs: List of API endpoint configurations
+        tc_api_key: Torn City API key
+    """
+    for api_config in api_configs:
+        # Convert ISO duration to minutes
+        duration = isodate.parse_duration(api_config['frequency'])
+        minutes = int(duration.total_seconds() / 60)
+        
+        # Schedule the job
+        schedule.every(minutes).minutes.do(
+            schedule_endpoint, 
+            config=config, 
+            api_config=api_config, 
+            tc_api_key=tc_api_key
+        )
+        
+        logging.info(f"Scheduled {api_config['name']} to run every {minutes} minutes")
 
 def main() -> NoReturn:
     """Main application entry point.
@@ -31,16 +70,15 @@ def main() -> NoReturn:
     This function:
     1. Initializes logging
     2. Loads configuration and API key
-    3. Processes each configured endpoint
-    4. Reports results
+    3. Sets up schedules for each endpoint
+    4. Runs the scheduler
     
     The function will exit with status code 1 if:
     - Configuration cannot be loaded
     - API key is invalid
-    - Any endpoint fails to process
     
     Returns:
-        NoReturn: Function always exits via sys.exit
+        NoReturn: Function runs indefinitely unless error occurs
     """
     # Parse command line arguments
     parser = argparse.ArgumentParser(description='TCdatalogger - Torn City Data Logger')
@@ -93,33 +131,23 @@ def main() -> NoReturn:
                 drop_tables(config, api_config["table"])
             logging.info("All tables dropped")
             
-        # Process timestamp endpoint first
-        timestamp_config = next((cfg for cfg in api_configs if cfg['name'] == 'server_timestamp'), None)
-        if timestamp_config:
-            logging.info("Processing timestamp endpoint first")
-            if not process_api_endpoint(config, timestamp_config, tc_api_key):
-                logging.error("Failed to process timestamp endpoint")
-                sys.exit(1)
-                
-        # Process remaining endpoints
-        success_count = 0
-        for api_config in api_configs:
-            if api_config['name'] != 'server_timestamp':  # Skip timestamp endpoint as it's already processed
-                if process_api_endpoint(config, api_config, tc_api_key):
-                    success_count += 1
-                    
-        # Report results
-        total_endpoints = len(api_configs) - (1 if timestamp_config else 0)
-        logging.info("Processing complete. Success: %d/%d", success_count, total_endpoints)
+        # Set up schedules for all endpoints
+        setup_schedules(config, api_configs, tc_api_key)
         
-        if success_count < total_endpoints:
-            sys.exit(1)
+        # Run all jobs immediately on startup
+        logging.info("Running initial jobs...")
+        for api_config in api_configs:
+            schedule_endpoint(config, api_config, tc_api_key)
+            
+        # Run the scheduler
+        logging.info("Starting scheduler...")
+        while True:
+            schedule.run_pending()
+            time.sleep(1)
             
     except Exception as e:
         logging.error("Unexpected error: %s", str(e))
         sys.exit(1)
-        
-    sys.exit(0)
 
 if __name__ == '__main__':
     main()
