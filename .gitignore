@@ -1,13 +1,16 @@
-# Sensitive files
-app/config/credentials.json
-app/config/TC_API_key.txt
-app/config/TC_API_config.json
+# TCdatalogger .gitignore
+# See https://git-scm.com/docs/gitignore for documentation
 
-# Python
+### Python ###
+# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
+
+# C extensions
 *.so
+
+# Distribution / packaging
 .Python
 build/
 develop-eggs/
@@ -24,30 +27,61 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
-.pytest_cache/
-.coverage
-htmlcov/
+
+# Virtual environments
 .env
-.venv
+.venv/
 venv/
 ENV/
 
-# IDE
+### IDE ###
+# PyCharm
 .idea/
+# VSCode
 .vscode/
+# Vim
 *.swp
 *.swo
-.DS_Store
 
-# Logs and databases
+### Logs ###
+logs/
 *.log
-*.sqlite
-*.db
+tcdata.log
+var/
 
-# Docker
-.docker/
-docker-compose.override.yml
+### Secrets and Configuration ###
+# API Keys and Credentials
+config/TC_API_key.txt
+config/credentials.json
+config/token.json
+config/crime_ids.txt
+*.pem
+*.key
+*.crt
 
-# Application specific
-app/var/
-tcdata.log 
+### System Files ###
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+### Version Control ###
+.git/
+.gitlab/
+
+### Project Specific ###
+# Flask
+.flaskenv
+# BigQuery
+*.json
+!package.json
+!package-lock.json
+!tsconfig.json
+
+# Keep environment templates
+!.env-template
+.env*
