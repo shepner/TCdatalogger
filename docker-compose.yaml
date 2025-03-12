@@ -3,11 +3,23 @@ version: '3.8'
 services:
   tcdatalogger:
     build:
-      context: ./app
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: docker/Dockerfile
     container_name: tcdatalogger
     restart: unless-stopped
     volumes:
-      - ./app/config:/app/config
-      - ./app/var:/app/var
-      - ./app/queries:/app/queries 
+      - ./app/config:/app/config:ro  # Read-only mount for sensitive configs
+      - ./app/var:/app/var           # For persistent data
+      - ./queries:/app/queries:ro    # Read-only mount for SQL queries
+    environment:
+      - TZ=UTC                       # Ensure consistent timezone
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"             # Limit log file size
+        max-file: "3"               # Keep only last 3 log files
+    healthcheck:
+      test: ["CMD", "ps", "aux", "|", "grep", "[c]ron"]
+      interval: 5m
+      timeout: 10s
+      retries: 3 
