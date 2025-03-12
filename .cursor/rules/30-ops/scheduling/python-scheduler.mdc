@@ -1,0 +1,128 @@
+---
+description: Best practices for implementing Python-based scheduling
+globs: ["*.py"]
+alwaysApply: true
+---
+# Python Scheduler Implementation
+
+## Overview
+Standards for implementing reliable Python-based scheduling systems.
+
+## Rules
+
+### Scheduler Setup
+1. Use appropriate scheduler library:
+   - `schedule` for simple interval-based scheduling
+   - `APScheduler` for more complex scheduling needs
+   - Consider timezone handling requirements
+
+2. Initialize scheduler:
+```python
+import schedule
+import logging
+
+def setup_schedules(config: Dict, jobs: List[Dict]) -> None:
+    """Set up job schedules.
+    
+    Args:
+        config: Application configuration
+        jobs: List of jobs to schedule
+    """
+    for job in jobs:
+        interval = parse_interval(job['frequency'])
+        schedule.every(interval).minutes.do(
+            run_job, job=job, config=config
+        )
+        logging.info(f"Scheduled {job['name']} every {interval} minutes")
+```
+
+### Job Management
+1. Job Definition:
+   - Clear job names and descriptions
+   - Well-defined intervals
+   - Proper error handling
+   - Logging and monitoring
+   - Resource cleanup
+
+2. Job Execution:
+```python
+def run_job(job: Dict, config: Dict) -> None:
+    """Execute a scheduled job.
+    
+    Args:
+        job: Job configuration
+        config: Application configuration
+    """
+    try:
+        logging.info(f"Starting job: {job['name']}")
+        # Execute job...
+        logging.info(f"Completed job: {job['name']}")
+    except Exception as e:
+        logging.error(f"Job failed: {job['name']} - {str(e)}")
+```
+
+### Error Handling
+1. Handle common issues:
+   - Job failures
+   - Resource constraints
+   - Network issues
+   - Timeouts
+   - Concurrent execution
+
+2. Implement retry logic:
+```python
+def run_with_retry(func, max_retries=3, delay=60):
+    """Run function with retry logic.
+    
+    Args:
+        func: Function to execute
+        max_retries: Maximum retry attempts
+        delay: Delay between retries in seconds
+    """
+    for attempt in range(max_retries):
+        try:
+            return func()
+        except Exception as e:
+            if attempt == max_retries - 1:
+                raise
+            logging.warning(f"Retry {attempt + 1}/{max_retries}: {str(e)}")
+            time.sleep(delay)
+```
+
+### Resource Management
+1. Monitor resource usage:
+   - Memory consumption
+   - CPU utilization
+   - Network connections
+   - File handles
+
+2. Implement cleanup:
+```python
+def cleanup_resources():
+    """Clean up resources after job execution."""
+    # Close connections
+    # Release file handles
+    # Clear temporary files
+    pass
+```
+
+### Testing
+1. Test scheduler setup:
+```python
+def test_scheduler_setup():
+    """Test scheduler initialization."""
+    config = load_test_config()
+    jobs = get_test_jobs()
+    setup_schedules(config, jobs)
+    assert len(schedule.jobs) == len(jobs)
+```
+
+2. Test job execution:
+```python
+def test_job_execution():
+    """Test job execution and error handling."""
+    job = get_test_job()
+    with mock.patch('logging.info') as mock_log:
+        run_job(job, config)
+        assert mock_log.called
+``` 

@@ -1,0 +1,162 @@
+---
+description: Standards for implementing and managing storage modes in data pipelines
+globs: ["*.py", "*.json"]
+alwaysApply: true
+---
+# Storage Mode Management
+
+## Overview
+Standards for implementing and managing different storage modes (append, replace) in data pipelines.
+
+## Rules
+
+### Storage Mode Definition
+1. Supported Modes:
+   - `append`: Add new records to existing data
+   - `replace`: Replace all existing data with new data
+
+2. Configuration:
+```json
+{
+  "endpoints": [
+    {
+      "name": "example_endpoint",
+      "table": "project.dataset.table",
+      "storage_mode": "replace"  // or "append"
+    }
+  ]
+}
+```
+
+### Implementation
+1. Mode Handling:
+```python
+def upload_data(data: pd.DataFrame, table_id: str, mode: str = "append") -> bool:
+    """Upload data with specified storage mode.
+    
+    Args:
+        data: Data to upload
+        table_id: Target table ID
+        mode: Storage mode ("append" or "replace")
+        
+    Returns:
+        bool: Success status
+    """
+    try:
+        if mode == "replace":
+            # Use temporary table for atomic replacement
+            temp_table = create_temp_table()
+            upload_to_temp(data, temp_table)
+            replace_table(temp_table, table_id)
+        else:
+            # Append directly to target table
+            append_to_table(data, table_id)
+        return True
+    except Exception as e:
+        logging.error(f"Upload failed: {str(e)}")
+        return False
+```
+
+### Data Safety
+1. Replace Mode Safety:
+   - Use temporary tables
+   - Perform atomic swaps
+   - Validate before replacing
+   - Keep backup if needed
+
+2. Implementation:
+```python
+def safe_replace(data: pd.DataFrame, table_id: str) -> None:
+    """Safely replace table data.
+    
+    Args:
+        data: New data
+        table_id: Target table ID
+    """
+    temp_table = f"{table_id}_temp_{int(time.time())}"
+    try:
+        # Upload to temp table
+        create_table(temp_table, schema)
+        upload_data(data, temp_table)
+        
+        # Validate temp table
+        validate_table(temp_table)
+        
+        # Atomic swap
+        swap_tables(temp_table, table_id)
+    finally:
+        # Cleanup
+        delete_table(temp_table)
+```
+
+### Schema Management
+1. Mode-specific Schema Handling:
+   - Replace: Can modify schema
+   - Append: Must match existing schema
+
+2. Implementation:
+```python
+def handle_schema(data: pd.DataFrame, table_id: str, mode: str) -> None:
+    """Handle schema based on storage mode.
+    
+    Args:
+        data: Data to upload
+        table_id: Target table ID
+        mode: Storage mode
+    """
+    existing_schema = get_table_schema(table_id)
+    new_schema = infer_schema(data)
+    
+    if mode == "replace":
+        # Can use new schema
+        update_table_schema(table_id, new_schema)
+    else:
+        # Must conform to existing schema
+        validate_schema_compatibility(existing_schema, new_schema)
+```
+
+### Error Handling
+1. Mode-specific Error Handling:
+   - Replace: Handle atomic operation failures
+   - Append: Handle duplicate records
+
+2. Implementation:
+```python
+def handle_errors(error: Exception, mode: str) -> None:
+    """Handle mode-specific errors.
+    
+    Args:
+        error: The error that occurred
+        mode: Storage mode in use
+    """
+    if mode == "replace":
+        if isinstance(error, AtomicOperationError):
+            # Handle atomic operation failure
+            rollback_changes()
+    else:
+        if isinstance(error, DuplicateError):
+            # Handle duplicate records
+            deduplicate_data()
+```
+
+### Testing
+1. Test Storage Modes:
+```python
+def test_storage_modes():
+    """Test different storage modes."""
+    # Test append mode
+    data = get_test_data()
+    assert upload_data(data, "test_table", "append")
+    
+    # Test replace mode
+    assert upload_data(data, "test_table", "replace")
+```
+
+2. Test Error Cases:
+```python
+def test_error_handling():
+    """Test error handling for different modes."""
+    with pytest.raises(SchemaError):
+        # Should fail on schema mismatch in append mode
+        upload_data(invalid_data, "test_table", "append")
+``` 
