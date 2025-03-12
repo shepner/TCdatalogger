@@ -1,0 +1,157 @@
+---
+description: Guidelines for organizing and naming Cursor rules in a hierarchical structure
+globs: ["**/*.mdc"]
+alwaysApply: true
+---
+# Cursor Rules Organization
+
+Guidelines for organizing and naming Cursor rule files in a hierarchical structure.
+
+<rule>
+name: cursor-rules-organization
+description: Standards for organizing and naming Cursor rule files
+filters:
+  # Generic pattern matching using config
+  - type: file_extension
+    pattern: ${config.patterns.rule_file}
+  # Performance-optimized content matching
+  - type: content
+    pattern: ${config.patterns.rule_content}
+    max_complexity: ${config.performance.max_pattern_complexity}
+
+actions:
+  - type: reject
+    conditions:
+      # Generic directory structure validation
+      - pattern: "^(?!\\.\\/\\.cursor\\/rules\\/${config.patterns.directory_prefix}\\/)"
+        message: "Place rule files in appropriate numbered category directories (e.g., 10-code/, 20-data/)"
+      # Performance-optimized validation
+      - pattern: "^(?!.*\\.mdc$)"
+        message: "Use .mdc extension for cursor rule files"
+        cache_result: true
+        cache_ttl: ${config.performance.cache_ttl_seconds}
+      # Generic naming convention check
+      - pattern: "[A-Z]"
+        message: "Use kebab-case for rule file and directory names"
+        batch_size: ${config.performance.batch_size}
+
+  - type: validate
+    conditions:
+      # Generic size validation
+      - check: "file_size_kb <= ${config.validation.max_file_size_kb}"
+        message: "Rule file exceeds maximum size limit"
+      # Generic structure validation
+      - check: "has_required_sections(${config.validation.required_sections})"
+        message: "Missing required sections in rule file"
+      # Performance monitoring
+      - check: "performance_metrics_within_limits"
+        message: "Rule processing exceeds performance thresholds"
+
+  - type: suggest
+    message: |
+      When organizing Cursor rules:
+
+      1. Directory Structure:
+         ${generate_directory_structure()}
+
+      2. Subdirectory Organization:
+         ${generate_subdirectory_guidelines()}
+
+      3. File Naming:
+         ${generate_naming_guidelines()}
+
+      4. Rule Hierarchy:
+         ${generate_hierarchy_guidelines()}
+
+      5. Rule Dependencies:
+         ${generate_dependency_guidelines()}
+
+# Generic helper functions
+functions:
+  generate_directory_structure: |
+    def generate():
+      return """
+      00-meta/          # Meta rules about rules
+      10-code/          # Code organization and quality
+      20-data/          # Data handling and processing
+      30-ops/           # Operations and deployment
+      40-version-control/ # Version control and licensing
+      """
+
+  generate_subdirectory_guidelines: |
+    def generate():
+      return """
+      Each main category should have logical subdirectories:
+      ```
+      10-code/
+      ├── organization/  # Code style and structure
+      ├── quality/       # Error handling, logging
+      └── security/      # Security practices
+      ```
+      """
+
+  generate_naming_guidelines: |
+    def generate():
+      return """
+      - Use kebab-case (e.g., error-handling.mdc)
+      - Group related rules in subdirectories
+      - Use descriptive, specific names
+      - Follow category prefixes
+      """
+
+  generate_hierarchy_guidelines: |
+    def generate():
+      return """
+      - Meta rules (00-meta)
+      - Code rules (10-code)
+      - Data rules (20-data)
+      - Operations rules (30-ops)
+      - Version control rules (40-version-control)
+      """
+
+  generate_dependency_guidelines: |
+    def generate():
+      return """
+      - Higher-level rules can reference lower-level rules
+      - Avoid circular dependencies
+      - Document rule relationships
+      - Use consistent references
+      """
+
+examples:
+  - input: |
+      # Bad: Incorrect organization
+      .cursor/rules/error_handling.mdc
+      .cursor/rules/DataTypes.md
+      .cursor/rules/random/logging.txt
+
+      # Good: Proper hierarchical organization
+      .cursor/rules/00-meta/cursor-rules.mdc
+      .cursor/rules/10-code/quality/error-handling.mdc
+      .cursor/rules/20-data/schema/data-types.mdc
+      .cursor/rules/30-ops/docker/docker-optimization.mdc
+
+# Performance monitoring
+metrics:
+  - name: rule_processing_time
+    type: histogram
+    labels: ["rule_name", "action_type"]
+  - name: cache_hit_ratio
+    type: gauge
+    labels: ["rule_name"]
+  - name: validation_errors
+    type: counter
+    labels: ["rule_name", "error_type"]
+
+metadata:
+  priority: high
+  version: 2.0
+  tags:
+    - organization
+    - structure
+    - naming
+    - hierarchy
+  changelog:
+    - 2.0: Updated to support hierarchical organization and follow generic/performance guidelines
+    - 1.0: Initial version with basic organization guidelines
+</rule>

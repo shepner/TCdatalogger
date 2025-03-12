@@ -1,0 +1,221 @@
+---
+description: Guidelines for managing and evolving database schemas
+globs: ["*.py", "*.sql", "*.json", "*.yaml", "*.yml"]
+alwaysApply: true
+---
+# Schema Management Guidelines
+
+Rules for consistent schema management and evolution across the codebase.
+
+<rule>
+name: schema-management
+description: Standards for managing database schemas, updates, and validation
+filters:
+  # Match Python files
+  - type: file_extension
+    pattern: "\\.py$"
+  # Match SQL files
+  - type: file_extension
+    pattern: "\\.sql$"
+  # Match config files
+  - type: file_extension
+    pattern: "\\.(json|ya?ml)$"
+  # Match schema related content
+  - type: content
+    pattern: "(schema|table|column|field|type|constraint|alter|modify|index|primary|foreign|key|unique|not\\s+null|migration|version)"
+
+actions:
+  - type: reject
+    conditions:
+      # Reject unsafe schema modifications
+      - pattern: "ALTER\\s+TABLE.*DROP\\s+COLUMN(?!.*backup)"
+        message: "Create a backup before dropping columns"
+      # Reject type changes without validation
+      - pattern: "ALTER\\s+TABLE.*MODIFY\\s+COLUMN.*(?!.*USING)"
+        message: "Include USING clause when modifying column types"
+      # Reject constraint drops without verification
+      - pattern: "ALTER\\s+TABLE.*DROP\\s+CONSTRAINT"
+        message: "Verify data integrity before dropping constraints"
+      # Reject direct schema assignments
+      - pattern: "table\\.schema\\s*="
+        message: "Use schema evolution methods instead of direct assignment"
+      # Reject nullable primary keys
+      - pattern: "PRIMARY\\s+KEY.*NULL"
+        message: "Primary key columns must be NOT NULL"
+      # Reject unsafe index creation
+      - pattern: "CREATE\\s+INDEX(?!.*CONCURRENTLY)"
+        message: "Use CONCURRENTLY when creating indexes on active tables"
+      # Reject unversioned migrations
+      - pattern: "class\\s+.*Migration.*:(?!.*version)"
+        message: "Include version number in migration class names"
+
+  - type: suggest
+    message: |
+      When managing schemas:
+
+      1. Schema Verification:
+         - Get existing schema before modifications
+         - Compare new schema against existing schema
+         - Log both schemas for debugging
+         - Verify column name consistency
+         - Check for required columns
+         - Validate field type compatibility
+         - Verify index coverage
+
+      2. Schema Updates:
+         - Handle new columns separately from type changes
+         - Preserve existing column types when updating
+         - Update schema before data load
+         - Log schema changes
+         - Verify schema update success
+         - Handle schema update failures gracefully
+         - Use online schema changes when possible
+
+      3. Schema Evolution:
+         - Track schema version changes
+         - Document schema modifications
+         - Handle backward compatibility
+         - Manage column deprecation
+         - Monitor schema drift
+         - Validate schema consistency across tables
+         - Implement schema versioning
+
+      4. Schema Validation:
+         - Check for required fields
+         - Validate field constraints
+         - Verify field order consistency
+         - Handle nullable fields appropriately
+         - Document schema dependencies
+         - Maintain schema documentation
+         - Test schema changes
+
+      5. Migration Management:
+         - Version all migrations
+         - Make migrations reversible
+         - Test migrations on sample data
+         - Implement rollback procedures
+         - Document migration steps
+         - Handle data transformation
+         - Verify migration success
+
+      6. Performance Considerations:
+         - Plan index changes carefully
+         - Use appropriate field types
+         - Consider partitioning strategy
+         - Monitor schema size
+         - Optimize constraint definitions
+         - Handle large tables appropriately
+         - Test performance impact
+
+      7. Security Measures:
+         - Implement column encryption
+         - Manage access controls
+         - Audit schema changes
+         - Protect sensitive data
+         - Version control schemas
+         - Track schema access
+         - Document security requirements
+
+examples:
+  - input: |
+      # Bad: Unsafe schema modifications
+      def update_schema(table):
+          # Direct schema modification
+          table.schema = new_schema  # Unsafe direct assignment
+          
+          # Unsafe column operations
+          cursor.execute("ALTER TABLE users DROP COLUMN email")  # No backup
+          cursor.execute("ALTER TABLE users MODIFY COLUMN age INT")  # No type conversion
+          cursor.execute("ALTER TABLE users DROP CONSTRAINT pk_users")  # No verification
+          cursor.execute("CREATE TABLE items (id INT PRIMARY KEY NULL)")  # Nullable PK
+          cursor.execute("CREATE INDEX idx_email ON users(email)")  # Not concurrent
+          
+          class UpdateUsersMigration:  # No version number
+              def up(self):
+                  pass
+
+      # Good: Safe schema evolution with comprehensive management
+      class V20240315_UpdateUsers_Migration:
+          def __init__(self):
+              self.version = "2024.03.15.001"
+              self.description = "Add email verification fields to users table"
+          
+          def up(self):
+              # Get existing schema
+              current_schema = {field.name: field for field in table.schema}
+              
+              # Log current state and plan
+              logging.info(f"Starting migration {self.version}: {self.description}")
+              logging.info(f"Current schema: {current_schema}")
+              
+              # Create backup with verification
+              backup_table = create_backup(table)
+              verify_backup(table, backup_table)
+              
+              try:
+                  # Track schema version
+                  register_schema_version(self.version)
+                  
+                  # Add new fields with validation
+                  new_fields = [
+                      Field("email_verified", "BOOLEAN", nullable=False, default=False),
+                      Field("verification_date", "TIMESTAMP", nullable=True)
+                  ]
+                  
+                  for new_field in new_fields:
+                      if new_field.name not in current_schema:
+                          # Validate and document new field
+                          validate_field_definition(new_field)
+                          document_field_addition(new_field, self.version)
+                          
+                          # Add field with online schema change
+                          alter_table_online(table.name, f"ADD COLUMN {new_field.definition}")
+                          
+                          # Update schema documentation
+                          update_schema_docs(table.name, new_field)
+                      
+                  # Add index concurrently
+                  execute_with_retry("""
+                      CREATE INDEX CONCURRENTLY idx_email_verified 
+                      ON users(email_verified) 
+                      WHERE email_verified = true
+                  """)
+                  
+                  # Verify changes
+                  verify_schema_update(table, new_fields)
+                  
+                  # Test new schema
+                  run_schema_tests(table)
+                  
+              except Exception as e:
+                  # Rollback with logging
+                  logging.error(f"Schema update failed: {e}")
+                  self.down()
+                  restore_from_backup(backup_table)
+                  raise
+              
+              finally:
+                  # Cleanup with archival
+                  archive_backup(backup_table)
+                  cleanup_temporary_objects()
+          
+          def down(self):
+              # Reversible migration
+              logging.info(f"Rolling back migration {self.version}")
+              drop_index_concurrently("idx_email_verified")
+              alter_table_online(table.name, "DROP COLUMN IF EXISTS email_verified")
+              alter_table_online(table.name, "DROP COLUMN IF EXISTS verification_date")
+              deregister_schema_version(self.version)
+
+metadata:
+  priority: high
+  version: 1.1
+  tags:
+    - schema
+    - database
+    - evolution
+    - migration
+    - security
+  changelog:
+    - 1.0: Initial version with comprehensive schema management guidelines
+    - 1.1: Added migration management, security measures, and performance considerations 

@@ -1,0 +1,278 @@
+---
+description: Guidelines for automatic rule creation and updates based on new requirements
+globs: ["**/*.mdc", "**/*.{py,rs,pl,js,ts,sql}", "**/*.{json,yaml,yml,toml}"]
+alwaysApply: true
+config:
+  update_triggers:
+    - new_requirements
+    - code_changes
+    - documentation_updates
+    - performance_metrics
+    - error_patterns
+    - conflict_resolutions
+  validation:
+    required_sections: [
+      "description",
+      "config",
+      "filters",
+      "actions",
+      "functions",
+      "examples",
+      "metrics",
+      "metadata"
+    ]
+    min_examples: 2
+    max_file_size_kb: 500
+  monitoring:
+    check_interval_seconds: 300
+    metrics_retention_days: 30
+  conflict_handling:
+    check_before_update: true
+    prompt_on_conflict: true
+    learning_from_resolutions: true
+    resolution_history_days: 90
+---
+# Rule Automation Guidelines
+
+Guidelines for automatically creating and updating rules based on new requirements and patterns.
+
+<rule>
+name: rule-automation
+description: Standards for automatic rule creation and updates
+filters:
+  # Match rule files
+  - type: file_extension
+    pattern: "\\.mdc$"
+  # Match source files that might trigger rule updates
+  - type: file_extension
+    pattern: "\\.(py|rs|pl|js|ts|sql|json|ya?ml|toml)$"
+  # Match documentation that might contain requirements
+  - type: file_extension
+    pattern: "\\.(md|rst|txt)$"
+
+actions:
+  - type: monitor
+    conditions:
+      # Monitor for new patterns in code
+      - pattern: "(?s)new\\s+(?:pattern|practice|standard|requirement)"
+        action: "analyze_for_rule_creation"
+      # Monitor for rule violations
+      - pattern: "rule_violation_detected"
+        action: "update_rule_constraints"
+      # Monitor for performance issues
+      - pattern: "performance_threshold_exceeded"
+        action: "update_performance_rules"
+      # Monitor for error patterns
+      - pattern: "error_pattern_detected"
+        action: "update_error_handling_rules"
+      # Monitor for rule conflicts
+      - pattern: "rule_conflict_detected"
+        action: "trigger_conflict_resolution"
+
+  - type: automate
+    tasks:
+      # Automatically create rules
+      - trigger: "new_requirement_detected"
+        action: "create_rule"
+        template: "rule_templates/standard.mdc"
+        conflict_check: true
+      # Update existing rules
+      - trigger: "rule_update_needed"
+        action: "update_rule"
+        validation: "validate_rule_changes"
+        conflict_check: true
+      # Enforce rule compliance
+      - trigger: "rule_violation"
+        action: "enforce_compliance"
+        severity: "blocking"
+      # Handle rule conflicts
+      - trigger: "conflict_detected"
+        action: "handle_conflict"
+        prompt: true
+
+  - type: enforce
+    conditions:
+      # Enforce rule structure
+      - check: "validate_rule_structure"
+        message: "Rule must follow standard structure"
+        action: "block_commit"
+      # Enforce performance requirements
+      - check: "validate_performance"
+        message: "Rule must meet performance criteria"
+        action: "block_commit"
+      # Enforce documentation
+      - check: "validate_documentation"
+        message: "Rule must be fully documented"
+        action: "block_commit"
+      # Check for conflicts
+      - check: "check_rule_conflicts"
+        message: "Rule must not conflict with existing rules"
+        action: "prompt_for_resolution"
+
+functions:
+  analyze_for_rule_creation: |
+    def analyze(content):
+      """
+      Analyze content for patterns that should be turned into rules.
+      Returns a list of suggested rules.
+      """
+      patterns = extract_common_patterns(content)
+      requirements = extract_requirements(content)
+      
+      # Check for potential conflicts before suggesting rules
+      potential_rules = generate_rule_suggestions(patterns, requirements)
+      for rule in potential_rules:
+        conflicts = check_for_conflicts(rule)
+        if conflicts:
+          handle_potential_conflicts(rule, conflicts)
+      
+      return potential_rules
+
+  validate_rule_changes: |
+    def validate(changes):
+      """
+      Validate proposed rule changes against best practices.
+      Returns (valid, reasons).
+      """
+      checks = [
+        check_structure(changes),
+        check_performance(changes),
+        check_documentation(changes),
+        check_examples(changes),
+        check_for_conflicts(changes)
+      ]
+      return all(checks), [r for v, r in checks if not v]
+
+  enforce_compliance: |
+    def enforce(violation):
+      """
+      Enforce rule compliance through various mechanisms.
+      Returns enforcement actions taken.
+      """
+      actions = []
+      if violation.severity == "blocking":
+        actions.append(block_commit(violation))
+      actions.append(notify_developers(violation))
+      actions.append(log_violation(violation))
+      
+      # Check if violation was due to conflict
+      if is_conflict_related(violation):
+        actions.append(trigger_conflict_resolution(violation))
+      
+      return actions
+
+  handle_conflict: |
+    def handle(conflict):
+      """
+      Handle detected rule conflicts.
+      Returns resolution actions.
+      """
+      actions = []
+      
+      # Analyze conflict
+      impact = analyze_conflict_impact(conflict)
+      options = generate_resolution_options(conflict)
+      
+      # Prompt for resolution if needed
+      if should_prompt_for_resolution(conflict):
+        resolution = prompt_user_for_resolution(conflict, options)
+      else:
+        resolution = auto_resolve_conflict(conflict, options)
+      
+      # Apply resolution
+      actions.extend(apply_resolution(resolution))
+      
+      # Learn from resolution
+      learn_from_resolution(conflict, resolution)
+      
+      return actions
+
+examples:
+  - input: |
+      # Conflict detected during rule creation
+      """
+      New requirement: All functions must have return type hints
+      """
+      
+      # Existing rule
+      <rule>
+      name: function-documentation
+      actions:
+        - type: reject
+          conditions:
+            - pattern: "def.*?:"
+              message: "Functions must have docstrings"
+      </rule>
+      
+      # Potential conflict detected
+      [ANALYSIS] New rule may conflict with existing rule:
+      - Existing: function-documentation (documentation focus)
+      - New: type-hints (typing focus)
+      
+      [RESOLUTION] Created merged rule:
+      <rule>
+      name: function-standards
+      actions:
+        - type: reject
+          conditions:
+            - pattern: "def.*?:"
+              message: "Functions must have docstrings and return type hints"
+            - pattern: "def.*?\\)\\s*:"
+              message: "Missing return type hint"
+      metrics:
+        - name: documentation_completeness
+          threshold: 1.0
+      </rule>
+
+  - input: |
+      # Learning from conflict resolution
+      """
+      Conflict pattern detected: Multiple rules targeting same construct
+      Resolution chosen: Merge rules with combined conditions
+      """
+      
+      [LEARNING] Updated rule creation template:
+      - Added conflict pre-check
+      - Updated pattern matching to be context-aware
+      - Added rule relationship documentation
+      - Created new test cases
+
+metrics:
+  - name: rules_created
+    type: counter
+    labels: ["trigger_type", "rule_category"]
+  - name: rules_updated
+    type: counter
+    labels: ["trigger_type", "update_type"]
+  - name: rule_violations
+    type: counter
+    labels: ["rule_name", "violation_type"]
+  - name: enforcement_actions
+    type: counter
+    labels: ["action_type", "severity"]
+  - name: automation_performance
+    type: histogram
+    labels: ["operation_type"]
+  - name: conflicts_handled
+    type: counter
+    labels: ["conflict_type", "resolution_type"]
+  - name: resolution_success
+    type: gauge
+    labels: ["conflict_type"]
+  - name: learning_events
+    type: counter
+    labels: ["event_type", "improvement_type"]
+
+metadata:
+  priority: critical
+  version: 2.0
+  tags:
+    - automation
+    - enforcement
+    - monitoring
+    - compliance
+    - conflict-resolution
+  changelog:
+    - 2.0: Added comprehensive conflict detection and resolution
+    - 1.0: Initial version with automation capabilities
+</rule> 

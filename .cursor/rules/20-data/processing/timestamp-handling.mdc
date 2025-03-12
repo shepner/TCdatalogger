@@ -1,0 +1,91 @@
+---
+description: Guidelines for handling timestamps and datetime conversions
+globs: ["*.py", "*.sql", "*.json", "*.yaml", "*.yml"]
+alwaysApply: true
+---
+# Timestamp Handling Guidelines
+
+Rules for consistent timestamp handling and conversions across the codebase.
+
+<rule>
+name: timestamp_handling
+description: Standards for handling timestamps, datetime conversions, and validation
+filters:
+  # Match Python files
+  - type: file_extension
+    pattern: "\\.py$"
+  # Match SQL files
+  - type: file_extension
+    pattern: "\\.sql$"
+  # Match config files
+  - type: file_extension
+    pattern: "\\.(json|ya?ml)$"
+  # Match timestamp related content
+  - type: content
+    pattern: "(timestamp|datetime|date|time|utc|timezone)"
+
+actions:
+  - type: suggest
+    message: |
+      When handling timestamps:
+
+      1. Timestamp Detection:
+         - Check if field is already datetime using pd.api.types.is_datetime64_any_dtype()
+         - Only attempt conversion on non-datetime fields
+         - Log timestamp format before conversion
+         - Verify timezone information if present
+
+      2. Timestamp Conversion:
+         - Handle None values before conversion
+         - Use pd.to_datetime(format='mixed', errors='coerce') for flexible parsing
+         - Log sample values after conversion
+         - Handle invalid timestamp formats gracefully
+         - Convert string timestamps to appropriate timezone
+         - Maintain UTC consistency where required
+
+      3. Timestamp Validation:
+         - Verify timestamp range validity
+         - Check for NaT (Not a Time) values
+         - Log invalid timestamp formats
+         - Handle timezone conversions explicitly
+         - Validate timestamp precision requirements
+         - Ensure consistent timestamp formatting across dataset
+
+examples:
+  - input: |
+      # Bad: Inconsistent timestamp handling
+      df['timestamp'] = pd.to_datetime(df['timestamp'])
+      df['date'] = df['date'].astype(str)
+
+      # Good: Consistent timestamp handling with validation
+      def convert_to_timestamp(df, column):
+          # Check if already datetime
+          if not pd.api.types.is_datetime64_any_dtype(df[column]):
+              # Log original format
+              sample_values = df[column].head()
+              logging.debug(f"Converting {column}, sample values: {sample_values}")
+              
+              # Convert with error handling
+              df[column] = pd.to_datetime(
+                  df[column],
+                  format='mixed',
+                  errors='coerce',
+                  utc=True
+              )
+              
+              # Validate conversion
+              nat_count = df[column].isna().sum()
+              if nat_count > 0:
+                  logging.warning(f"Found {nat_count} invalid timestamps in {column}")
+          
+          return df
+
+metadata:
+  priority: high
+  version: 1.0
+  tags:
+    - timestamps
+    - datetime
+    - validation
+  changelog:
+    - 1.0: Initial version with comprehensive timestamp handling guidelines 

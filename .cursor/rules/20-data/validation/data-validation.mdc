@@ -1,0 +1,89 @@
+# Data Validation Guidelines
+
+## Overview
+Standards for implementing comprehensive data validation across the project.
+
+## Configuration
+globs: ["*.py", "*.sql"]
+priority: high
+
+## Rules
+
+### Input Validation
+1. Validate data types and formats
+2. Check for required fields
+3. Validate value ranges
+4. Check for data consistency
+5. Validate relationships between fields
+
+### BigQuery Data Validation
+1. Validate schema compatibility
+2. Check for data quality issues
+3. Validate foreign key relationships
+4. Monitor data distributions
+5. Check for duplicates
+
+### Data Quality Metrics
+1. Completeness checks
+2. Accuracy validation
+3. Consistency checks
+4. Timeliness validation
+5. Uniqueness checks
+
+## Examples
+
+### Python Data Validation
+```python
+def validate_torn_data(data: dict) -> tuple[bool, list[str]]:
+    """Validate Torn City API data.
+    
+    Args:
+        data: Dictionary containing API response
+        
+    Returns:
+        Tuple of (is_valid, error_messages)
+    """
+    errors = []
+    
+    # Required fields
+    required_fields = ['id', 'name', 'level']
+    for field in required_fields:
+        if field not in data:
+            errors.append(f"Missing required field: {field}")
+    
+    # Type validation
+    if 'level' in data and not isinstance(data['level'], int):
+        errors.append("Level must be an integer")
+    
+    # Range validation
+    if 'level' in data and isinstance(data['level'], int):
+        if data['level'] < 1:
+            errors.append("Level must be positive")
+    
+    return len(errors) == 0, errors
+```
+
+### SQL Data Validation
+```sql
+-- Validate data quality
+WITH data_quality AS (
+    SELECT
+        COUNT(*) as total_records,
+        COUNT(CASE WHEN level < 1 THEN 1 END) as invalid_levels,
+        COUNT(CASE WHEN name IS NULL THEN 1 END) as missing_names
+    FROM `torncity-402423.torn_data.v2_faction_members`
+)
+SELECT
+    total_records,
+    invalid_levels,
+    missing_names,
+    CASE 
+        WHEN invalid_levels > 0 OR missing_names > 0 THEN 'FAIL'
+        ELSE 'PASS'
+    END as validation_status
+FROM data_quality;
+```
+
+## Version History
+- 1.0: Initial version
+- 1.1: Added Torn City specific validation examples 

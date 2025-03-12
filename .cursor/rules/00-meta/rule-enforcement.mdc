@@ -1,0 +1,196 @@
+---
+description: Guidelines for strict enforcement of all Cursor rules
+globs: ["**/*"]
+alwaysApply: true
+---
+# Rule Enforcement Guidelines
+
+Guidelines for ensuring strict compliance with all Cursor rules.
+
+<rule>
+name: rule-enforcement
+description: Standards for enforcing rule compliance
+filters:
+  # Match all relevant files
+  - type: any_file
+    pattern: ".*"
+  # Match git operations
+  - type: git_event
+    pattern: "(commit|push|merge)"
+  # Match IDE operations
+  - type: ide_event
+    pattern: "(save|build|run)"
+
+actions:
+  - type: pre_commit
+    conditions:
+      # Check rule compliance before commit
+      - check: "validate_all_rules"
+        message: "All rules must pass validation"
+        action: "block_commit"
+      # Check performance requirements
+      - check: "validate_performance"
+        message: "Performance requirements must be met"
+        action: "block_commit"
+      # Check documentation
+      - check: "validate_documentation"
+        message: "Documentation must be complete"
+        action: "block_commit"
+
+  - type: continuous
+    conditions:
+      # Monitor file changes
+      - check: "monitor_file_changes"
+        action: "trigger_validation"
+      # Track rule violations
+      - check: "track_violations"
+        action: "update_metrics"
+      # Monitor performance
+      - check: "monitor_performance"
+        action: "trigger_optimization"
+
+  - type: enforce
+    conditions:
+      # Block non-compliant changes
+      - check: "rule_compliance"
+        message: "Changes must comply with all rules"
+        action: "block_save"
+      # Enforce performance standards
+      - check: "performance_standards"
+        message: "Changes must meet performance requirements"
+        action: "block_save"
+      # Enforce documentation standards
+      - check: "documentation_standards"
+        message: "Documentation must meet standards"
+        action: "block_save"
+
+functions:
+  validate_all_rules: |
+    def validate():
+      """
+      Validate compliance with all rules.
+      Returns (valid, violations).
+      """
+      rules = load_all_rules()
+      violations = []
+      for rule in rules:
+        if not check_compliance(rule):
+          violations.append(get_violation_details(rule))
+      return len(violations) == 0, violations
+
+  track_violations: |
+    def track(violation):
+      """
+      Track rule violations and trigger actions.
+      Returns tracking_record.
+      """
+      record = store_violation(violation)
+      if exceeds_threshold(record):
+        trigger_alerts(record)
+      return record
+
+  enforce_standards: |
+    def enforce(change):
+      """
+      Enforce all standards on changes.
+      Returns (compliant, actions_taken).
+      """
+      checks = [
+        check_rule_compliance(change),
+        check_performance_standards(change),
+        check_documentation_standards(change)
+      ]
+      actions = []
+      if not all(checks):
+        actions.extend(block_change(change))
+        actions.extend(notify_violation(change))
+      return all(checks), actions
+
+examples:
+  - input: |
+      # Attempting to commit non-compliant code
+      def process_data(data):
+          # Missing type hints
+          # Missing documentation
+          # No error handling
+          result = data * 2
+          return result
+      
+      # Enforcement action
+      [BLOCKED] Commit failed validation:
+      - Missing type hints (typing_standards)
+      - Missing function documentation (documentation_standards)
+      - No error handling (error_handling_standards)
+      
+      Suggested fixes:
+      ```python
+      def process_data(data: float) -> float:
+          """
+          Process numeric data by doubling it.
+          
+          Args:
+              data: The numeric value to process
+              
+          Returns:
+              float: The processed value
+              
+          Raises:
+              TypeError: If data is not numeric
+          """
+          try:
+              return float(data) * 2
+          except (TypeError, ValueError) as e:
+              raise TypeError(f"Invalid input: {e}")
+      ```
+
+  - input: |
+      # Performance violation detected
+      query = """
+      SELECT *
+      FROM large_table
+      WHERE status = 'active'
+      """
+      
+      # Enforcement action
+      [BLOCKED] Query failed performance standards:
+      - Using SELECT * (query_optimization)
+      - Missing LIMIT clause (query_safety)
+      - Table scan detected (performance_optimization)
+      
+      Suggested optimization:
+      ```sql
+      SELECT id, name, status
+      FROM large_table
+      WHERE status = 'active'
+      AND created_at > NOW() - INTERVAL '7 days'
+      LIMIT 1000
+      ```
+
+metrics:
+  - name: rule_violations
+    type: counter
+    labels: ["rule_name", "violation_type"]
+  - name: enforcement_actions
+    type: counter
+    labels: ["action_type", "result"]
+  - name: validation_performance
+    type: histogram
+    labels: ["check_type"]
+  - name: blocked_operations
+    type: counter
+    labels: ["operation_type", "reason"]
+  - name: auto_fixes
+    type: counter
+    labels: ["rule_name", "fix_type"]
+
+metadata:
+  priority: critical
+  version: 1.0
+  tags:
+    - enforcement
+    - compliance
+    - validation
+    - monitoring
+  changelog:
+    - 1.0: Initial version with comprehensive enforcement capabilities
+</rule> 

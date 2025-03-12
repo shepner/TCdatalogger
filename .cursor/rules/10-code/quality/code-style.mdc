@@ -1,0 +1,63 @@
+# Code Style Guidelines
+
+## Overview
+Standards for maintaining consistent code style across the project.
+
+## Configuration
+globs: ["*.py", "*.sql", "*.sh"]
+priority: high
+
+## Rules
+
+### Python Style Guidelines
+1. Follow PEP 8 conventions
+2. Use meaningful variable and function names
+3. Keep functions focused and small
+4. Use type hints for function parameters and returns
+5. Document functions with docstrings
+
+### SQL Style Guidelines
+1. Use uppercase for SQL keywords
+2. Align columns in SELECT statements
+3. Use meaningful table aliases
+4. Include appropriate indexes
+5. Comment complex queries
+
+### Shell Script Guidelines
+1. Use shellcheck for validation
+2. Include error handling
+3. Use meaningful variable names
+4. Document script purpose and usage
+
+## Examples
+
+### Good Python Style
+```python
+def process_data(input_data: list[dict]) -> dict:
+    """Process input data and return summary statistics.
+    
+    Args:
+        input_data: List of dictionaries containing data points
+        
+    Returns:
+        Dictionary containing summary statistics
+    """
+    return {"count": len(input_data)}
+```
+
+### Good SQL Style
+```sql
+SELECT 
+    u.user_id,
+    u.username,
+    COUNT(o.order_id) as order_count
+FROM users u
+LEFT JOIN orders o ON u.user_id = o.user_id
+GROUP BY 
+    u.user_id,
+    u.username;
+```
+
+## Version History
+- 1.0: Initial version
+- 1.1: Added SQL and shell script guidelines 

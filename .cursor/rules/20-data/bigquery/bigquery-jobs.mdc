@@ -1,0 +1,44 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Job Configuration
+- Don't use ALLOW_FIELD_ADDITION with WRITE_TRUNCATE on regular tables
+- Handle schema updates manually before data load
+- Use appropriate write disposition based on operation
+- Configure job timeout appropriately
+- Set proper job priority
+- Include job labels for tracking
+
+# Load Jobs
+- Verify source data format
+- Set appropriate chunk size
+- Configure error handling
+- Monitor job progress
+- Handle job failures gracefully
+- Log job statistics
+
+# Query Jobs
+- Use parameterized queries
+- Set appropriate timeout
+- Configure query caching
+- Monitor query performance
+- Handle partial results
+- Log query execution plans
+
+# Job Management
+- Track job status
+- Handle job cancellation
+- Clean up failed jobs
+- Monitor resource usage
+- Implement retry logic
+- Log job completion status
+
+# Resource Management
+- Clean up temporary tables
+- Monitor quota usage
+- Handle resource limitations
+- Implement backoff strategies
+- Track resource consumption
+- Log resource cleanup status 

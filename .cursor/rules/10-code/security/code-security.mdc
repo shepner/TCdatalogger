@@ -1,0 +1,135 @@
+# Code Security Guidelines
+
+## Overview
+Standards for implementing secure coding practices across the project.
+
+## Configuration
+globs: ["*.py", "*.sql", "*.sh"]
+priority: critical
+
+## Rules
+
+### Input Validation
+1. User Input
+   - Validate all input data
+   - Use parameterized queries
+   - Sanitize user input
+   - Implement input size limits
+   - Check data types
+
+2. API Security
+   - Validate API responses
+   - Handle timeouts appropriately
+   - Implement rate limiting
+   - Use secure protocols (HTTPS)
+   - Monitor API usage
+
+### Data Protection
+1. Sensitive Data
+   - Never hardcode credentials
+   - Use environment variables
+   - Encrypt sensitive data
+   - Implement access controls
+   - Log access attempts
+
+2. Error Handling
+   - Don't expose system details
+   - Log securely
+   - Handle errors gracefully
+   - Implement timeouts
+   - Use secure defaults
+
+## Examples
+
+### Secure API Handling
+```python
+import requests
+from urllib.parse import urljoin
+from typing import Optional
+import os
+
+def fetch_api_data(endpoint: str, params: Optional[dict] = None) -> dict:
+    """Securely fetch data from API with proper error handling.
+    
+    Args:
+        endpoint: API endpoint path
+        params: Optional query parameters
+        
+    Returns:
+        API response data
+        
+    Raises:
+        APIError: If API request fails
+        ValidationError: If response validation fails
+    """
+    api_key = os.getenv('API_KEY')
+    if not api_key:
+        raise SecurityError("API key not configured")
+        
+    base_url = "https://api.torn.com/v2/"
+    url = urljoin(base_url, endpoint)
+    
+    try:
+        response = requests.get(
+            url,
+            params=params,
+            headers={'Authorization': f'Bearer {api_key}'},
+            timeout=30
+        )
+        response.raise_for_status()
+        
+        data = response.json()
+        validate_response(data)
+        return data
+        
+    except requests.exceptions.Timeout:
+        raise APIError("API request timed out")
+    except requests.exceptions.RequestException as e:
+        raise APIError(f"API request failed: {e}")
+```
+
+### Secure SQL Query
+```python
+from google.cloud import bigquery
+from typing import List, Any
+
+def query_member_data(member_ids: List[int]) -> List[dict]:
+    """Securely query member data using parameterized query.
+    
+    Args:
+        member_ids: List of member IDs to query
+        
+    Returns:
+        List of member data records
+    """
+    client = bigquery.Client()
+    
+    query = """
+        SELECT 
+            m.id,
+            m.name,
+            m.level
+        FROM `torncity-402423.torn_data.v2_faction_members` m
+        WHERE m.id IN UNNEST(@member_ids)
+    """
+    
+    job_config = bigquery.QueryJobConfig(
+        query_parameters=[
+            bigquery.ArrayQueryParameter(
+                "member_ids",
+                "INT64",
+                member_ids
+            )
+        ]
+    )
+    
+    try:
+        query_job = client.query(query, job_config=job_config)
+        return [dict(row) for row in query_job]
+    finally:
+        client.close()
+```
+
+## Version History
+- 1.0: Initial version
+- 1.1: Added TCdatalogger specific security examples 

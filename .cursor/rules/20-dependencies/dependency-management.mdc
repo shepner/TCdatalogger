@@ -1,0 +1,98 @@
+---
+description: Manage dependencies for the TCdatalogger project
+globs: ["**/package.json", "**/requirements.txt", "**/Dockerfile"]
+alwaysApply: true
+---
+# TCdatalogger Dependency Management
+
+Project-specific dependency management rules for TCdatalogger.
+
+<rule>
+name: dependency-management
+description: Enforce dependency management rules for TCdatalogger
+filters:
+  - type: file_pattern
+    pattern: "(package\\.json|requirements\\.txt|Dockerfile)$"
+
+actions:
+  - type: validate
+    conditions:
+      # Python dependencies
+      - pattern: "requirements.txt"
+        rules:
+          - "pandas>=2.0.0"  # Required for data processing
+          - "requests>=2.25.0"  # Required for API calls
+          - "python-dotenv>=1.0.0"  # Required for environment variables
+          - "SQLAlchemy>=2.0.0"  # Required for database operations
+      
+      # Node.js dependencies
+      - pattern: "package.json"
+        rules:
+          - '"type": "module"'  # Use ES modules
+          - '"engines": {"node": ">=18.0.0"}'  # Require Node.js 18+
+      
+      # Docker dependencies
+      - pattern: "Dockerfile"
+        rules:
+          - "FROM python:3.11-slim"  # Use slim Python image
+          - "COPY requirements.txt"  # Copy requirements first
+          - "RUN pip install"  # Install dependencies
+
+  - type: suggest
+    message: |
+      TCdatalogger requires specific dependency versions:
+      
+      Python:
+      - pandas >= 2.0.0
+      - requests >= 2.25.0
+      - python-dotenv >= 1.0.0
+      - SQLAlchemy >= 2.0.0
+      
+      Node.js:
+      - Node.js >= 18.0.0
+      - ES modules
+      
+      Docker:
+      - Python 3.11 slim image
+      - Multi-stage builds for production
+
+examples:
+  - input: |
+      # requirements.txt
+      pandas==1.5.0
+      requests==2.24.0
+    output: |
+      Dependencies need to be updated:
+      - pandas >= 2.0.0 required (current: 1.5.0)
+      - requests >= 2.25.0 required (current: 2.24.0)
+
+  - input: |
+      # package.json without type field
+      {
+        "name": "tcdatalogger",
+        "version": "1.0.0"
+      }
+    output: |
+      Missing required fields in package.json:
+      - Add "type": "module" for ES modules
+      - Add "engines" field to specify Node.js version
+
+metrics:
+  - name: dependency_violations
+    type: counter
+    labels: ["dependency_type", "rule"]
+  - name: dependency_updates
+    type: counter
+    labels: ["dependency_type"]
+  - name: validation_duration
+    type: histogram
+    labels: ["file_type"]
+
+metadata:
+  priority: high
+  version: 1.0.0
+  tags:
+    - dependencies
+    - workspace-specific
+    - tcdatalogger
+</rule> 

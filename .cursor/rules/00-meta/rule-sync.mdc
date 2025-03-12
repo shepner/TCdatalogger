@@ -1,0 +1,181 @@
+---
+description: Automatically sync and update rules from cursorrules.org
+globs: ["**/*.mdc"]
+alwaysApply: true
+config:
+  sync_interval_hours: 24
+  api_endpoint: "https://www.cursorrules.org/api"
+  categories:
+    - "Backend Development"
+    - "Frontend Frameworks"
+    - "Database and API"
+    - "Testing"
+    - "Tools and DevOps"
+    - "Language-Specific"
+---
+# Rule Synchronization
+
+Automatically check for updates and new rules from cursorrules.org.
+
+<rule>
+name: rule-sync
+description: Sync rules with cursorrules.org community repository
+filters:
+  - type: file_extension
+    pattern: "\\.mdc$"
+  - type: event
+    pattern: "(file_create|file_modify|daily_check)"
+
+actions:
+  - type: execute
+    command: |
+      # Create temporary directory for rule comparison
+      TEMP_DIR=$(mktemp -d)
+      RULES_DIR=".cursor/rules"
+      
+      # Fetch latest rules catalog
+      curl -s "${CURSOR_RULES_API:-https://www.cursorrules.org/api}/catalog" > "$TEMP_DIR/catalog.json"
+      
+      # Compare local rules with remote catalog
+      for rule in "$RULES_DIR"/**/*.mdc; do
+        rule_name=$(basename "$rule" .mdc)
+        remote_version=$(jq -r ".rules.\"$rule_name\".version" "$TEMP_DIR/catalog.json")
+        local_version=$(grep -A1 "version:" "$rule" | tail -n1 | tr -d ' ')
+        
+        if [[ "$remote_version" > "$local_version" ]]; then
+          echo "Update available for $rule_name: $local_version -> $remote_version"
+          # Download updated rule
+          curl -s "${CURSOR_RULES_API:-https://www.cursorrules.org/api}/rules/$rule_name" > "$TEMP_DIR/$rule_name.mdc"
+          # Backup existing rule
+          cp "$rule" "$rule.backup"
+          # Apply update
+          cp "$TEMP_DIR/$rule_name.mdc" "$rule"
+        fi
+      done
+      
+      # Check for new relevant rules
+      jq -r '.rules | keys[]' "$TEMP_DIR/catalog.json" | while read -r rule_name; do
+        if [[ ! -f "$RULES_DIR/**/$rule_name.mdc" ]]; then
+          category=$(jq -r ".rules.\"$rule_name\".category" "$TEMP_DIR/catalog.json")
+          if grep -q "$category" "$RULES_DIR/.categories"; then
+            echo "New rule available: $rule_name ($category)"
+            # Download new rule
+            mkdir -p "$RULES_DIR/$category"
+            curl -s "${CURSOR_RULES_API:-https://www.cursorrules.org/api}/rules/$rule_name" > "$RULES_DIR/$category/$rule_name.mdc"
+          fi
+        fi
+      done
+      
+      # Cleanup
+      rm -rf "$TEMP_DIR"
+
+  - type: suggest
+    message: |
+      Rule updates are available:
+      1. Review changes in .cursor/rules/**/*.backup
+      2. Accept or reject updates
+      3. Configure sync preferences:
+         ```bash
+         # Set custom API endpoint
+         export CURSOR_RULES_API="https://your-rules-mirror.com/api"
+         
+         # Set sync interval (in hours)
+         export CURSOR_RULES_SYNC_INTERVAL=12
+         ```
+
+  - type: monitor
+    conditions:
+      - pattern: "version:\\s*([0-9]+\\.[0-9]+\\.[0-9]+)"
+        action: "check_for_updates"
+      - pattern: "new_rule_detected"
+        action: "download_rule"
+      - pattern: "update_available"
+        action: "notify_user"
+
+functions:
+  check_for_updates: |
+    def check(rule_path):
+      """
+      Check if updates are available for a rule
+      Returns (has_update, new_version)
+      """
+      with open(rule_path) as f:
+        current = extract_version(f.read())
+      remote = fetch_remote_version(rule_path)
+      return semver_compare(remote, current), remote
+
+  download_rule: |
+    def download(rule_name, category):
+      """
+      Download a new rule from cursorrules.org
+      Returns success status
+      """
+      url = f"{API_ENDPOINT}/rules/{rule_name}"
+      response = requests.get(url)
+      if response.status_code == 200:
+        save_rule(category, rule_name, response.text)
+        return True
+      return False
+
+examples:
+  - input: |
+      # Local rule version
+      metadata:
+        version: 1.0.0
+      
+      # Remote catalog shows new version
+      {
+        "rules": {
+          "example-rule": {
+            "version": "1.1.0",
+            "category": "Testing"
+          }
+        }
+      }
+    output: |
+      Update available for example-rule: 1.0.0 -> 1.1.0
+      Downloading update...
+      Update applied. Backup saved as example-rule.mdc.backup
+
+  - input: |
+      # New rule available in catalog
+      {
+        "rules": {
+          "new-testing-rule": {
+            "version": "1.0.0",
+            "category": "Testing"
+          }
+        }
+      }
+      
+      # Local .categories file
+      Testing
+      Frontend Frameworks
+    output: |
+      New rule available: new-testing-rule (Testing)
+      Downloading rule...
+      Rule saved to .cursor/rules/Testing/new-testing-rule.mdc
+
+metrics:
+  - name: rules_synced
+    type: counter
+    labels: ["status", "category"]
+  - name: sync_errors
+    type: counter
+    labels: ["error_type"]
+  - name: update_available
+    type: gauge
+    labels: ["rule_name"]
+  - name: sync_latency
+    type: histogram
+    labels: ["operation"]
+
+metadata:
+  priority: high
+  version: 1.0.0
+  tags:
+    - synchronization
+    - community
+    - updates
+    - automation
+</rule> 
