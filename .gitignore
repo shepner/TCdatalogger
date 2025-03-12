@@ -81,7 +81,9 @@ Desktop.ini
 !package.json
 !package-lock.json
 !tsconfig.json
+!app/config/TC_API_config.json
 
 # Keep environment templates
 !.env-template
 .env*
+app/config/TC_API_key.txt
