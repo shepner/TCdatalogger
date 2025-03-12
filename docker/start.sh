@@ -22,6 +22,12 @@ check_required_files() {
     return $missing_files
 }
 
+# Create log directory if it doesn't exist
+mkdir -p /var/log/tcdatalogger
+
+# Initialize log file
+log "INFO: Starting TCdatalogger container"
+
 # Check for required files
 log "INFO: Checking for required configuration files..."
 if ! check_required_files; then
@@ -34,7 +40,9 @@ log "INFO: Setting up cron job..."
 cp /app/config/crontab /etc/cron.d/tcdatalogger
 chmod 0644 /etc/cron.d/tcdatalogger
 
-# Update crontab to use new log location
+# Update crontab to use correct paths and logging
+sed -i 's|python3|/usr/local/bin/python|g' /etc/cron.d/tcdatalogger
+sed -i 's|/app/main.py|/app/src/main.py|g' /etc/cron.d/tcdatalogger
 sed -i 's|/var/log/cron.log|/var/log/tcdatalogger/app.log|g' /etc/cron.d/tcdatalogger
 
 # Apply crontab
@@ -52,7 +60,7 @@ fi
 
 # Run the initial job
 log "INFO: Running initial job..."
-cd /app && /usr/local/bin/python /app/main.py >> /var/log/tcdatalogger/app.log 2>&1
+cd /app && /usr/local/bin/python /app/src/main.py >> /var/log/tcdatalogger/app.log 2>&1
 
 # Monitor logs and cron service
 log "INFO: Container startup complete. Monitoring logs..."

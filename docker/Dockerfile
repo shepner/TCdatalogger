@@ -9,26 +9,26 @@ RUN apt-get update && \
 # Set the working directory
 WORKDIR /app
 
-# Copy application files from src directory
-COPY src/app/ /app/app/
-COPY src/tests/ /app/tests/
-COPY src/main.py src/requirements.txt /app/
-
-# Create directory for config
-RUN mkdir -p /app/config
-
-# Install Python dependencies
+# Copy requirements first to leverage Docker cache
+COPY app/requirements.txt /app/
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Copy application files
+COPY app/src/ /app/src/
+COPY queries/ /app/queries/
+
+# Create directories
+RUN mkdir -p /app/config /app/var /var/log/tcdatalogger
+
 # Copy start script
-COPY start.sh /app/start.sh
+COPY docker/start.sh /app/start.sh
 RUN chmod +x /app/start.sh
 
 # Set environment variable for Python to buffer stdout/stderr
 ENV PYTHONUNBUFFERED=1
 
 # Create volume mount points
-VOLUME ["/app/config", "/var/log/tcdatalogger"]
+VOLUME ["/app/config", "/app/var", "/var/log/tcdatalogger"]
 
 # Start cron and tail logs
 CMD ["/app/start.sh"]
