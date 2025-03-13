@@ -165,13 +165,16 @@ def wait_for_next_poll(api_config: Dict) -> None:
     
     Args:
         api_config: API endpoint configuration dictionary containing the frequency
+        
+    Raises:
+        ValueError: If frequency is missing or invalid
     """
     if 'frequency' not in api_config:
-        logging.warning("No frequency specified for endpoint %s, using default of 15 minutes", 
-                       api_config['name'])
-        frequency = "PT15M"
-    else:
-        frequency = api_config['frequency']
+        raise ValueError(f"Missing frequency for endpoint {api_config['name']}")
+        
+    frequency = api_config['frequency']
+    if not frequency:
+        raise ValueError(f"Empty frequency for endpoint {api_config['name']}")
     
     try:
         interval = parse_iso_duration(frequency)
@@ -182,10 +185,7 @@ def wait_for_next_poll(api_config: Dict) -> None:
                         interval_seconds, api_config['name'])
             time.sleep(interval_seconds)
     except ValueError as e:
-        logging.error("Invalid frequency format for %s: %s", 
-                     api_config['name'], str(e))
-        # Use default 15-minute interval if frequency is invalid
-        time.sleep(900)  # 15 minutes in seconds
+        raise ValueError(f"Invalid frequency format '{frequency}' for endpoint {api_config['name']}: {str(e)}")
 
 def setup_logging() -> None:
     """Configure logging for the application.

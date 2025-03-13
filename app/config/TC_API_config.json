@@ -35,33 +35,33 @@
       "api_key": "default"
     },
     {
-      "name": "v2_faction_crimes_40832",
+      "name": "v2_faction_40832_crimes",
       "url": "https://api.torn.com/v2/faction/crimes?key={API_KEY}&cat=all&offset=0&sort=ASC",
-      "table": "torncity-402423.torn_data.v2_faction_crimes_40832",
+      "table": "torncity-402423.torn_data.v2_faction_40832_crimes",
       "frequency": "PT15M",
       "storage_mode": "replace",
       "api_key": "faction_40832"
     },
     {
-      "name": "v2_faction_crimes_17991",
+      "name": "v2_faction_17991_crimes",
       "url": "https://api.torn.com/v2/faction/crimes?key={API_KEY}&cat=all&offset=0&sort=ASC",
-      "table": "torncity-402423.torn_data.v2_faction_crimes_17991",
+      "table": "torncity-402423.torn_data.v2_faction_17991_crimes",
       "frequency": "PT15M",
       "storage_mode": "replace",
       "api_key": "faction_17991"
     },
     {
-      "name": "v2_faction_members_40832",
+      "name": "v2_faction_40832_members",
       "url": "https://api.torn.com/v2/faction/members?key={API_KEY}&striptags=true",
-      "table": "torncity-402423.torn_data.v2_faction_members_40832",
+      "table": "torncity-402423.torn_data.v2_faction_40832_members",
       "frequency": "PT15M",
       "storage_mode": "replace",
       "api_key": "faction_40832"
     },
     {
-      "name": "v2_faction_members_17991",
+      "name": "v2_faction_17991_members",
       "url": "https://api.torn.com/v2/faction/members?key={API_KEY}&striptags=true",
-      "table": "torncity-402423.torn_data.v2_faction_members_17991",
+      "table": "torncity-402423.torn_data.v2_faction_17991_members",
       "frequency": "PT15M",
       "storage_mode": "replace",
       "api_key": "faction_17991"
@@ -75,17 +75,17 @@
       "api_key": "faction_40832"
     },
     {
-      "name": "v2_faction_40832",
+      "name": "v2_faction_40832_basic",
       "url": "https://api.torn.com/v2/faction/40832/basic?key={API_KEY}",
-      "table": "torncity-402423.torn_data.v2_faction_40832",
+      "table": "torncity-402423.torn_data.v2_faction_40832_basic",
       "frequency": "PT1D",
       "storage_mode": "append",
       "api_key": "faction_40832"
     },
     {
-      "name": "v2_faction_17991_members",
-      "url": "https://api.torn.com/v2/faction/17991/members?key={API_KEY}",
-      "table": "torncity-402423.torn_data.v2_faction_17991_members",
+      "name": "v2_faction_17991_basic",
+      "url": "https://api.torn.com/v2/faction/17991/basic?key={API_KEY}",
+      "table": "torncity-402423.torn_data.v2_faction_17991_basic",
       "frequency": "PT1D",
       "storage_mode": "append",
       "api_key": "faction_17991"

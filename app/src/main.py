@@ -50,19 +50,34 @@ def setup_schedules(config: Dict, api_configs: list, api_keys: Dict[str, str]) -
         api_keys: Dictionary mapping API key identifiers to their values
     """
     for api_config in api_configs:
-        # Convert ISO duration to minutes
-        duration = isodate.parse_duration(api_config['frequency'])
-        minutes = int(duration.total_seconds() / 60)
+        # Get frequency with default value
+        frequency = api_config.get('frequency', 'PT15M')  # Default to 15 minutes if not specified
         
-        # Schedule the job
-        schedule.every(minutes).minutes.do(
-            schedule_endpoint, 
-            config=config, 
-            api_config=api_config, 
-            api_keys=api_keys
-        )
-        
-        logging.info(f"Scheduled {api_config['name']} to run every {minutes} minutes")
+        try:
+            # Convert ISO duration to minutes
+            duration = isodate.parse_duration(frequency)
+            minutes = int(duration.total_seconds() / 60)
+            
+            # Schedule the job
+            schedule.every(minutes).minutes.do(
+                schedule_endpoint, 
+                config=config, 
+                api_config=api_config, 
+                api_keys=api_keys
+            )
+            
+            logging.info(f"Scheduled {api_config['name']} to run every {minutes} minutes")
+        except (ValueError, isodate.ISO8601Error) as e:
+            logging.error(f"Invalid frequency format '{frequency}' for endpoint {api_config['name']}: {str(e)}")
+            # Use default frequency
+            minutes = 15  # Default to 15 minutes
+            schedule.every(minutes).minutes.do(
+                schedule_endpoint, 
+                config=config, 
+                api_config=api_config, 
+                api_keys=api_keys
+            )
+            logging.info(f"Scheduled {api_config['name']} with default frequency of {minutes} minutes")
 
 def main() -> NoReturn:
     """Main application entry point.
