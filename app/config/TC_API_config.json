@@ -32,7 +32,7 @@
       "table": "torncity-402423.torn_data.server_timestamp",
       "frequency": "PT15M",
       "storage_mode": "replace",
-      "api_key": "default"
+      "api_key": "faction_40832"
     },
     {
       "name": "v2_faction_40832_crimes",
@@ -78,7 +78,7 @@
       "name": "v2_faction_40832_basic",
       "url": "https://api.torn.com/v2/faction/40832/basic?key={API_KEY}",
       "table": "torncity-402423.torn_data.v2_faction_40832_basic",
-      "frequency": "PT1D",
+      "frequency": "P1D",
       "storage_mode": "append",
       "api_key": "faction_40832"
     },
@@ -86,7 +86,7 @@
       "name": "v2_faction_17991_basic",
       "url": "https://api.torn.com/v2/faction/17991/basic?key={API_KEY}",
       "table": "torncity-402423.torn_data.v2_faction_17991_basic",
-      "frequency": "PT1D",
+      "frequency": "P1D",
       "storage_mode": "append",
       "api_key": "faction_17991"
     },
@@ -94,7 +94,7 @@
       "name": "v2_faction_40832_currency",
       "url": "https://api.torn.com/v2/faction?selections=currency&key={API_KEY}",
       "table": "torncity-402423.torn_data.v2_faction_40832_currency",
-      "frequency": "PT1D",
+      "frequency": "P1D",
       "storage_mode": "append",
       "api_key": "faction_40832"
     },
@@ -102,7 +102,7 @@
       "name": "v2_faction_17991_currency",
       "url": "https://api.torn.com/v2/faction?selections=currency&key={API_KEY}",
       "table": "torncity-402423.torn_data.v2_faction_17991_currency",
-      "frequency": "PT1D",
+      "frequency": "P1D",
       "storage_mode": "append",
       "api_key": "faction_17991"
     }

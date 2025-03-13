@@ -9,7 +9,7 @@ doas chmod -R 775 /mnt/docker/tcdatalogger
 ENDSSH
 
 # Sync only the necessary files to d03.asyla.org
-rsync -av \
+rsync -av --force \
   --rsync-path="doas rsync" \
   app \
   docker \
@@ -21,5 +21,6 @@ ssh d03.asyla.org << 'ENDSSH'
 cd /mnt/docker/tcdatalogger
 doas chown -R docker:asyla .
 doas chmod -R 775 .
-doas docker compose up -d --build
+doas docker compose build --no-cache --pull
+doas docker compose up -d
 ENDSSH
