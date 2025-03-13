@@ -8,7 +8,6 @@ services:
     volumes:
       - ./app/config:/app/config:ro  # Read-only mount for sensitive configs
       - ./app/var:/app/var           # For persistent data
-      - ./queries:/app/queries:ro    # Read-only mount for SQL queries
     environment:
       - TZ=UTC                       # Ensure consistent timezone
     logging:

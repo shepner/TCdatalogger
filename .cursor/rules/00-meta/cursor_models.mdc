@@ -1,0 +1,214 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# cursor_models.mdc
+
+# Model definitions with capabilities and characteristics
+models:
+  claude:
+    - name: "claude-3-opus"
+      capabilities: ["complex_reasoning", "code_generation", "architecture"]
+      speed: "slow"
+      accuracy: "very_high"
+      cost: "high"
+    - name: "claude-3.5-haiku"
+      capabilities: ["quick_response", "simple_edits"]
+      speed: "fast"
+      accuracy: "medium"
+      cost: "low"
+    - name: "claude-3.5-sonnet"
+      capabilities: ["code_generation", "debugging", "explanation"]
+      speed: "medium"
+      accuracy: "high"
+      cost: "medium"
+    - name: "claude-3.7-sonnet"
+      capabilities: ["code_generation", "debugging", "explanation"]
+      speed: "medium"
+      accuracy: "very_high"
+      cost: "high"
+    - name: "claude-3.7-sonnet-thinking"
+      capabilities: ["complex_reasoning", "architecture", "deep_analysis"]
+      speed: "slow"
+      accuracy: "very_high"
+      cost: "high"
+
+  cursor:
+    - name: "cursor-fast"
+      capabilities: ["quick_edits", "simple_validation"]
+      speed: "very_fast"
+      accuracy: "medium"
+      cost: "low"
+    - name: "cursor-small"
+      capabilities: ["code_completion", "simple_edits"]
+      speed: "fast"
+      accuracy: "medium"
+      cost: "low"
+
+  deepseek:
+    - name: "deepseek-r1"
+      capabilities: ["code_generation"]
+      speed: "medium"
+      accuracy: "medium"
+      cost: "medium"
+    - name: "deepseek-v3"
+      capabilities: ["shell_scripting", "system_admin", "infrastructure"]
+      speed: "medium"
+      accuracy: "high"
+      cost: "medium"
+
+  gemini:
+    - name: "gemini-2.0-flash"
+      capabilities: ["quick_response", "simple_tasks"]
+      speed: "very_fast"
+      accuracy: "medium"
+      cost: "low"
+    - name: "gemini-2.0-flash-thinking-exp"
+      capabilities: ["quick_analysis", "code_generation"]
+      speed: "fast"
+      accuracy: "high"
+      cost: "medium"
+    - name: "gemini-2.0-pro-exp"
+      capabilities: ["google_cloud", "python", "infrastructure"]
+      speed: "medium"
+      accuracy: "high"
+      cost: "medium"
+
+  gpt:
+    - name: "gpt-3.5-turbo"
+      capabilities: ["code_generation", "explanation"]
+      speed: "fast"
+      accuracy: "medium"
+      cost: "low"
+    - name: "gpt-4"
+      capabilities: ["code_generation", "architecture"]
+      speed: "medium"
+      accuracy: "high"
+      cost: "high"
+    - name: "gpt-4-turbo-2024-04-09"
+      capabilities: ["code_generation", "architecture"]
+      speed: "medium"
+      accuracy: "very_high"
+      cost: "high"
+    - name: "gpt-4.5-preview"
+      capabilities: ["complex_reasoning", "architecture"]
+      speed: "medium"
+      accuracy: "very_high"
+      cost: "high"
+    - name: "gpt-4o"
+      capabilities: ["code_optimization", "performance"]
+      speed: "medium"
+      accuracy: "high"
+      cost: "high"
+    - name: "gpt-4o-mini"
+      capabilities: ["code_optimization"]
+      speed: "fast"
+      accuracy: "medium"
+      cost: "medium"
+
+  anthropic:
+    - name: "o1"
+      capabilities: ["code_editing"]
+      speed: "fast"
+      accuracy: "medium"
+      cost: "low"
+    - name: "o1-mini"
+      capabilities: ["quick_edits"]
+      speed: "very_fast"
+      accuracy: "medium"
+      cost: "low"
+    - name: "o1-preview"
+      capabilities: ["code_editing", "validation"]
+      speed: "fast"
+      accuracy: "high"
+      cost: "medium"
+    - name: "o3-mini"
+      capabilities: ["code_editing", "quick_fixes"]
+      speed: "very_fast"
+      accuracy: "medium"
+      cost: "low"
+
+# Task patterns and recommended model configurations
+task_patterns:
+  shell_scripting:
+    indicators:
+      - "#!/bin/bash"
+      - "chmod"
+      - "chown"
+      - "rsync"
+      - "ssh"
+      - "docker"
+      - "doas"
+      - "sudo"
+    errors:
+      - "Permission denied"
+      - "command not found"
+      - "No such file or directory"
+    recommend:
+      primary: ["deepseek-v3", "claude-3.5-sonnet"]
+      fallback: ["claude-3.7-sonnet-thinking"]
+      quick_edits: ["o3-mini"]
+
+  python_development:
+    indicators:
+      - "import"
+      - "def"
+      - "class"
+      - "async"
+      - "requirements.txt"
+      - "venv"
+    errors:
+      - "ModuleNotFoundError"
+      - "ImportError"
+      - "IndentationError"
+    recommend:
+      primary: ["claude-3.5-sonnet", "gemini-2.0-pro-exp"]
+      fallback: ["claude-3.7-sonnet-thinking"]
+      quick_edits: ["cursor-fast"]
+
+  infrastructure:
+    indicators:
+      - "docker-compose"
+      - "Dockerfile"
+      - "kubernetes"
+      - "terraform"
+      - "docker build"
+      - "docker run"
+    errors:
+      - "Image not found"
+      - "Volume mount error"
+      - "Network error"
+    recommend:
+      primary: ["claude-3.7-sonnet-thinking", "deepseek-v3"]
+      fallback: ["gemini-2.0-pro-exp"]
+      quick_edits: ["o3-mini"]
+
+  quick_edits:
+    indicators:
+      - "format"
+      - "indent"
+      - "typo"
+      - "rename"
+    recommend:
+      primary: ["o3-mini", "cursor-fast"]
+      disable: ["claude-3.7-sonnet-thinking", "claude-3-opus"]
+
+# Configuration thresholds and settings
+settings:
+  error_threshold: 3  # Number of errors before suggesting model change
+  pattern_threshold: 2  # Number of pattern matches before activating rule
+  cost_sensitivity: "medium"  # low, medium, high - affects model recommendations
+  performance_weight: 0.7  # Weight given to accuracy vs speed
+
+# Default configurations
+defaults:
+  primary: "claude-3.5-sonnet"
+  quick_edit: "o3-mini"
+  fallback: "claude-3.7-sonnet-thinking"
+
+# Update handling
+updates:
+  check_frequency: "daily"
+  auto_update_models: true
+  preserve_user_preferences: true 

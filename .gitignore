@@ -51,6 +51,7 @@ var/
 
 ### Secrets and Configuration ###
 # API Keys and Credentials
+app/config/TC_API_key.txt
 config/TC_API_key.txt
 config/credentials.json
 config/token.json
@@ -86,4 +87,3 @@ Desktop.ini
 # Keep environment templates
 !.env-template
 .env*
-app/config/TC_API_key.txt

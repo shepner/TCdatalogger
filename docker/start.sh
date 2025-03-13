@@ -35,6 +35,6 @@ if ! check_required_files; then
     exit 1
 fi
 
-# Start the Python application
+# Activate virtual environment and start the Python application
 log "INFO: Starting TCdatalogger application..."
-cd /app && exec /usr/local/bin/python /app/src/main.py 
+cd /app && exec /app/venv/bin/python /app/src/main.py 
