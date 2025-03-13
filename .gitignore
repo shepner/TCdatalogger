@@ -51,8 +51,8 @@ var/
 
 ### Secrets and Configuration ###
 # API Keys and Credentials
-app/config/TC_API_key.txt
-config/TC_API_key.txt
+app/config/TC_API_key.json
+config/TC_API_key.json
 config/credentials.json
 config/token.json
 config/crime_ids.txt

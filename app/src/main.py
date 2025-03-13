@@ -29,25 +29,25 @@ from app.common.common import setup_logging, load_config, process_api_endpoint
 from app.svcProviders.TornCity.TornCity import tc_load_api_key
 from app.svcProviders.Google.Google import drop_tables
 
-def schedule_endpoint(config: Dict, api_config: Dict, tc_api_key: str) -> None:
+def schedule_endpoint(config: Dict, api_config: Dict, api_keys: Dict[str, str]) -> None:
     """Schedule and process an API endpoint.
     
     Args:
         config: Application configuration
         api_config: API endpoint configuration
-        tc_api_key: Torn City API key
+        api_keys: Dictionary mapping API key identifiers to their values
     """
     logging.info(f"Processing endpoint: {api_config['name']}")
-    if not process_api_endpoint(config, api_config, tc_api_key):
+    if not process_api_endpoint(config, api_config, api_keys):
         logging.error(f"Failed to process endpoint: {api_config['name']}")
 
-def setup_schedules(config: Dict, api_configs: list, tc_api_key: str) -> None:
+def setup_schedules(config: Dict, api_configs: list, api_keys: Dict[str, str]) -> None:
     """Set up schedules for all endpoints.
     
     Args:
         config: Application configuration
         api_configs: List of API endpoint configurations
-        tc_api_key: Torn City API key
+        api_keys: Dictionary mapping API key identifiers to their values
     """
     for api_config in api_configs:
         # Convert ISO duration to minutes
@@ -59,7 +59,7 @@ def setup_schedules(config: Dict, api_configs: list, tc_api_key: str) -> None:
             schedule_endpoint, 
             config=config, 
             api_config=api_config, 
-            tc_api_key=tc_api_key
+            api_keys=api_keys
         )
         
         logging.info(f"Scheduled {api_config['name']} to run every {minutes} minutes")
@@ -69,13 +69,13 @@ def main() -> NoReturn:
     
     This function:
     1. Initializes logging
-    2. Loads configuration and API key
+    2. Loads configuration and API keys
     3. Sets up schedules for each endpoint
     4. Runs the scheduler
     
     The function will exit with status code 1 if:
     - Configuration cannot be loaded
-    - API key is invalid
+    - API keys are invalid
     
     Returns:
         NoReturn: Function runs indefinitely unless error occurs
@@ -104,11 +104,11 @@ def main() -> NoReturn:
             logging.error("Failed to load configuration")
             sys.exit(1)
             
-        # Load API key
-        api_key_path = os.path.join(config['config_dir'], 'TC_API_key.txt')
-        tc_api_key = tc_load_api_key(api_key_path)
-        if not tc_api_key:
-            logging.error("Failed to load API key")
+        # Load API keys
+        api_key_path = os.path.join(config['config_dir'], 'TC_API_key.json')
+        api_keys = tc_load_api_key(api_key_path)
+        if not api_keys:
+            logging.error("Failed to load API keys")
             sys.exit(1)
             
         # Load API configuration
@@ -132,12 +132,12 @@ def main() -> NoReturn:
             logging.info("All tables dropped")
             
         # Set up schedules for all endpoints
-        setup_schedules(config, api_configs, tc_api_key)
+        setup_schedules(config, api_configs, api_keys)
         
         # Run all jobs immediately on startup
         logging.info("Running initial jobs...")
         for api_config in api_configs:
-            schedule_endpoint(config, api_config, tc_api_key)
+            schedule_endpoint(config, api_config, api_keys)
             
         # Run the scheduler
         logging.info("Starting scheduler...")

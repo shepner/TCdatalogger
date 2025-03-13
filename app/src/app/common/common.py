@@ -232,13 +232,13 @@ def load_config(config_directories: List[str]) -> Optional[Dict]:
             
     return config
 
-def process_api_endpoint(config: Dict, api_config: Dict, tc_api_key: str) -> bool:
+def process_api_endpoint(config: Dict, api_config: Dict, api_keys: Dict[str, str]) -> bool:
     """Process a single API endpoint and upload data to BigQuery.
     
     Args:
         config: Application configuration dictionary.
         api_config: API endpoint configuration dictionary.
-        tc_api_key: Torn City API key.
+        api_keys: Dictionary mapping API key identifiers to their values.
         
     Returns:
         bool: True if processing was successful, False otherwise.
@@ -246,6 +246,13 @@ def process_api_endpoint(config: Dict, api_config: Dict, tc_api_key: str) -> boo
     global _server_timestamp
     
     try:
+        # Get the API key identifier for this endpoint
+        api_key_id = api_config.get('api_key', 'default')
+        if api_key_id not in api_keys:
+            logging.error("API key identifier '%s' not found for endpoint %s", 
+                         api_key_id, api_config['name'])
+            return False
+            
         # Mask sensitive data in logs
         masked_config = {
             **api_config,
@@ -256,7 +263,7 @@ def process_api_endpoint(config: Dict, api_config: Dict, tc_api_key: str) -> boo
                      {k: v for k, v in masked_config.items() if k != 'url'})
         
         # Fetch data from API
-        data = tc_fetch_api_data(api_config["url"], tc_api_key)
+        data = tc_fetch_api_data(api_config["url"], api_key_id, api_keys)
         if not data:
             logging.error("Failed to fetch data for %s", api_config['name'])
             return False

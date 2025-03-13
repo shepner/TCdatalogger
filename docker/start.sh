@@ -10,7 +10,7 @@ check_required_files() {
     local missing_files=0
     
     # Check for required config files
-    for file in "credentials.json" "TC_API_key.txt" "TC_API_config.json"; do
+    for file in "credentials.json" "TC_API_key.json" "TC_API_config.json"; do
         if [ ! -f "/app/config/$file" ]; then
             log "ERROR: Required file /app/config/$file not found"
             missing_files=$((missing_files + 1))

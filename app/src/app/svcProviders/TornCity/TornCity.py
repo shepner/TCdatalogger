@@ -17,25 +17,29 @@ import re
 import requests
 
 
-def tc_load_api_key(tc_api_key_file: str) -> Optional[str]:
-    """Load the Torn City API key from a file.
+def tc_load_api_key(tc_api_key_file: str) -> Optional[Dict[str, str]]:
+    """Load the Torn City API keys from a JSON file.
 
     Args:
-        tc_api_key_file: Path to the file containing the API key.
+        tc_api_key_file: Path to the file containing the API keys.
 
     Returns:
-        str: The API key if successfully loaded, None otherwise.
+        Dict[str, str]: Dictionary mapping API key identifiers to their values,
+                       or None if loading fails.
 
     Example:
-        >>> api_key = tc_load_api_key("config/TC_API_key.txt")
-        >>> if api_key:
-        ...     print("API key loaded successfully")
+        >>> api_keys = tc_load_api_key("config/TC_API_key.json")
+        >>> if api_keys:
+        ...     print("API keys loaded successfully")
     """
     try:
         with open(tc_api_key_file, "r") as f:
-            return f.read().strip()  # Ensure no extra spaces/newlines
+            return json.load(f)
     except FileNotFoundError:
         logging.error("API key file '%s' not found", tc_api_key_file)
+        return None
+    except json.JSONDecodeError:
+        logging.error("Invalid JSON format in API key file: %s", tc_api_key_file)
         return None
     except Exception as e:
         logging.error("Error reading API key file: %s", str(e))
@@ -56,19 +60,27 @@ def mask_sensitive_url(url: str) -> str:
     return masked_url
 
 
-def tc_fetch_api_data(url: str, api_key: str) -> Optional[Dict]:
+def tc_fetch_api_data(url: str, api_key: str, api_keys: Dict[str, str]) -> Optional[Dict]:
     """Fetch data from Torn City API.
     
     Args:
         url: API endpoint URL with {API_KEY} placeholder.
-        api_key: Torn City API key.
+        api_key: API key identifier (e.g., 'faction_40832').
+        api_keys: Dictionary mapping API key identifiers to their values.
         
     Returns:
         Optional[Dict]: API response data if successful, None otherwise.
     """
     try:
+        # Get the actual API key value
+        if api_key not in api_keys:
+            logging.error("API key identifier '%s' not found in configuration", api_key)
+            return None
+            
+        actual_key = api_keys[api_key]
+        
         # Replace API key placeholder
-        full_url = url.replace("{API_KEY}", api_key)
+        full_url = url.replace("{API_KEY}", actual_key)
         
         # Log masked URL
         logging.info("Fetching data from: %s", mask_sensitive_url(full_url))
@@ -81,8 +93,8 @@ def tc_fetch_api_data(url: str, api_key: str) -> Optional[Dict]:
     except requests.exceptions.RequestException as e:
         # Mask any sensitive data in error message
         error_msg = str(e)
-        if api_key in error_msg:
-            error_msg = error_msg.replace(api_key, "***")
+        if actual_key in error_msg:
+            error_msg = error_msg.replace(actual_key, "***")
         logging.error("API request failed: %s", error_msg)
         return None
 

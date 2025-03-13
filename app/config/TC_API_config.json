@@ -19,6 +19,10 @@
     "  append = Add new records to existing data (default)",
     "  replace = Replace all existing data with new data",
     "",
+    "API Keys:",
+    "  faction_40832 = API key for faction 40832",
+    "  faction_17991 = API key for faction 17991",
+    "",
     "See: https://en.wikipedia.org/wiki/ISO_8601#Durations"
   ],
   "endpoints": [
@@ -27,28 +31,64 @@
       "url": "https://api.torn.com/torn/?selections=timestamp&key={API_KEY}",
       "table": "torncity-402423.torn_data.server_timestamp",
       "frequency": "PT15M",
-      "storage_mode": "replace"
+      "storage_mode": "replace",
+      "api_key": "default"
     },
     {
       "name": "v2_faction_crimes",
       "url": "https://api.torn.com/v2/faction/crimes?key={API_KEY}&cat=all&offset=0&sort=ASC",
       "table": "torncity-402423.torn_data.v2_faction_crimes",
       "frequency": "PT15M",
-      "storage_mode": "replace"
+      "storage_mode": "replace",
+      "api_key": "faction_40832"
     },
     {
       "name": "v2_faction_members",
       "url": "https://api.torn.com/v2/faction/members?key={API_KEY}&striptags=true",
       "table": "torncity-402423.torn_data.v2_faction_members",
       "frequency": "PT15M",
-      "storage_mode": "replace"
+      "storage_mode": "replace",
+      "api_key": "faction_40832"
     },
     {
       "name": "v2_torn_items",
       "url": "https://api.torn.com/v2/torn/items?key={API_KEY}",
       "table": "torncity-402423.torn_data.v2_torn_items",
       "frequency": "PT24H",
-      "storage_mode": "replace"
+      "storage_mode": "replace",
+      "api_key": "faction_40832"
+    },
+    {
+      "name": "v2_faction_40832",
+      "url": "https://api.torn.com/v2/faction/40832/basic?key={API_KEY}",
+      "table": "torncity-402423.torn_data.v2_faction_40832",
+      "frequency": "PT1D",
+      "storage_mode": "append",
+      "api_key": "faction_40832"
+    },
+    {
+      "name": "v2_faction_17991_members",
+      "url": "https://api.torn.com/v2/faction/17991/members?key={API_KEY}",
+      "table": "torncity-402423.torn_data.v2_faction_17991_members",
+      "frequency": "PT1D",
+      "storage_mode": "append",
+      "api_key": "faction_17991"
+    },
+    {
+      "name": "v2_faction_40832_currency",
+      "url": "https://api.torn.com/v2/faction?selections=currency&key={API_KEY}",
+      "table": "torncity-402423.torn_data.v2_faction_40832_currency",
+      "frequency": "PT1D",
+      "storage_mode": "append",
+      "api_key": "faction_40832"
+    },
+    {
+      "name": "v2_faction_17991_currency",
+      "url": "https://api.torn.com/v2/faction?selections=currency&key={API_KEY}",
+      "table": "torncity-402423.torn_data.v2_faction_17991_currency",
+      "frequency": "PT1D",
+      "storage_mode": "append",
+      "api_key": "faction_17991"
     }
   ]
 } 
