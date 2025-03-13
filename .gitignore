@@ -83,7 +83,12 @@ Desktop.ini
 !package-lock.json
 !tsconfig.json
 !app/config/TC_API_config.json
+!tests/**/*.json
 
 # Keep environment templates
 !.env-template
 .env*
+
+# Keep test files
+!tests/
+!tests/**/*.py
