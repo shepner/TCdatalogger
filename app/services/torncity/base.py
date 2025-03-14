@@ -18,7 +18,7 @@ from typing import Dict, Optional, Any, List
 import pandas as pd
 from google.cloud import monitoring_v3, bigquery
 
-from app.services.google.client import BigQueryClient
+from app.services.google.bigquery.client import BigQueryClient
 from app.services.torncity.client import TornClient
 
 
@@ -55,10 +55,7 @@ class BaseEndpointProcessor(ABC):
         
         # Initialize clients
         self.torn_client = TornClient(config["tc_api_key_file"])
-        self.bq_client = BigQueryClient(
-            project_id=os.getenv('GCP_PROJECT_ID'),
-            credentials_file=config.get('gcp_credentials_file')
-        )
+        self.bq_client = BigQueryClient(config)
         
         # Initialize monitoring
         self.monitoring_client = monitoring_v3.MetricServiceClient()
