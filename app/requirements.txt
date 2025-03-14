@@ -7,4 +7,5 @@ pandas-gbq
 pandas
 requests
 schedule
-isodate 
+isodate
+tenacity 
