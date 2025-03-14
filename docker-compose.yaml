@@ -6,17 +6,25 @@ services:
     container_name: tcdatalogger
     restart: unless-stopped
     volumes:
-      - ./app/config:/app/config:ro  # Read-only mount for sensitive configs
-      - ./app/var:/app/var           # For persistent data
+      - ./config:/config:ro  # Move sensitive configs outside app directory
+      - ./var/log:/var/log/tcdatalogger  # Simplified log path
     environment:
-      - TZ=UTC                       # Ensure consistent timezone
+      - TZ=UTC
+      - PYTHONUNBUFFERED=1
+      - COLUMNS=200
+      - CONFIG_DIR=/config
+      - GCP_PROJECT_ID=${GCP_PROJECT_ID}
+      - BIGQUERY_DATASET=${BIGQUERY_DATASET}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
     logging:
       driver: "json-file"
       options:
-        max-size: "10m"             # Limit log file size
-        max-file: "3"               # Keep only last 3 log files
+        max-size: "10m"
+        max-file: "3"
+        tag: "{{.Name}}"
+        mode: "non-blocking"
     healthcheck:
-      test: ["CMD", "ps", "aux", "|", "grep", "[c]ron"]
+      test: ["CMD", "ps", "aux", "|", "grep", "[p]ython"]
       interval: 5m
       timeout: 10s
       retries: 3 

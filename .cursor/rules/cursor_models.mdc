@@ -106,8 +106,6 @@ models:
       speed: "fast"
       accuracy: "medium"
       cost: "medium"
-
-  anthropic:
     - name: "o1"
       capabilities: ["code_editing"]
       speed: "fast"

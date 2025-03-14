@@ -1,6 +1,6 @@
 # TCdatalogger
 
-A Python application for collecting Torn City API data and storing it in Google BigQuery.
+A Python application for collecting Torn City API data and storing it in Google BigQuery.  Generated using Cursor to better learn the tool and to try vibe coding
 
 ## Overview
 
@@ -30,25 +30,40 @@ This package contains modules for:
 ## Project Structure
 
 ```
-TCdatalogger/
-├── config/                  # Configuration files (not in repo)
-│   ├── credentials.json     # GCP credentials
-│   ├── TC_API_key.txt      # Torn City API key
-│   ├── TC_API_config.json  # API endpoint configuration
-│   └── crontab             # Cron schedule configuration
-├── var/
-│   └── log/
-│       └── tcdatalogger/   # Application logs (not in repo)
-│           └── app.log     # Combined application and cron logs
-├── Dockerfile              # Container definition
-├── start.sh               # Container startup script
-└── src/                    # Source code
-    ├── app/                # Application package
-    │   ├── common/        # Common utilities
-    │   └── svcProviders/  # Service integrations
-    ├── tests/             # Unit tests
-    ├── requirements.txt   # Python dependencies
-    └── main.py           # Application entry point
+TCdatalogger/                          # Root directory
+├── app/                               # Main application code
+│   ├── core/                          # Core application logic
+│   │   ├── common.py                  # Shared utilities
+│   │   ├── scheduler.py               # Central scheduler service
+│   │   └── main.py                    # Application entry point
+│   ├── services/                      # External service integrations
+│   │   ├── google/                    # Google Cloud services
+│   │   │   └── client.py              # BigQuery client
+│   │   └── torncity/                  # Torn City API
+│   │       ├── client.py              # API client
+│   │       ├── base.py                # Base endpoint processor
+│   │       ├── registry.py            # Endpoint processor registry
+│   │       └── endpoints/             # Endpoint-specific processors
+│   │           ├── crimes.py          # Crimes endpoint processor
+│   │           ├── members.py         # Members endpoint processor
+│   │           ├── items.py           # Items endpoint processor
+│   │           ├── currency.py        # Currency endpoint processor
+│   │           └── basic.py           # Basic endpoint processor
+│   └── models/                        # Data models and schemas
+├── config/                            # Configuration (not in repo)
+│   ├── credentials.json               # GCP credentials
+│   ├── TC_API_key.txt                 # Torn City API key
+│   ├── TC_API_config.json             # API endpoint configuration
+│   └── crontab                        # Cron schedule configuration
+├── tests/                             # Test suite
+│   ├── unit/                          # Unit tests
+│   ├── integration/                   # Integration tests
+│   └── fixtures/                      # Test fixtures
+├── docker/                            # Docker-related files
+└── var/                               # Variable data directory
+    └── log/                           # Log directory
+        └── tcdatalogger/              # Application logs (not in repo)
+            └── app.log                # Combined application and cron logs
 ```
 
 ## Docker Deployment
