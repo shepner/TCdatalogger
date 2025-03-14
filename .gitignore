@@ -22,7 +22,6 @@ lib/
 lib64/
 parts/
 sdist/
-var/
 wheels/
 *.egg-info/
 .installed.cfg
@@ -51,11 +50,8 @@ var/
 
 ### Secrets and Configuration ###
 # API Keys and Credentials
-app/config/TC_API_key.json
 config/TC_API_key.json
 config/credentials.json
-config/token.json
-config/crime_ids.txt
 *.pem
 *.key
 *.crt
@@ -77,18 +73,35 @@ Desktop.ini
 ### Project Specific ###
 # Flask
 .flaskenv
-# BigQuery
+
+# BigQuery and JSON files
+# Ignore all JSON files by default
 *.json
+# But track these specific JSON files
+!config/TC_API_config.json
 !package.json
 !package-lock.json
 !tsconfig.json
-!app/config/TC_API_config.json
 !tests/**/*.json
 
 # Keep environment templates
 !.env-template
 .env*
 
+# Runtime data
+var/
+data/
+
 # Keep test files
 !tests/
-!tests/**/*.py
+
+# Keep shell scripts
+!*.sh
+
+# Keep Docker files
+!docker-compose.yaml
+!Dockerfile*
+
+# Keep documentation
+!*.md
+!LICENSE
