@@ -1,0 +1,30 @@
+{
+    "1": {
+        "name": "Flower",
+        "description": "A beautiful flower",
+        "effect": "No effect",
+        "requirement": "None",
+        "type": "Flower",
+        "weapon_type": null,
+        "buy_price": 100,
+        "sell_price": 50,
+        "market_value": 75,
+        "circulation": 1000,
+        "image": "flower.png",
+        "timestamp": 1234567890
+    },
+    "2": {
+        "name": "Baseball Bat",
+        "description": "A wooden baseball bat",
+        "effect": "+5 Attack",
+        "requirement": "Level 1",
+        "type": "Melee",
+        "weapon_type": "Clubbing",
+        "buy_price": 250,
+        "sell_price": 100,
+        "market_value": 200,
+        "circulation": 5000,
+        "image": "bat.png",
+        "timestamp": 1234567890
+    }
+} 

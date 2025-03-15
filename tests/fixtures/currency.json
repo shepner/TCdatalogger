@@ -1,0 +1,18 @@
+{
+    "1": {
+        "name": "Points",
+        "buy_price": 45000,
+        "sell_price": 44500,
+        "circulation": 1000000,
+        "market_value": 44750,
+        "timestamp": 1234567890
+    },
+    "2": {
+        "name": "Swiss Franc",
+        "buy_price": 1.05,
+        "sell_price": 0.95,
+        "circulation": 500000,
+        "market_value": 1.00,
+        "timestamp": 1234567890
+    }
+} 

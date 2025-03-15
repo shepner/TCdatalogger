@@ -1,0 +1,20 @@
+{
+    "1": {
+        "name": "TestUser1",
+        "level": 10,
+        "status": {"state": "Okay", "description": ""},
+        "last_action": {"status": "Online", "timestamp": 1234567890},
+        "faction": {"position": "Member", "faction_id": 123},
+        "life": {"current": 100, "maximum": 100},
+        "timestamp": 1234567890
+    },
+    "2": {
+        "name": "TestUser2",
+        "level": 20,
+        "status": {"state": "Hospital", "description": "Hospitalized"},
+        "last_action": {"status": "Offline", "timestamp": 1234567880},
+        "faction": null,
+        "life": {"current": 50, "maximum": 100},
+        "timestamp": 1234567890
+    }
+} 
