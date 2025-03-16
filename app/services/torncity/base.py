@@ -59,7 +59,7 @@ class BaseEndpointProcessor(ABC):
         
         # Initialize monitoring
         self.monitoring_client = monitoring_v3.MetricServiceClient()
-        self.project_path = self.monitoring_client.project_path(
+        self.project_path = self.monitoring_client.common_project_path(
             os.getenv('GCP_PROJECT_ID')
         )
 
@@ -209,11 +209,13 @@ class BaseEndpointProcessor(ABC):
             schema: BigQuery table schema
         """
         try:
+            # Construct fully qualified table ID
+            table_id = f"{self.bq_client.project_id}.{self.config['dataset']}.{self.table}"
+            
             self.bq_client.upload_dataframe(
                 df=df,
-                table_id=self.table,
-                schema=schema,
-                write_mode=self.storage_mode
+                table_id=table_id,
+                write_disposition=self.storage_mode
             )
             
             # Record upload metrics

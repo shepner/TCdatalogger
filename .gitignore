@@ -92,6 +92,8 @@ Desktop.ini
 var/
 data/
 
+# test data to be ignored
+/tests/coverage/
 # Keep test files
 !tests/
 
@@ -105,3 +107,9 @@ data/
 # Keep documentation
 !*.md
 !LICENSE
+
+# Coverage reports
+tests/coverage/
+.coverage
+coverage.xml
+htmlcov/

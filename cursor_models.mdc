@@ -1,0 +1,5 @@
+- name: "claude-3.7-sonnet"
+  capabilities: ["code_generation", "debugging", "explanation"]
+  speed: "medium"
+  accuracy: "very_high"
+  cost: "very_high" 
