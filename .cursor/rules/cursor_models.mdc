@@ -1,13 +1,36 @@
 ---
-description: 
+description: penai
 globs: 
 alwaysApply: false
 ---
 # cursor_models.mdc
 
+
+# Pricing info (https://www.cursor.com/pricing-history)
+# Chat, Cmd-K, Terminal Cmd-K, and Context Chat with claude-3-opus: 10 requests per day included in Pro/Business, 10 cents per request after that.
+# Chat, Cmd-K, Terminal Cmd-K, and Context Chat with o1: 40 cents per request.
+# Chat, Cmd-K, Terminal Cmd-K, and Context Chat with o1-mini: 10 requests per day included in Pro/Business, 10 cents per request after that.
+# Chat, Cmd-K, Terminal Cmd-K, and Context Chat with gpt-4.5-preview: 200 cents per request.
+# Long context chat with claude-3-haiku-200k: 10 requests per day included in Pro/Business, 10 cents per request after that.
+# Long context chat with claude-3-sonnet-200k: 10 requests per day included in Pro/Business, 20 cents per request after that.
+# Long context chat with claude-3-5-sonnet-200k: 10 requests per day included in Pro/Business, 20 cents per request after that.
+# Long context chat with gemini-1.5-flash-500k: 10 requests per day included in Pro/Business, 10 cents per request after that.
+# Long context chat with gpt-4o-128k: 10 requests per day included in Pro/Business, 10 cents per request after that.
+# Bug finder: priced upfront based on the size of the diff. Currently experimental; expect the price to go down in the future.
+# Fast premium models: As many fast premium requests as are included in your plan, 4 cents per request after that.
+# Fast premium models (Haiku): As many fast premium requests as are included in your plan, 1 cent per request after that.
+# Anything not mentioned above is included in your subscription and will not be charged for. See pricing history
+
+cost_scale:
+  - very_high: ">=$.20"
+    high: "~$.10"
+    medium: "~$.04"
+    low: "~$.01"
+    free: "$0"
+
 # Model definitions with capabilities and characteristics
 models:
-  claude:
+  anthropic:
     - name: "claude-3-opus"
       capabilities: ["complex_reasoning", "code_generation", "architecture"]
       speed: "slow"
@@ -17,22 +40,22 @@ models:
       capabilities: ["quick_response", "simple_edits"]
       speed: "fast"
       accuracy: "medium"
-      cost: "low"
+      cost: "high"
     - name: "claude-3.5-sonnet"
       capabilities: ["code_generation", "debugging", "explanation"]
       speed: "medium"
       accuracy: "high"
-      cost: "medium"
+      cost: "very_high"
     - name: "claude-3.7-sonnet"
       capabilities: ["code_generation", "debugging", "explanation"]
       speed: "medium"
       accuracy: "very_high"
-      cost: "high"
+      cost: "medium"
     - name: "claude-3.7-sonnet-thinking"
       capabilities: ["complex_reasoning", "architecture", "deep_analysis"]
       speed: "slow"
       accuracy: "very_high"
-      cost: "high"
+      cost: "very_high"
 
   cursor:
     - name: "cursor-fast"
@@ -46,19 +69,19 @@ models:
       accuracy: "medium"
       cost: "low"
 
-  deepseek:
+  fireworks:
     - name: "deepseek-r1"
       capabilities: ["code_generation"]
       speed: "medium"
       accuracy: "medium"
-      cost: "medium"
+      cost: "medium"  # $.04; 1 fast credit
     - name: "deepseek-v3"
       capabilities: ["shell_scripting", "system_admin", "infrastructure"]
       speed: "medium"
       accuracy: "high"
       cost: "medium"
 
-  gemini:
+  google:
     - name: "gemini-2.0-flash"
       capabilities: ["quick_response", "simple_tasks"]
       speed: "very_fast"
@@ -75,7 +98,7 @@ models:
       accuracy: "high"
       cost: "medium"
 
-  gpt:
+  openai:
     - name: "gpt-3.5-turbo"
       capabilities: ["code_generation", "explanation"]
       speed: "fast"
@@ -95,7 +118,7 @@ models:
       capabilities: ["complex_reasoning", "architecture"]
       speed: "medium"
       accuracy: "very_high"
-      cost: "high"
+      cost: "very_high"
     - name: "gpt-4o"
       capabilities: ["code_optimization", "performance"]
       speed: "medium"
@@ -110,12 +133,12 @@ models:
       capabilities: ["code_editing"]
       speed: "fast"
       accuracy: "medium"
-      cost: "low"
+      cost: "very_high"
     - name: "o1-mini"
       capabilities: ["quick_edits"]
       speed: "very_fast"
       accuracy: "medium"
-      cost: "low"
+      cost: "high"
     - name: "o1-preview"
       capabilities: ["code_editing", "validation"]
       speed: "fast"
@@ -124,6 +147,13 @@ models:
     - name: "o3-mini"
       capabilities: ["code_editing", "quick_fixes"]
       speed: "very_fast"
+      accuracy: "medium"
+      cost: "low"
+
+  xai:
+    - name: "grok-2"
+      capabilities: ["images"]
+      speed: "medium"
       accuracy: "medium"
       cost: "low"
 
