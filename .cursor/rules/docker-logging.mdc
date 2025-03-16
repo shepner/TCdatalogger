@@ -1,3 +1,8 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
 # Docker Logging Best Practices
 
 Guidelines for viewing and analyzing Docker logs effectively.

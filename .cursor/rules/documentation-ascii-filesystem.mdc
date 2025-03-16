@@ -1,3 +1,8 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
 # ASCII Filesystem Representation Guidelines
 
 Rules for ensuring consistent and readable ASCII-based filesystem representations.

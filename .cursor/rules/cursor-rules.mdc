@@ -23,8 +23,8 @@ actions:
   - type: reject
     conditions:
       # Generic directory structure validation
-      - pattern: "^(?!\\.\\/\\.cursor\\/rules\\/${config.patterns.directory_prefix}\\/)"
-        message: "Place rule files in appropriate numbered category directories (e.g., 10-code/, 20-data/)"
+      - pattern: "^(?!\\.\\/\\.cursor\\/rules\\)"
+        message: "Place rule files in appropriate directory"
       # Performance-optimized validation
       - pattern: "^(?!.*\\.mdc$)"
         message: "Use .mdc extension for cursor rule files"
@@ -67,29 +67,6 @@ actions:
          ${generate_dependency_guidelines()}
 
 # Generic helper functions
-functions:
-  generate_directory_structure: |
-    def generate():
-      return """
-      00-meta/          # Meta rules about rules
-      10-code/          # Code organization and quality
-      20-data/          # Data handling and processing
-      30-ops/           # Operations and deployment
-      40-version-control/ # Version control and licensing
-      """
-
-  generate_subdirectory_guidelines: |
-    def generate():
-      return """
-      Each main category should have logical subdirectories:
-      ```
-      10-code/
-      ├── organization/  # Code style and structure
-      ├── quality/       # Error handling, logging
-      └── security/      # Security practices
-      ```
-      """
-
   generate_naming_guidelines: |
     def generate():
       return """
@@ -97,16 +74,6 @@ functions:
       - Group related rules in subdirectories
       - Use descriptive, specific names
       - Follow category prefixes
-      """
-
-  generate_hierarchy_guidelines: |
-    def generate():
-      return """
-      - Meta rules (00-meta)
-      - Code rules (10-code)
-      - Data rules (20-data)
-      - Operations rules (30-ops)
-      - Version control rules (40-version-control)
       """
 
   generate_dependency_guidelines: |
@@ -120,15 +87,15 @@ functions:
 
 examples:
   - input: |
-      # Bad: Incorrect organization
+      # Good: Proper organization
       .cursor/rules/error_handling.mdc
       .cursor/rules/DataTypes.md
       .cursor/rules/random/logging.txt
 
-      # Good: Proper hierarchical organization
+      # Bad: Improper organization
       .cursor/rules/00-meta/cursor-rules.mdc
-      .cursor/rules/10-code/quality/error-handling.mdc
-      .cursor/rules/20-data/schema/data-types.mdc
+      /rules/error-handling.mdc
+      data-types.mdc
       .cursor/rules/30-ops/docker/docker-optimization.mdc
 
 # Performance monitoring

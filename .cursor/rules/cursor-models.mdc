@@ -6,7 +6,9 @@ alwaysApply: false
 # cursor_models.mdc
 
 
-# Pricing info (https://www.cursor.com/pricing-history)
+# Pricing info
+# https://www.cursor.com/pricing-history
+#
 # Chat, Cmd-K, Terminal Cmd-K, and Context Chat with claude-3-opus: 10 requests per day included in Pro/Business, 10 cents per request after that.
 # Chat, Cmd-K, Terminal Cmd-K, and Context Chat with o1: 40 cents per request.
 # Chat, Cmd-K, Terminal Cmd-K, and Context Chat with o1-mini: 10 requests per day included in Pro/Business, 10 cents per request after that.
@@ -74,7 +76,7 @@ models:
       capabilities: ["code_generation"]
       speed: "medium"
       accuracy: "medium"
-      cost: "medium"  # $.04; 1 fast credit
+      cost: "medium"
     - name: "deepseek-v3"
       capabilities: ["shell_scripting", "system_admin", "infrastructure"]
       speed: "medium"
