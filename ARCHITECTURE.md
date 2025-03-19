@@ -234,92 +234,108 @@ TCdatalogger/
 
    b. Currency Table (`torn.currency`):
    ```
+   Schema for v2_faction_*_currency:
    - server_timestamp: TIMESTAMP (REQUIRED) - server time
-   - currency_id: INTEGER (REQUIRED) - Currency identifier
-   - name: STRING (REQUIRED) - Currency name
-   - buy_price: FLOAT - Current buy price
-   - sell_price: FLOAT - Current sell price
-   - circulation: INTEGER - Amount in circulation
-   
+   - faction_id: INTEGER (REQUIRED)
+   - points: INTEGER
+   - money: INTEGER
    ```
 
-   c. Faction Currency Table (`torn.faction_currency`):
+   c. Items Table (`torn.items`):
    ```
+   Schema for v2_torn_items:
    - server_timestamp: TIMESTAMP (REQUIRED) - server time
-   - faction_id: INTEGER (REQUIRED) - Faction identifier
-   - points_balance: INTEGER (REQUIRED) - Current points balance
-   - money_balance: INTEGER (REQUIRED) - Current money balance
-   - points_accumulated: INTEGER - Total points accumulated
-   - points_total: INTEGER - Total points
-   - money_accumulated: INTEGER - Total money accumulated
-   - money_total: INTEGER - Total money
-
-   - fetched_at: TIMESTAMP - Data fetch timestamp
-   ```
-
-   d. Items Table (`torn.items`):
-   ```
-   - server_timestamp: TIMESTAMP (REQUIRED) - server time
-   - item_id: INTEGER (REQUIRED) - Item identifier
+   - id: INTEGER (REQUIRED) - Item identifier
    - name: STRING (REQUIRED) - Item name
-   - description: STRING - Item description
-   - type: STRING - Item type
-   - buy_price: INTEGER - Market buy price
-   - sell_price: INTEGER - Market sell price
-   - market_value: INTEGER - Current market value
-   - circulation: INTEGER - Amount in circulation
+   - description: STRING (NULLABLE) - Item description
+   - effect: STRING (NULLABLE) - Item effect description
+   - requirement: STRING (NULLABLE) - Item usage requirements
+   - image: STRING (NULLABLE) - Item image filename
+   - type: STRING (NULLABLE) - Item type
+   - sub_type: STRING (NULLABLE) - Item subtype
+   - is_masked: BOOLEAN (NULLABLE) - Whether item details are hidden
+   - is_tradable: BOOLEAN (NULLABLE) - Whether item can be traded
+   - is_found_in_city: BOOLEAN (NULLABLE) - Whether item can be found in city
+   - value_vendor_country: STRING (NULLABLE) - Country where item is sold
+   - value_vendor_name: STRING (NULLABLE) - Name of vendor selling item
+   - value_buy_price: INTEGER (NULLABLE) - Price to buy from vendor
+   - value_sell_price: INTEGER (NULLABLE) - Price to sell to vendor
+   - value_market_price: INTEGER (NULLABLE) - Current market price
+   - circulation: INTEGER (NULLABLE) - Amount in circulation
+   - details_coverage_name: STRING (NULLABLE) - Name of the coverage type
+   - details_coverage_value: FLOAT (NULLABLE) - Value of the coverage
+   - details_category: STRING (NULLABLE) - Item category
+   - details_stealth_level: FLOAT (NULLABLE) - Required stealth level
+   - details_base_stats_damage: INTEGER (NULLABLE) - Base damage stat
+   - details_base_stats_accuracy: INTEGER (NULLABLE) - Base accuracy stat
+   - details_base_stats_armor: INTEGER (NULLABLE) - Base armor stat
+   - details_ammo_id: INTEGER (NULLABLE) - ID of compatible ammo
+   - details_ammo_name: STRING (NULLABLE) - Name of compatible ammo
+   - details_ammo_magazine_rounds: INTEGER (NULLABLE) - Number of rounds per magazine
+   - details_ammo_rate_of_fire_minimum: INTEGER (NULLABLE) - Minimum rate of fire
+   - details_ammo_rate_of_fire_maximum: INTEGER (NULLABLE) - Maximum rate of fire
+   - details_mods: INTEGER (NULLABLE) - Number of modification slots
+   ```
+
+   d. Server Timestamp Table (`torn.server_timestamp`):
+   ```
+   Schema for v2_server_timestamp:
+   - timestamp: TIMESTAMP (REQUIRED) - Server time when data was fetched from the API
    ```
 
    e. Crimes Table (`torn.crimes`):
    ```
+   Schema for v2_faction_*_crimes:
    - server_timestamp: TIMESTAMP (REQUIRED) - Server time when data was fetched
    - id: INTEGER (REQUIRED) - Unique crime identifier
    - name: STRING (REQUIRED) - Name of the crime
-   - difficulty: STRING (REQUIRED) - Difficulty level of the crime
+   - difficulty: INTEGER (REQUIRED) - Difficulty level of the crime
    - status: STRING (REQUIRED) - Current status of the crime (e.g., completed, failed)
    - created_at: TIMESTAMP (REQUIRED) - When the crime was created
    - planning_at: TIMESTAMP (NULLABLE) - When the crime entered planning phase
    - executed_at: TIMESTAMP (NULLABLE) - When the crime was executed
    - ready_at: TIMESTAMP (NULLABLE) - When the crime will be ready
    - expired_at: TIMESTAMP (NULLABLE) - When the crime will expire
-   - rewards_money: INTEGER (REQUIRED) - Money reward amount
-   - rewards_respect: FLOAT (REQUIRED) - Respect reward amount
-   - rewards_payout_type: STRING (NULLABLE) - Type of payout
-   - rewards_payout_percentage: FLOAT (NULLABLE) - Percentage of payout
-   - rewards_payout_paid_by: INTEGER (NULLABLE) - ID of player who paid out
-   - rewards_payout_paid_at: TIMESTAMP (NULLABLE) - When the payout was made
-   - rewards_items_id: STRING (NULLABLE) - Comma-separated list of reward item IDs
-   - rewards_items_quantity: STRING (NULLABLE) - Comma-separated list of reward item quantities
-   - slots_position: INTEGER (NULLABLE) - Position in the crime
-   - slots_user_id: INTEGER (NULLABLE) - ID of user in the slot
-   - slots_success_chance: FLOAT (NULLABLE) - Success chance for the slot
-   - slots_crime_pass_rate: FLOAT (NULLABLE) - Pass rate for the crime
+   - slots_position: STRING (NULLABLE) - Position in the crime
    - slots_item_requirement_id: INTEGER (NULLABLE) - ID of required item for the slot
    - slots_item_requirement_is_reusable: BOOLEAN (NULLABLE) - Whether the required item is reusable
    - slots_item_requirement_is_available: BOOLEAN (NULLABLE) - Whether the required item is available
+   - slots_user_id: INTEGER (NULLABLE) - ID of user in the slot
    - slots_user_joined_at: TIMESTAMP (NULLABLE) - When the user joined the slot
    - slots_user_progress: FLOAT (NULLABLE) - User's progress in the slot
+   - slots_success_chance: INTEGER (NULLABLE) - Success chance for the slot
+   - slots_crime_pass_rate: INTEGER (NULLABLE) - Pass rate for the crime
+   - rewards_money: INTEGER (NULLABLE) - Money reward from the crime
+   - rewards_items_id: INTEGER (NULLABLE) - ID of item reward
+   - rewards_items_quantity: INTEGER (NULLABLE) - Quantity of item reward
+   - rewards_respect: INTEGER (NULLABLE) - Respect reward from the crime
+   - rewards_payout_type: STRING (NULLABLE) - Type of payout (e.g., percentage, fixed)
+   - rewards_payout_percentage: INTEGER (NULLABLE) - Percentage of payout if applicable
+   - rewards_payout_paid_by: INTEGER (NULLABLE) - ID of user who paid the reward
+   - rewards_payout_paid_at: TIMESTAMP (NULLABLE) - When the reward was paid
    ```
 
    f. Basic Faction Table (`torn.basic`):
    ```
+   Schema for v2_faction_*_basic:
    - server_timestamp: TIMESTAMP (REQUIRED) - server time
-   - faction_id: INTEGER - Faction identifier
+   - id: INTEGER - Faction identifier
    - name: STRING - Faction name
    - tag: STRING - Faction tag
+   - tag_image: STRING - name of the tag image file
    - leader_id: INTEGER - Leader's player ID
    - co_leader_id: INTEGER - Co-leader's player ID
-   - age: INTEGER - Faction age in days
-   - best_chain: INTEGER - Best chain achieved
-   - total_respect: INTEGER - Total respect earned
+   - respect: INTEGER - total respect the faction has earned
+   - days_old:  INTEGER - age of the faction in days
    - capacity: INTEGER - Member capacity
-   - territory_count: INTEGER - Number of territories
-   - territory_respect: INTEGER - Respect from territories
-   - raid_won: INTEGER - Number of raids won
-   - raid_lost: INTEGER - Number of raids lost
-   - peace_expiry: TIMESTAMP - Peace treaty expiry
-   - peace_faction_id: INTEGER - Peace treaty faction ID
-   - fetched_at: TIMESTAMP - Data fetch timestamp
+   - members: INTEGER - quantity of members
+   - is_enlisted: BOOLEAN
+   - rank_level: INTEGER
+   - rank_name: STRING
+   - rank_division: INTEGER
+   - rank_position: INTEGER
+   - rank_wins: INTEGER
+   - best_chain: INTEGER - Best chain achieved
    ```
 
 3. **Storage Modes**
