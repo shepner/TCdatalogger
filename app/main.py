@@ -1,40 +1,39 @@
-"""Main application entry point for TCdatalogger."""
+"""Main entry point for TCdatalogger application."""
 
+import sys
 import logging
-from dotenv import load_dotenv
-from core.config import Config
-from services.torncity.endpoints.members import MembersEndpointProcessor
+import argparse
+from pathlib import Path
 
-def main():
-    """Main application entry point."""
-    # Load environment variables
-    load_dotenv()
-    
-    # Set up logging
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    )
-    logger = logging.getLogger(__name__)
-    
+from app.core.config import Config
+from app.core.scheduler import EndpointScheduler
+from app.services.torncity.registry import EndpointRegistry
+
+def main() -> None:
+    """Main entry point."""
+    parser = argparse.ArgumentParser(description="TCdatalogger - Torn City data collection")
+    parser.add_argument("--config-dir", type=Path, default=Path("config"),
+                       help="Path to configuration directory")
+    args = parser.parse_args()
+
     try:
-        # Load configuration
-        logger.info("Loading configuration...")
-        config = Config.load()
+        # Initialize configuration
+        config = Config(args.config_dir)
         
-        # Initialize members processor
-        logger.info("Initializing members processor...")
-        processor = MembersEndpointProcessor(config)
+        # Initialize services
+        registry = EndpointRegistry()
+        scheduler = EndpointScheduler(config, registry)
         
-        # Process members data
-        logger.info("Processing members data...")
-        processor.process()
+        # Start the scheduler
+        logging.info("Starting scheduler...")
+        scheduler.run()
         
-        logger.info("Data processing completed successfully")
-        
+    except KeyboardInterrupt:
+        logging.info("Shutting down...")
+        sys.exit(0)
     except Exception as e:
-        logger.error("Application failed: %s", str(e))
-        raise
+        logging.error(f"Application error: {str(e)}")
+        sys.exit(1)
 
 if __name__ == "__main__":
     main() 

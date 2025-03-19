@@ -5,13 +5,18 @@ import json
 import os
 from typing import List, Dict
 import time
+from datetime import datetime
+from unittest.mock import MagicMock, patch, mock_open, Mock
+import tempfile
+from pathlib import Path
 
 # Third-party imports
 import pytest
-from unittest.mock import Mock, mock_open, patch, MagicMock
 from google.oauth2 import service_account
 from google.cloud import bigquery, monitoring_v3
 import pandas as pd
+import numpy as np
+import unittest
 
 # Application imports
 from app.services.torncity.endpoints.members import MembersEndpointProcessor
@@ -254,10 +259,64 @@ class TestMembersEndpointProcessor(MembersEndpointProcessor):
             self._log_error(f"Upload failed: {str(e)}")
             raise
 
-@pytest.fixture(scope='function')
+@pytest.fixture
+def test_config_dir():
+    """Create a temporary configuration directory with test files."""
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_path = Path(temp_dir)
+        
+        # Create test credentials file
+        credentials = {
+            "type": "service_account",
+            "project_id": "test-project",
+            "private_key": "test-key",
+            "client_email": "test@example.com"
+        }
+        with open(temp_path / "credentials.json", "w") as f:
+            json.dump(credentials, f)
+        
+        # Create test API key file
+        api_keys = {
+            "default": "test_api_key",
+            "faction_40832": "test_api_key"
+        }
+        with open(temp_path / "TC_API_key.json", "w") as f:
+            json.dump(api_keys, f)
+        
+        # Create test endpoints file
+        endpoints = {
+            "members": {
+                "table": "test_members",
+                "frequency": "daily",
+                "storage_mode": "append",
+                "selection": ["basic"],
+                "batch_size": 10,
+                "max_retries": 1,
+                "retry_delay": 1
+            }
+        }
+        with open(temp_path / "endpoints.json", "w") as f:
+            json.dump(endpoints, f)
+        
+        yield temp_path
+
+@pytest.fixture
+def members_processor(test_config_dir):
+    """Create a test members processor instance."""
+    config = {
+        'gcp_project_id': 'test-project',
+        'gcp_credentials_file': str(test_config_dir / 'credentials.json'),
+        'dataset': 'test_dataset',
+        'endpoint': 'members',
+        'selection': 'default',
+        'storage_mode': 'append'
+    }
+    return MembersEndpointProcessor(config=config)
+
+@pytest.fixture
 def mock_monitoring_client():
     """Mock Google Cloud Monitoring client."""
-    mock_client = Mock(spec=monitoring_v3.MetricServiceClient)
+    mock_client = MagicMock(spec=monitoring_v3.MetricServiceClient)
     mock_client.common_project_path.return_value = "projects/test-project"
     with patch('google.cloud.monitoring_v3.MetricServiceClient', return_value=mock_client):
         yield mock_client
@@ -265,8 +324,8 @@ def mock_monitoring_client():
 @pytest.fixture(scope='function')
 def mock_credentials(monkeypatch):
     """Mock Google Cloud credentials."""
-    mock_creds = Mock(spec=service_account.Credentials)
-    mock_creds.project_id = 'test-project'
+    mock_creds = MagicMock(spec=service_account.Credentials)
+    mock_creds.project_id = "test-project"
     
     # Mock the credentials file content
     mock_creds_content = {
@@ -300,40 +359,34 @@ def mock_credentials(monkeypatch):
     return mock_creds
 
 @pytest.fixture
-def sample_config(mock_api_keys):
-    """Sample configuration for testing."""
+def sample_config(test_config_dir):
+    """Create sample config for testing."""
     return {
-        'gcp_project_id': 'test-project',
-        'gcp_credentials_file': '/path/to/credentials.json',
-        'dataset': 'test_dataset',
-        'endpoint': 'user',
-        'selection': 'default',
-        'api_key': 'test_key_1',
-        'endpoint_config': {
-            'name': 'members',
-            'table': 'v2_faction_17991_members',
-            'url': 'v2/faction/members',
-            'faction_id': '17991'
+        "dataset": "test_dataset",
+        "endpoint_config": {
+            "members": {
+                "name": "members",
+                "table": "test_members",
+                "endpoint": "/v2/faction/members"
+            }
         },
-        'storage_mode': 'append',
-        'api_keys': {
-            'default': 'test_key_1',
-            'secondary': 'test_key_2'
-        }
+        "gcp_credentials_file": str(test_config_dir / "credentials.json"),
+        "tc_api_key_file": str(test_config_dir / "TC_API_key.json")
     }
 
 @pytest.fixture
 def mock_api_keys():
-    """Mock API keys for testing."""
-    return {"default": "test_key_1", "secondary": "test_key_2"}
+    """Mock Torn API keys."""
+    return {
+        'members': 'test_key_2',
+        'default': 'test_key_1'
+    }
 
 @pytest.fixture
 def torn_client(mock_api_keys):
-    """Create a TornClient instance with mock API keys."""
-    with patch('os.path.exists') as mock_exists, \
-         patch('builtins.open', mock_open(read_data=json.dumps(mock_api_keys))):
-        mock_exists.return_value = True
-        client = TornClient("/path/to/api_keys.json")
+    """Create TornClient with mocked API keys."""
+    with patch.object(TornClient, "_load_api_keys", return_value=mock_api_keys):
+        client = TornClient("dummy_path")
         return client
 
 @pytest.fixture(scope='function')
@@ -341,39 +394,22 @@ def bq_client(mock_credentials, sample_config):
     """Create a BigQuery client for testing."""
     return BigQueryClient(sample_config)
 
-@pytest.fixture(scope='function')
-def members_processor(mock_credentials, mock_monitoring_client, sample_config, torn_client):
-    """Create a MembersEndpointProcessor for testing."""
-    with patch("google.oauth2.service_account.Credentials.from_service_account_file",
-              return_value=mock_credentials):
-        processor = TestMembersEndpointProcessor(sample_config, sample_config['endpoint_config'])
-        processor.torn_client = torn_client
-        return processor
-
 @pytest.fixture
 def mock_members_response():
-    """Mock response for members endpoint."""
+    """Mock response from members endpoint."""
     return {
-        "fetched_at": "2024-03-16T09:32:31.281852",
         "members": {
-            "12345": {
-                "member_id": 12345,  # Ensure this is an integer
-                "name": "Test User",
+            "1": {
+                "id": 1,
+                "name": "Test Member",
                 "level": 50,
-                "faction": {
-                    "faction_id": 17991  # Also make this an integer
-                },
-                "status": {
-                    "description": "Online",
-                    "state": "online",
-                    "until": 0
-                },
-                "last_action": {
-                    "relative": "1 hour ago",
-                    "timestamp": 1710579151
-                }
+                "days_in_faction": 100,
+                "last_action": 1646960400,
+                "status": "Okay"
             }
-        }
+        },
+        "timestamp": 1646960400,
+        "fetched_at": datetime.now()
     }
 
 @pytest.fixture

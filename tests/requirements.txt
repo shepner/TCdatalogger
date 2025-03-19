@@ -20,4 +20,3 @@ schedule==1.2.1
 isodate==0.6.1
 tenacity==8.2.3
 google-cloud-bigquery>=3.0.0
-python-dotenv==1.0.1

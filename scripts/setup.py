@@ -18,6 +18,7 @@ import venv
 import stat
 import shutil
 import subprocess
+import json
 from pathlib import Path
 import logging
 from typing import List, Optional, Dict, Any
@@ -36,10 +37,11 @@ class EnvSetup:
         """Initialize setup with base directory."""
         self.base_dir = Path(base_dir) if base_dir else Path(__file__).parent.parent
         self.venv_dir = self.base_dir / '.venv'
-        self.requirements_file = self.base_dir / 'app' / 'requirements.txt'  # Use app/requirements.txt
+        self.requirements_file = self.base_dir / 'app' / 'requirements.txt'
         self.scripts_dir = self.base_dir / 'scripts'
         self.tests_dir = self.base_dir / 'tests'
         self.app_dir = self.base_dir / 'app'
+        self.config_dir = self.base_dir / 'config'
         
         # Required directory structure
         self.required_dirs = {
@@ -50,7 +52,15 @@ class EnvSetup:
             'tests/fixtures': self.tests_dir / 'fixtures',
             'app': self.app_dir,
             'app/core': self.app_dir / 'core',
-            'app/services': self.app_dir / 'services'
+            'app/services': self.app_dir / 'services',
+            'config': self.config_dir
+        }
+
+        # Development configuration defaults
+        self.dev_config = {
+            'log_level': 'DEBUG',
+            'enable_metrics': True,
+            'metric_prefix': 'custom.googleapis.com/tcdatalogger'
         }
 
     def ensure_directory_structure(self) -> None:
@@ -62,6 +72,39 @@ class EnvSetup:
                 path.mkdir(parents=True, exist_ok=True)
             else:
                 logger.info("Directory exists: %s", name)
+
+    def ensure_config_files(self) -> None:
+        """Ensure required config files exist with proper structure."""
+        logger.info("Checking configuration files...")
+        
+        # Create example config files if they don't exist
+        example_configs = {
+            'credentials.json.example': {
+                'type': 'service_account',
+                'project_id': 'your-project-id',
+                'private_key': 'your-private-key',
+                'client_email': 'your-service-account@example.com'
+            },
+            'TC_API_key.json.example': {
+                'default': 'your-api-key',
+                'faction_40832': 'your-faction-api-key'
+            },
+            'endpoints.json.example': {
+                'members': {
+                    'table': 'torn.members',
+                    'frequency': 'PT15M',
+                    'storage_mode': 'append'
+                }
+            },
+            'dev_config.json': self.dev_config
+        }
+        
+        for filename, content in example_configs.items():
+            config_file = self.config_dir / filename
+            if not config_file.exists():
+                logger.info("Creating example config file: %s", filename)
+                with open(config_file, 'w') as f:
+                    json.dump(content, f, indent=4)
 
     def ensure_requirements_file(self) -> None:
         """Ensure requirements.txt exists."""
@@ -152,6 +195,17 @@ class EnvSetup:
         else:
             env["PYTHONPATH"] = python_path
         
+        # Load development configuration
+        dev_config_file = self.config_dir / 'dev_config.json'
+        if dev_config_file.exists():
+            with open(dev_config_file) as f:
+                dev_config = json.load(f)
+                env.update({
+                    'LOG_LEVEL': dev_config.get('log_level', 'DEBUG'),
+                    'ENABLE_METRICS': str(dev_config.get('enable_metrics', True)).lower(),
+                    'METRIC_PREFIX': dev_config.get('metric_prefix', 'custom.googleapis.com/tcdatalogger')
+                })
+        
         # Remove PYTHONHOME if it exists
         env.pop("PYTHONHOME", None)
         
@@ -190,6 +244,9 @@ class EnvSetup:
             
             # Ensure directory structure
             self.ensure_directory_structure()
+            
+            # Ensure config files exist
+            self.ensure_config_files()
             
             # Ensure requirements file
             self.ensure_requirements_file()
@@ -263,6 +320,17 @@ class EnvSetup:
             os.environ["PYTHONPATH"] = f"{python_path}:{os.environ['PYTHONPATH']}"
         else:
             os.environ["PYTHONPATH"] = python_path
+        
+        # Load development configuration
+        dev_config_file = self.config_dir / 'dev_config.json'
+        if dev_config_file.exists():
+            with open(dev_config_file) as f:
+                dev_config = json.load(f)
+                os.environ.update({
+                    'LOG_LEVEL': dev_config.get('log_level', 'DEBUG'),
+                    'ENABLE_METRICS': str(dev_config.get('enable_metrics', True)).lower(),
+                    'METRIC_PREFIX': dev_config.get('metric_prefix', 'custom.googleapis.com/tcdatalogger')
+                })
         
         # Remove PYTHONHOME if it exists
         os.environ.pop("PYTHONHOME", None)

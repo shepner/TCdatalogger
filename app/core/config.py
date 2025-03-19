@@ -10,7 +10,6 @@ import logging
 from pathlib import Path
 from typing import Dict, Any, Optional
 from dataclasses import dataclass
-from dotenv import load_dotenv
 
 @dataclass
 class GoogleConfig:
@@ -20,22 +19,22 @@ class GoogleConfig:
     credentials_file: Optional[Path] = None
 
     @classmethod
-    def from_env(cls) -> 'GoogleConfig':
-        """Create GoogleConfig from environment variables."""
-        project_id = os.getenv('GCP_PROJECT_ID')
-        if not project_id:
-            raise ValueError("GCP_PROJECT_ID environment variable is required")
+    def from_file(cls, credentials_file: Path) -> 'GoogleConfig':
+        """Create GoogleConfig from credentials file."""
+        if not credentials_file.exists():
+            raise FileNotFoundError(f"Google credentials file not found: {credentials_file}")
             
-        dataset = os.getenv('BIGQUERY_DATASET')
-        if not dataset:
-            raise ValueError("BIGQUERY_DATASET environment variable is required")
+        try:
+            with open(credentials_file) as f:
+                credentials = json.load(f)
             
-        credentials_file = os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
-        return cls(
-            project_id=project_id,
-            dataset=dataset,
-            credentials_file=Path(credentials_file) if credentials_file else None
-        )
+            return cls(
+                project_id=credentials['project_id'],
+                dataset='torn_data',  # This is hardcoded in TC_API_config.json
+                credentials_file=credentials_file
+            )
+        except (json.JSONDecodeError, KeyError) as e:
+            raise ValueError(f"Invalid Google credentials file: {str(e)}")
 
 @dataclass
 class TornConfig:
@@ -45,20 +44,22 @@ class TornConfig:
     timeout: int
 
     @classmethod
-    def from_env(cls) -> 'TornConfig':
-        """Create TornConfig from environment variables."""
-        api_key = os.getenv('TORN_API_KEY')
-        if not api_key:
-            raise ValueError("TORN_API_KEY environment variable is required")
+    def from_file(cls, api_key_file: Path) -> 'TornConfig':
+        """Create TornConfig from API key file."""
+        if not api_key_file.exists():
+            raise FileNotFoundError(f"Torn API key file not found: {api_key_file}")
             
-        rate_limit = int(os.getenv('API_RATE_LIMIT', '60'))
-        timeout = int(os.getenv('API_TIMEOUT', '30'))
-        
-        return cls(
-            api_key=api_key,
-            rate_limit=rate_limit,
-            timeout=timeout
-        )
+        try:
+            with open(api_key_file) as f:
+                api_keys = json.load(f)
+            
+            return cls(
+                api_key=api_keys['default'],
+                rate_limit=60,  # Default values from previous env vars
+                timeout=30
+            )
+        except (json.JSONDecodeError, KeyError) as e:
+            raise ValueError(f"Invalid Torn API key file: {str(e)}")
 
 @dataclass
 class AppConfig:
@@ -69,32 +70,28 @@ class AppConfig:
     metric_prefix: str
 
     @classmethod
-    def from_env(cls) -> 'AppConfig':
-        """Create AppConfig from environment variables."""
-        log_level = os.getenv('LOG_LEVEL', 'INFO').upper()
-        if log_level not in ('DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'):
-            raise ValueError(f"Invalid log level: {log_level}")
-            
-        config_dir = os.getenv('CONFIG_DIR', '/config')
-        enable_metrics = os.getenv('ENABLE_METRICS', 'true').lower() == 'true'
-        metric_prefix = os.getenv('METRIC_PREFIX', 'custom.googleapis.com/tcdatalogger')
-        
+    def from_defaults(cls, config_dir: Path) -> 'AppConfig':
+        """Create AppConfig with default values."""
         return cls(
-            log_level=log_level,
-            config_dir=Path(config_dir),
-            enable_metrics=enable_metrics,
-            metric_prefix=metric_prefix
+            log_level='INFO',
+            config_dir=config_dir,
+            enable_metrics=True,
+            metric_prefix='custom.googleapis.com/tcdatalogger'
         )
 
 class Config:
     """Central configuration manager."""
     
-    def __init__(self):
+    def __init__(self, config_dir: Path = Path('config')):
         """Initialize configuration."""
+        self.config_dir = config_dir
+        if not self.config_dir.exists():
+            raise FileNotFoundError(f"Configuration directory not found: {self.config_dir}")
+        
         # Initialize components
-        self.google = GoogleConfig.from_env()
-        self.torn = TornConfig.from_env()
-        self.app = AppConfig.from_env()
+        self.google = GoogleConfig.from_file(self.config_dir / 'credentials.json')
+        self.torn = TornConfig.from_file(self.config_dir / 'TC_API_key.json')
+        self.app = AppConfig.from_defaults(self.config_dir)
         
         # Set up logging
         self._setup_logging()

@@ -28,6 +28,9 @@ class MembersEndpointProcessor(BaseEndpointProcessor):
                 'storage_mode': config.get('storage_mode', 'append'),
                 'frequency': 'PT15M'
             }
+        # Convert selection list to comma-separated string if it's a list
+        if isinstance(endpoint_config.get('selection'), list):
+            endpoint_config['selection'] = ','.join(endpoint_config['selection'])
         self.endpoint_config.update(endpoint_config)
 
     def get_schema(self) -> List[bigquery.SchemaField]:

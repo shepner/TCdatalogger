@@ -1,114 +1,97 @@
 """Unit tests for items endpoint processor."""
 
-# Standard library imports
 import json
 import os
-from typing import List, Dict
+from datetime import datetime
+from unittest.mock import MagicMock, patch, mock_open, Mock
 import time
+from typing import Any
+import tempfile
+from pathlib import Path
 
-# Third-party imports
-import pytest
-from unittest.mock import Mock, mock_open, patch
-from google.oauth2 import service_account
-from google.cloud import bigquery, monitoring_v3
 import pandas as pd
+import pytest
+from google.cloud import bigquery, monitoring_v3
+from google.oauth2 import service_account
+import numpy as np
+import unittest
 
-# Application imports
+from app.services.torncity.client import TornClient
 from app.services.torncity.endpoints.items import ItemsEndpointProcessor
 from app.services.google.bigquery.client import BigQueryClient
-from app.services.torncity.client import TornClient, TornAPIError
+from app.services.torncity.client import TornAPIError
 
-class TestItemsEndpointProcessor(ItemsEndpointProcessor):
-    """Test implementation of ItemsEndpointProcessor."""
-    
-    def get_schema(self) -> List[bigquery.SchemaField]:
-        """Get the schema for test data."""
-        return [
-            bigquery.SchemaField("item_id", "INTEGER", mode="REQUIRED"),
-            bigquery.SchemaField("name", "STRING", mode="REQUIRED"),
-            bigquery.SchemaField("description", "STRING"),
-            bigquery.SchemaField("type", "STRING"),
-            bigquery.SchemaField("weapon_type", "STRING"),
-            bigquery.SchemaField("buy_price", "INTEGER"),
-            bigquery.SchemaField("sell_price", "INTEGER"),
-            bigquery.SchemaField("market_value", "INTEGER"),
-            bigquery.SchemaField("circulation", "INTEGER"),
-            bigquery.SchemaField("image", "STRING"),
-            bigquery.SchemaField("requirement_level", "INTEGER"),
-            bigquery.SchemaField("requirement_strength", "INTEGER"),
-            bigquery.SchemaField("requirement_speed", "INTEGER"),
-            bigquery.SchemaField("requirement_dexterity", "INTEGER"),
-            bigquery.SchemaField("requirement_intelligence", "INTEGER"),
-            bigquery.SchemaField("damage", "INTEGER"),
-            bigquery.SchemaField("accuracy", "INTEGER"),
-            bigquery.SchemaField("damage_bonus", "INTEGER"),
-            bigquery.SchemaField("accuracy_bonus", "INTEGER"),
-            bigquery.SchemaField("fetched_at", "TIMESTAMP")
-        ]
 
-    def convert_timestamps(self, df: pd.DataFrame, exclude_cols: list[str] = None) -> pd.DataFrame:
-        """Convert timestamp columns to datetime.
+@pytest.fixture
+def test_config_dir():
+    """Create a temporary configuration directory with test files."""
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_path = Path(temp_dir)
         
-        Args:
-            df: DataFrame to process
-            exclude_cols: Columns to exclude from conversion
-            
-        Returns:
-            pd.DataFrame: DataFrame with converted timestamps
-        """
-        if exclude_cols is None:
-            exclude_cols = []
-            
-        timestamp_cols = [
-            col for col in df.columns 
-            if "timestamp" in col.lower() and col not in exclude_cols
-        ]
+        # Create test credentials file
+        credentials = {
+            "type": "service_account",
+            "project_id": "test-project",
+            "private_key": "test-key",
+            "client_email": "test@example.com"
+        }
+        with open(temp_path / "credentials.json", "w") as f:
+            json.dump(credentials, f)
         
-        for col in timestamp_cols:
-            df[col] = pd.to_datetime(df[col], unit='s')
-            
-        if "fetched_at" in df.columns and "fetched_at" not in exclude_cols:
-            df["fetched_at"] = pd.to_datetime(df["fetched_at"])
-            
-        return df
+        # Create test API key file
+        api_keys = {
+            "default": "test_api_key",
+            "faction_40832": "test_api_key"
+        }
+        with open(temp_path / "TC_API_key.json", "w") as f:
+            json.dump(api_keys, f)
+        
+        # Create test endpoints file
+        endpoints = {
+            "items": {
+                "table": "test_items",
+                "frequency": "daily",
+                "storage_mode": "append",
+                "selection": ["basic"],
+                "batch_size": 10,
+                "max_retries": 1,
+                "retry_delay": 1
+            }
+        }
+        with open(temp_path / "endpoints.json", "w") as f:
+            json.dump(endpoints, f)
+        
+        yield temp_path
 
-    def convert_numerics(self, df: pd.DataFrame, exclude_cols: list[str] = None) -> pd.DataFrame:
-        """Convert numeric columns to appropriate types.
-        
-        Args:
-            df: DataFrame to process
-            exclude_cols: Columns to exclude from conversion
-            
-        Returns:
-            pd.DataFrame: DataFrame with converted numeric types
-        """
-        if exclude_cols is None:
-            exclude_cols = []
-            
-        numeric_cols = [
-            col for col in df.columns 
-            if any(t in col.lower() for t in ["id", "price", "value", "circulation", "requirement", "damage", "accuracy", "bonus"])
-            and col not in exclude_cols
-        ]
-        
-        for col in numeric_cols:
-            df[col] = pd.to_numeric(df[col], errors='coerce')
-            
-        return df
 
-@pytest.fixture(scope='function')
+@pytest.fixture
+def items_processor(test_config_dir):
+    """Create a test items processor instance."""
+    config = {
+        'gcp_project_id': 'test-project',
+        'gcp_credentials_file': str(test_config_dir / 'credentials.json'),
+        'dataset': 'test_dataset',
+        'endpoint': 'items',
+        'selection': 'default',
+        'storage_mode': 'append'
+    }
+    return ItemsEndpointProcessor(config=config)
+
+
+@pytest.fixture
 def mock_monitoring_client():
     """Mock Google Cloud Monitoring client."""
-    mock_client = Mock(spec=monitoring_v3.MetricServiceClient)
+    mock_client = MagicMock(spec=monitoring_v3.MetricServiceClient)
     mock_client.common_project_path.return_value = "projects/test-project"
     with patch('google.cloud.monitoring_v3.MetricServiceClient', return_value=mock_client):
         yield mock_client
 
+
 @pytest.fixture(scope='function')
 def mock_credentials(monkeypatch):
     """Mock Google Cloud credentials."""
-    mock_creds = Mock(spec=service_account.Credentials)
-    mock_creds.project_id = 'test-project'
+    mock_creds = MagicMock(spec=service_account.Credentials)
+    mock_creds.project_id = "test-project"
     
     # Mock the credentials file content
     mock_creds_content = {
@@ -141,87 +124,68 @@ def mock_credentials(monkeypatch):
     
     return mock_creds
 
-@pytest.fixture(scope='function')
-def sample_config():
-    """Sample configuration for testing."""
+
+@pytest.fixture
+def sample_config(test_config_dir):
+    """Create sample config for testing."""
     return {
-        'dataset': 'test_dataset',
-        'gcp_project_id': 'test-project',
-        'gcp_credentials_file': '/path/to/credentials.json',
-        'tc_api_key_file': '/path/to/api_keys.json',
-        'storage_mode': 'append',
-        'endpoint_config': {
-            'endpoint': 'v2/torn/items',
-            'name': 'v2_torn_items',
-            'table': 'v2_torn_items',
-            'url': 'https://api.torn.com/v2/torn/items'
-        }
+        "dataset": "test_dataset",
+        "endpoint_config": {
+            "items": {
+                "name": "items",
+                "table": "test_items",
+                "endpoint": "/v2/torn/items"
+            }
+        },
+        "gcp_credentials_file": str(test_config_dir / "credentials.json"),
+        "tc_api_key_file": str(test_config_dir / "TC_API_key.json")
     }
 
-@pytest.fixture(scope='function')
+
+@pytest.fixture
 def mock_api_keys():
     """Mock Torn API keys."""
-    keys = {
-        "default": "test_key_1",
-        "items": "test_key_2"
+    return {
+        'items': 'test_key_2',
+        'default': 'test_key_1'
     }
-    m = mock_open(read_data=json.dumps(keys))
-    with patch("builtins.open", m):
-        yield keys
 
-@pytest.fixture(scope='function')
+
+@pytest.fixture
 def torn_client(mock_api_keys):
     """Create TornClient with mocked API keys."""
     with patch.object(TornClient, "_load_api_keys", return_value=mock_api_keys):
         client = TornClient("dummy_path")
         return client
 
+
 @pytest.fixture(scope='function')
 def bq_client(mock_credentials, sample_config):
     """Create a BigQuery client for testing."""
     return BigQueryClient(sample_config)
 
-@pytest.fixture(scope='function')
-def items_processor(mock_credentials, mock_monitoring_client, sample_config, torn_client):
-    """Create a ItemsEndpointProcessor for testing."""
-    with patch("google.oauth2.service_account.Credentials.from_service_account_file",
-              return_value=mock_credentials):
-        processor = TestItemsEndpointProcessor(sample_config)
-        processor.torn_client = torn_client
-        return processor
 
-@pytest.fixture(scope='function')
+@pytest.fixture
 def mock_items_response():
     """Mock response from items endpoint."""
     return {
         "items": {
             "1": {
-                "name": "Flower",
-                "description": "A beautiful flower",
-                "type": "Flower",
-                "weapon_type": None,
-                "buy_price": 100,
-                "sell_price": 50,
-                "market_value": 75,
+                "id": 1,
+                "name": "Test Item",
+                "description": "A test item",
+                "type": "Primary",
+                "buy_price": 1000,
+                "sell_price": 800,
+                "market_value": 900,
                 "circulation": 1000,
-                "image": "flower.png",
-                "requirement": {
-                    "level": 1,
-                    "strength": 0,
-                    "speed": 0,
-                    "dexterity": 0,
-                    "intelligence": 0
-                },
-                "effect": {
-                    "damage": 0,
-                    "accuracy": 0,
-                    "damage_bonus": 0,
-                    "accuracy_bonus": 0
-                }
+                "image": "test.png"
             }
         },
-        "fetched_at": "2024-03-16T09:32:31.281852"
+        "timestamp": 1646960400,
+        "fetched_at": datetime.now()
     }
+
 
 class TestItemsPull:
     """Test items data pull and processing."""
@@ -247,9 +211,9 @@ class TestItemsPull:
             assert "item_id" in result.columns
             assert "name" in result.columns
             assert "market_value" in result.columns
-            assert result.iloc[0]["name"] == "Flower"
-            assert result.iloc[0]["buy_price"] == 100
-            assert result.iloc[0]["market_value"] == 75
+            assert result.iloc[0]["name"] == "Test Item"
+            assert result.iloc[0]["buy_price"] == 1000
+            assert result.iloc[0]["market_value"] == 900
     
     def test_items_data_validation(self, items_processor, mock_items_response):
         """Test data validation."""

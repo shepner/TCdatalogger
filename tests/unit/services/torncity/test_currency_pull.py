@@ -5,13 +5,18 @@ import json
 import os
 from typing import List, Dict
 import time
+from datetime import datetime
+from unittest.mock import MagicMock, patch, mock_open, Mock
+import tempfile
+from pathlib import Path
 
 # Third-party imports
 import pytest
-from unittest.mock import Mock, mock_open, patch
 from google.oauth2 import service_account
 from google.cloud import bigquery, monitoring_v3
 import pandas as pd
+import numpy as np
+import unittest
 
 # Application imports
 from app.services.torncity.endpoints.currency import CurrencyEndpointProcessor
@@ -80,10 +85,64 @@ class TestCurrencyEndpointProcessor(CurrencyEndpointProcessor):
             
         return df
 
-@pytest.fixture(scope='function')
+@pytest.fixture
+def test_config_dir():
+    """Create a temporary configuration directory with test files."""
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_path = Path(temp_dir)
+        
+        # Create test credentials file
+        credentials = {
+            "type": "service_account",
+            "project_id": "test-project",
+            "private_key": "test-key",
+            "client_email": "test@example.com"
+        }
+        with open(temp_path / "credentials.json", "w") as f:
+            json.dump(credentials, f)
+        
+        # Create test API key file
+        api_keys = {
+            "default": "test_api_key",
+            "faction_40832": "test_api_key"
+        }
+        with open(temp_path / "TC_API_key.json", "w") as f:
+            json.dump(api_keys, f)
+        
+        # Create test endpoints file
+        endpoints = {
+            "currency": {
+                "table": "test_currency",
+                "frequency": "daily",
+                "storage_mode": "append",
+                "selection": ["basic"],
+                "batch_size": 10,
+                "max_retries": 1,
+                "retry_delay": 1
+            }
+        }
+        with open(temp_path / "endpoints.json", "w") as f:
+            json.dump(endpoints, f)
+        
+        yield temp_path
+
+@pytest.fixture
+def currency_processor(test_config_dir):
+    """Create a test currency processor instance."""
+    config = {
+        'gcp_project_id': 'test-project',
+        'gcp_credentials_file': str(test_config_dir / 'credentials.json'),
+        'dataset': 'test_dataset',
+        'endpoint': 'currency',
+        'selection': 'default',
+        'storage_mode': 'append'
+    }
+    return CurrencyEndpointProcessor(config=config)
+
+@pytest.fixture
 def mock_monitoring_client():
     """Mock Google Cloud Monitoring client."""
-    mock_client = Mock(spec=monitoring_v3.MetricServiceClient)
+    mock_client = MagicMock(spec=monitoring_v3.MetricServiceClient)
     mock_client.common_project_path.return_value = "projects/test-project"
     with patch('google.cloud.monitoring_v3.MetricServiceClient', return_value=mock_client):
         yield mock_client
@@ -91,8 +150,8 @@ def mock_monitoring_client():
 @pytest.fixture(scope='function')
 def mock_credentials(monkeypatch):
     """Mock Google Cloud credentials."""
-    mock_creds = Mock(spec=service_account.Credentials)
-    mock_creds.project_id = 'test-project'
+    mock_creds = MagicMock(spec=service_account.Credentials)
+    mock_creds.project_id = "test-project"
     
     # Mock the credentials file content
     mock_creds_content = {
@@ -125,35 +184,31 @@ def mock_credentials(monkeypatch):
     
     return mock_creds
 
-@pytest.fixture(scope='function')
-def sample_config():
-    """Sample configuration for testing."""
+@pytest.fixture
+def sample_config(test_config_dir):
+    """Create sample config for testing."""
     return {
-        'dataset': 'test_dataset',
-        'gcp_project_id': 'test-project',
-        'gcp_credentials_file': '/path/to/credentials.json',
-        'tc_api_key_file': '/path/to/api_keys.json',
-        'storage_mode': 'append',
-        'endpoint_config': {
-            'endpoint': 'v2/faction/currency',
-            'faction_id': 'faction_17991',
-            'name': 'v2_faction_17991_currency',
-            'table': 'v2_faction_17991_currency'
-        }
+        "dataset": "test_dataset",
+        "endpoint_config": {
+            "currency": {
+                "name": "currency",
+                "table": "test_currency",
+                "endpoint": "/v2/faction/currency"
+            }
+        },
+        "gcp_credentials_file": str(test_config_dir / "credentials.json"),
+        "tc_api_key_file": str(test_config_dir / "TC_API_key.json")
     }
 
-@pytest.fixture(scope='function')
+@pytest.fixture
 def mock_api_keys():
     """Mock Torn API keys."""
-    keys = {
-        "default": "test_key_1",
-        "currency": "test_key_2"
+    return {
+        'currency': 'test_key_2',
+        'default': 'test_key_1'
     }
-    m = mock_open(read_data=json.dumps(keys))
-    with patch("builtins.open", m):
-        yield keys
 
-@pytest.fixture(scope='function')
+@pytest.fixture
 def torn_client(mock_api_keys):
     """Create TornClient with mocked API keys."""
     with patch.object(TornClient, "_load_api_keys", return_value=mock_api_keys):
@@ -165,24 +220,20 @@ def bq_client(mock_credentials, sample_config):
     """Create a BigQuery client for testing."""
     return BigQueryClient(sample_config)
 
-@pytest.fixture(scope='function')
-def currency_processor(mock_credentials, mock_monitoring_client, sample_config):
-    """Create a CurrencyEndpointProcessor for testing."""
-    with patch("google.oauth2.service_account.Credentials.from_service_account_file",
-              return_value=mock_credentials):
-        processor = TestCurrencyEndpointProcessor(sample_config, sample_config['endpoint_config'])
-        processor.torn_client = torn_client
-        return processor
-
-@pytest.fixture(scope='function')
+@pytest.fixture
 def mock_currency_response():
     """Mock response from currency endpoint."""
     return {
         "currency": {
             "points": 1000,
-            "money": 5000000
+            "money": 1000000,
+            "items": [
+                {"id": 1, "quantity": 2},
+                {"id": 2, "quantity": 1}
+            ]
         },
-        "timestamp": 1647432000
+        "timestamp": 1646960400,
+        "fetched_at": datetime.now()
     }
 
 class TestCurrencyPull:
@@ -210,7 +261,7 @@ class TestCurrencyPull:
             assert "points" in result.columns
             assert "money" in result.columns
             assert result.iloc[0]["points"] == 1000
-            assert result.iloc[0]["money"] == 5000000
+            assert result.iloc[0]["money"] == 1000000
     
     def test_currency_data_validation(self, currency_processor, mock_currency_response):
         """Test data validation."""

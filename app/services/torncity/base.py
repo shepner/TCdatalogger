@@ -140,9 +140,10 @@ class BaseEndpointProcessor(ABC):
             Exception: If the API request fails.
         """
         try:
+            # Always use the default API key for now
             return self.torn_client.make_request(
                 self.endpoint_config['endpoint'],
-                self.endpoint_config['selection']
+                'default'  # Use default API key
             )
         except Exception as e:
             self.logger.error(f"Failed to fetch data from Torn API: {str(e)}")

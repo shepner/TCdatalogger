@@ -1,17 +1,80 @@
 """Base client for Google Cloud services.
 
-This module provides the base functionality for interacting with Google Cloud services:
-- Authentication and credentials management
-- Project configuration
-- Common utility functions
+This module provides a base client class for interacting with Google Cloud services.
+It handles authentication and common functionality used by specific service clients.
 """
 
 import os
+import logging
+from pathlib import Path
 from typing import Dict, Any, Optional
 from google.oauth2 import service_account
 from google.auth.credentials import Credentials
 import json
+from google.cloud import storage, bigquery
 
+
+class GoogleClient:
+    """Base client for Google Cloud services."""
+    
+    def __init__(self, project_id: str, credentials_file: Optional[Path] = None):
+        """Initialize the Google Cloud client.
+        
+        Args:
+            project_id: Google Cloud project ID
+            credentials_file: Path to service account credentials file
+            
+        Raises:
+            ValueError: If credentials cannot be loaded
+        """
+        self.project_id = project_id
+        self.credentials_file = credentials_file
+        self.credentials = self._load_credentials()
+        
+    def _load_credentials(self) -> service_account.Credentials:
+        """Load Google Cloud credentials.
+        
+        Returns:
+            Credentials: Google Cloud credentials
+            
+        Raises:
+            ValueError: If credentials cannot be loaded
+        """
+        try:
+            if not self.credentials_file:
+                raise ValueError("No credentials file provided")
+                
+            if not self.credentials_file.exists():
+                raise FileNotFoundError(f"Credentials file not found: {self.credentials_file}")
+                
+            return service_account.Credentials.from_service_account_file(
+                str(self.credentials_file)
+            )
+            
+        except Exception as e:
+            raise ValueError(f"Failed to load Google Cloud credentials: {str(e)}")
+            
+    def get_storage_client(self) -> storage.Client:
+        """Get a Google Cloud Storage client.
+        
+        Returns:
+            Client: Storage client
+        """
+        return storage.Client(
+            project=self.project_id,
+            credentials=self.credentials
+        )
+        
+    def get_bigquery_client(self) -> bigquery.Client:
+        """Get a Google BigQuery client.
+        
+        Returns:
+            Client: BigQuery client
+        """
+        return bigquery.Client(
+            project=self.project_id,
+            credentials=self.credentials
+        )
 
 class BaseGoogleClient:
     """Base client for Google Cloud services.

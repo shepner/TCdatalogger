@@ -6,6 +6,8 @@ from datetime import datetime
 from unittest.mock import MagicMock, patch, mock_open, Mock
 import time
 from typing import Any
+import tempfile
+from pathlib import Path
 
 import pandas as pd
 import pytest
@@ -57,12 +59,53 @@ class TestCrimesEndpointProcessor(CrimesEndpointProcessor):
 
 
 @pytest.fixture
-def crimes_processor():
+def test_config_dir():
+    """Create a temporary configuration directory with test files."""
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_path = Path(temp_dir)
+        
+        # Create test credentials file
+        credentials = {
+            "type": "service_account",
+            "project_id": "test-project",
+            "private_key": "test-key",
+            "client_email": "test@example.com"
+        }
+        with open(temp_path / "credentials.json", "w") as f:
+            json.dump(credentials, f)
+        
+        # Create test API key file
+        api_keys = {
+            "default": "test_api_key",
+            "faction_40832": "test_api_key"
+        }
+        with open(temp_path / "TC_API_key.json", "w") as f:
+            json.dump(api_keys, f)
+        
+        # Create test endpoints file
+        endpoints = {
+            "crimes": {
+                "table": "test_crimes",
+                "frequency": "daily",
+                "storage_mode": "append",
+                "selection": ["basic"],
+                "batch_size": 10,
+                "max_retries": 1,
+                "retry_delay": 1
+            }
+        }
+        with open(temp_path / "endpoints.json", "w") as f:
+            json.dump(endpoints, f)
+        
+        yield temp_path
+
+
+@pytest.fixture
+def crimes_processor(test_config_dir):
     """Create a test crimes processor instance."""
     config = {
-        'api_key': 'test_api_key',
         'gcp_project_id': 'test-project',
-        'gcp_credentials_file': 'test_credentials.json',
+        'gcp_credentials_file': str(test_config_dir / 'credentials.json'),
         'dataset': 'test_dataset',
         'endpoint': 'crimes',
         'selection': 'default',
@@ -119,7 +162,7 @@ def mock_credentials(monkeypatch):
 
 
 @pytest.fixture
-def sample_config():
+def sample_config(test_config_dir):
     """Create sample config for testing."""
     return {
         "dataset": "test_dataset",
@@ -130,8 +173,8 @@ def sample_config():
                 "endpoint": "/v2/faction/crimes"
             }
         },
-        "gcp_credentials_file": "test_creds.json",
-        "tc_api_key_file": "test_api_keys.txt"
+        "gcp_credentials_file": str(test_config_dir / "credentials.json"),
+        "tc_api_key_file": str(test_config_dir / "TC_API_key.json")
     }
 
 
@@ -156,16 +199,6 @@ def torn_client(mock_api_keys):
 def bq_client(mock_credentials, sample_config):
     """Create a BigQuery client for testing."""
     return BigQueryClient(sample_config)
-
-
-@pytest.fixture(autouse=True)
-def setup_env():
-    """Set up environment variables for testing."""
-    with patch.dict(os.environ, {
-        "GCP_PROJECT_ID": "test-project",
-        "GOOGLE_APPLICATION_CREDENTIALS": "/path/to/credentials.json"
-    }):
-        yield
 
 
 @pytest.fixture

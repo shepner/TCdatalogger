@@ -33,13 +33,13 @@ class ConfigurationError(SchedulerError):
     pass
 
 
-class ProcessingError(SchedulerError):
-    """Raised when endpoint processing fails."""
+class ValidationError(SchedulerError):
+    """Raised when configuration validation fails."""
     pass
 
 
-class ValidationError(SchedulerError):
-    """Raised when validation fails."""
+class ProcessingError(SchedulerError):
+    """Raised when endpoint processing fails."""
     pass
 
 
@@ -95,12 +95,6 @@ class EndpointScheduler:
         for field in required_fields:
             if field not in config:
                 raise ValidationError(f"Missing required config field: {field}")
-        
-        # Validate environment variables
-        required_env = ['GCP_PROJECT_ID']
-        for env in required_env:
-            if not os.getenv(env):
-                raise ValidationError(f"Missing required environment variable: {env}")
         
         return config
         
