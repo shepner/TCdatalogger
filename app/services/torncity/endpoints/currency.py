@@ -51,13 +51,8 @@ class CurrencyEndpointProcessor(BaseEndpointProcessor):
             return [
                 bigquery.SchemaField('server_timestamp', 'TIMESTAMP', mode='REQUIRED'),
                 bigquery.SchemaField('faction_id', 'INTEGER', mode='REQUIRED'),
-                bigquery.SchemaField('points_balance', 'INTEGER', mode='REQUIRED'),
-                bigquery.SchemaField('money_balance', 'INTEGER', mode='REQUIRED'),
-                bigquery.SchemaField('points_accumulated', 'INTEGER', mode='NULLABLE'),
-                bigquery.SchemaField('points_total', 'INTEGER', mode='NULLABLE'),
-                bigquery.SchemaField('money_accumulated', 'INTEGER', mode='NULLABLE'),
-                bigquery.SchemaField('money_total', 'INTEGER', mode='NULLABLE'),
-                bigquery.SchemaField('fetched_at', 'TIMESTAMP', mode='NULLABLE')
+                bigquery.SchemaField('points', 'INTEGER', mode='REQUIRED'),
+                bigquery.SchemaField('money', 'INTEGER', mode='REQUIRED')
             ]
         else:
             return [
@@ -175,12 +170,8 @@ class CurrencyEndpointProcessor(BaseEndpointProcessor):
             # Create record with current balances
             record = {
                 "faction_id": faction_id,
-                "points_balance": currency_data.get("points_balance", 0),
-                "money_balance": currency_data.get("money_balance", 0),
-                "points_accumulated": currency_data.get("points", {}).get("accumulated", 0),
-                "points_total": currency_data.get("points", {}).get("total", 0),
-                "money_accumulated": currency_data.get("money", {}).get("accumulated", 0),
-                "money_total": currency_data.get("money", {}).get("total", 0),
+                "points": currency_data.get("points_balance", 0),
+                "money": currency_data.get("money_balance", 0),
                 "server_timestamp": data.get("timestamp"),
                 "fetched_at": data.get("fetched_at")
             }

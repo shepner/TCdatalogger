@@ -31,17 +31,43 @@ class ItemsEndpointProcessor(BaseEndpointProcessor):
         self.endpoint_config.update(endpoint_config)
 
     def get_schema(self) -> List[bigquery.SchemaField]:
-        """Get the BigQuery schema for items data."""
+        """Get the BigQuery schema for items data.
+
+        Returns:
+            List of BigQuery SchemaField objects defining the table schema.
+        """
         return [
-            bigquery.SchemaField("item_id", "INTEGER", mode="REQUIRED"),
-            bigquery.SchemaField("name", "STRING", mode="REQUIRED"),
-            bigquery.SchemaField("description", "STRING"),
-            bigquery.SchemaField("type", "STRING"),
-            bigquery.SchemaField("buy_price", "INTEGER"),
-            bigquery.SchemaField("sell_price", "INTEGER"),
-            bigquery.SchemaField("market_value", "INTEGER"),
-            bigquery.SchemaField("circulation", "INTEGER"),
-            bigquery.SchemaField("timestamp", "TIMESTAMP", mode="REQUIRED")
+            bigquery.SchemaField('server_timestamp', 'TIMESTAMP', mode='REQUIRED'),
+            bigquery.SchemaField('id', 'INTEGER', mode='REQUIRED'),
+            bigquery.SchemaField('name', 'STRING', mode='REQUIRED'),
+            bigquery.SchemaField('description', 'STRING', mode='NULLABLE'),
+            bigquery.SchemaField('effect', 'STRING', mode='NULLABLE'),
+            bigquery.SchemaField('requirement', 'STRING', mode='NULLABLE'),
+            bigquery.SchemaField('image', 'STRING', mode='NULLABLE'),
+            bigquery.SchemaField('type', 'STRING', mode='NULLABLE'),
+            bigquery.SchemaField('sub_type', 'STRING', mode='NULLABLE'),
+            bigquery.SchemaField('is_masked', 'BOOLEAN', mode='NULLABLE'),
+            bigquery.SchemaField('is_tradable', 'BOOLEAN', mode='NULLABLE'),
+            bigquery.SchemaField('is_found_in_city', 'BOOLEAN', mode='NULLABLE'),
+            bigquery.SchemaField('value_vendor_country', 'STRING', mode='NULLABLE'),
+            bigquery.SchemaField('value_vendor_name', 'STRING', mode='NULLABLE'),
+            bigquery.SchemaField('value_buy_price', 'INTEGER', mode='NULLABLE'),
+            bigquery.SchemaField('value_sell_price', 'INTEGER', mode='NULLABLE'),
+            bigquery.SchemaField('value_market_price', 'INTEGER', mode='NULLABLE'),
+            bigquery.SchemaField('circulation', 'INTEGER', mode='NULLABLE'),
+            bigquery.SchemaField('details_coverage_name', 'STRING', mode='NULLABLE'),
+            bigquery.SchemaField('details_coverage_value', 'FLOAT', mode='NULLABLE'),
+            bigquery.SchemaField('details_category', 'STRING', mode='NULLABLE'),
+            bigquery.SchemaField('details_stealth_level', 'FLOAT', mode='NULLABLE'),
+            bigquery.SchemaField('details_base_stats_damage', 'INTEGER', mode='NULLABLE'),
+            bigquery.SchemaField('details_base_stats_accuracy', 'INTEGER', mode='NULLABLE'),
+            bigquery.SchemaField('details_base_stats_armor', 'INTEGER', mode='NULLABLE'),
+            bigquery.SchemaField('details_ammo_id', 'INTEGER', mode='NULLABLE'),
+            bigquery.SchemaField('details_ammo_name', 'STRING', mode='NULLABLE'),
+            bigquery.SchemaField('details_ammo_magazine_rounds', 'INTEGER', mode='NULLABLE'),
+            bigquery.SchemaField('details_ammo_rate_of_fire_minimum', 'INTEGER', mode='NULLABLE'),
+            bigquery.SchemaField('details_ammo_rate_of_fire_maximum', 'INTEGER', mode='NULLABLE'),
+            bigquery.SchemaField('details_mods', 'INTEGER', mode='NULLABLE')
         ]
 
     def transform_data(self, data: Dict[str, Any]) -> List[Dict[str, Any]]:

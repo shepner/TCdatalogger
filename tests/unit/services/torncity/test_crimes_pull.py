@@ -26,33 +26,33 @@ class TestCrimesEndpointProcessor(CrimesEndpointProcessor):
     def get_schema(self) -> list:
         """Get schema for crimes data."""
         return [
-            bigquery.SchemaField('server_timestamp', 'TIMESTAMP', mode='REQUIRED'),
-            bigquery.SchemaField('id', 'INTEGER', mode='REQUIRED'),
-            bigquery.SchemaField('name', 'STRING', mode='REQUIRED'),
-            bigquery.SchemaField('difficulty', 'STRING', mode='REQUIRED'),
-            bigquery.SchemaField('status', 'STRING', mode='REQUIRED'),
-            bigquery.SchemaField('created_at', 'TIMESTAMP', mode='REQUIRED'),
-            bigquery.SchemaField('planning_at', 'TIMESTAMP', mode='NULLABLE'),
-            bigquery.SchemaField('executed_at', 'TIMESTAMP', mode='NULLABLE'),
-            bigquery.SchemaField('ready_at', 'TIMESTAMP', mode='NULLABLE'),
-            bigquery.SchemaField('expired_at', 'TIMESTAMP', mode='NULLABLE'),
-            bigquery.SchemaField('rewards_money', 'INTEGER', mode='REQUIRED'),
-            bigquery.SchemaField('rewards_respect', 'FLOAT', mode='REQUIRED'),
-            bigquery.SchemaField('rewards_payout_type', 'STRING', mode='NULLABLE'),
-            bigquery.SchemaField('rewards_payout_percentage', 'FLOAT', mode='NULLABLE'),
-            bigquery.SchemaField('rewards_payout_paid_by', 'INTEGER', mode='NULLABLE'),
-            bigquery.SchemaField('rewards_payout_paid_at', 'TIMESTAMP', mode='NULLABLE'),
-            bigquery.SchemaField('rewards_items_id', 'STRING', mode='NULLABLE'),
-            bigquery.SchemaField('rewards_items_quantity', 'STRING', mode='NULLABLE'),
-            bigquery.SchemaField('slots_position', 'INTEGER', mode='NULLABLE'),
-            bigquery.SchemaField('slots_user_id', 'INTEGER', mode='NULLABLE'),
-            bigquery.SchemaField('slots_success_chance', 'FLOAT', mode='NULLABLE'),
-            bigquery.SchemaField('slots_crime_pass_rate', 'FLOAT', mode='NULLABLE'),
-            bigquery.SchemaField('slots_item_requirement_id', 'INTEGER', mode='NULLABLE'),
-            bigquery.SchemaField('slots_item_requirement_is_reusable', 'BOOLEAN', mode='NULLABLE'),
-            bigquery.SchemaField('slots_item_requirement_is_available', 'BOOLEAN', mode='NULLABLE'),
-            bigquery.SchemaField('slots_user_joined_at', 'TIMESTAMP', mode='NULLABLE'),
-            bigquery.SchemaField('slots_user_progress', 'FLOAT', mode='NULLABLE')
+            bigquery.SchemaField("server_timestamp", "TIMESTAMP", mode="REQUIRED"),
+            bigquery.SchemaField("id", "INTEGER", mode="REQUIRED"),
+            bigquery.SchemaField("name", "STRING", mode="REQUIRED"),
+            bigquery.SchemaField("difficulty", "INTEGER", mode="REQUIRED"),
+            bigquery.SchemaField("status", "STRING", mode="REQUIRED"),
+            bigquery.SchemaField("created_at", "TIMESTAMP", mode="REQUIRED"),
+            bigquery.SchemaField("planning_at", "TIMESTAMP", mode="NULLABLE"),
+            bigquery.SchemaField("executed_at", "TIMESTAMP", mode="NULLABLE"),
+            bigquery.SchemaField("ready_at", "TIMESTAMP", mode="NULLABLE"),
+            bigquery.SchemaField("expired_at", "TIMESTAMP", mode="NULLABLE"),
+            bigquery.SchemaField("slots_position", "STRING", mode="NULLABLE"),
+            bigquery.SchemaField("slots_item_requirement_id", "INTEGER", mode="NULLABLE"),
+            bigquery.SchemaField("slots_item_requirement_is_reusable", "BOOLEAN", mode="NULLABLE"),
+            bigquery.SchemaField("slots_item_requirement_is_available", "BOOLEAN", mode="NULLABLE"),
+            bigquery.SchemaField("slots_user_id", "INTEGER", mode="NULLABLE"),
+            bigquery.SchemaField("slots_user_joined_at", "TIMESTAMP", mode="NULLABLE"),
+            bigquery.SchemaField("slots_user_progress", "FLOAT", mode="NULLABLE"),
+            bigquery.SchemaField("slots_success_chance", "INTEGER", mode="NULLABLE"),
+            bigquery.SchemaField("slots_crime_pass_rate", "INTEGER", mode="NULLABLE"),
+            bigquery.SchemaField("rewards_money", "INTEGER", mode="NULLABLE"),
+            bigquery.SchemaField("rewards_items_id", "INTEGER", mode="NULLABLE"),
+            bigquery.SchemaField("rewards_items_quantity", "INTEGER", mode="NULLABLE"),
+            bigquery.SchemaField("rewards_respect", "INTEGER", mode="NULLABLE"),
+            bigquery.SchemaField("rewards_payout_type", "STRING", mode="NULLABLE"),
+            bigquery.SchemaField("rewards_payout_percentage", "INTEGER", mode="NULLABLE"),
+            bigquery.SchemaField("rewards_payout_paid_by", "INTEGER", mode="NULLABLE"),
+            bigquery.SchemaField("rewards_payout_paid_at", "TIMESTAMP", mode="NULLABLE")
         ]
 
 
@@ -176,7 +176,7 @@ def mock_crimes_response():
             "1": {
                 "id": 1,
                 "name": "Test Crime",
-                "difficulty": "medium",
+                "difficulty": 2,
                 "status": "completed",
                 "created_at": 1646956800,
                 "planning_at": 1646956800,
@@ -283,7 +283,7 @@ class TestCrimesPull(unittest.TestCase):
             assert 'name' in result.columns
             assert result.iloc[0]['id'] == 1
             assert result.iloc[0]['name'] == 'Test Crime'
-            assert result.iloc[0]['difficulty'] == 'medium'
+            assert result.iloc[0]['difficulty'] == 2
             assert result.iloc[0]['status'] == 'completed'
             assert result.iloc[0]['participant_count'] == 2
             assert result.iloc[0]['participant_ids'] == '12345,67890'
@@ -305,7 +305,7 @@ class TestCrimesPull(unittest.TestCase):
                 '1': {
                     'id': 1,
                     'name': 'Test Crime',
-                    'difficulty': 'medium',
+                    'difficulty': 2,
                     'status': 'completed',
                     'created_at': 1646956800,
                     'planning_at': 1646956800,
@@ -781,7 +781,7 @@ class TestCrimesPull(unittest.TestCase):
                     'executed_at': 'invalid_date',  # Invalid string
                     'ready_at': '2024-03-17T00:00:00',  # String timestamp
                     'expired_at': 1710720000,  # Unix timestamp
-                    'difficulty': 'medium',
+                    'difficulty': 2,
                     'status': 'completed'
                 }
             }
@@ -936,7 +936,7 @@ class TestCrimesPull(unittest.TestCase):
                 '123': {
                     'id': 123,
                     'name': 'Test Crime',
-                    'difficulty': 'medium',
+                    'difficulty': 2,
                     'status': 'completed',
                     'created_at': 1710633600,
                     'planning_at': 1710633600,
@@ -979,7 +979,7 @@ class TestCrimesPull(unittest.TestCase):
         assert isinstance(crime['server_timestamp'], pd.Timestamp)
         assert crime['id'] == 123
         assert crime['name'] == 'Test Crime'
-        assert crime['difficulty'] == 'medium'
+        assert crime['difficulty'] == 2
         assert crime['status'] == 'completed'
         assert isinstance(crime['created_at'], pd.Timestamp)
         assert isinstance(crime['planning_at'], pd.Timestamp)

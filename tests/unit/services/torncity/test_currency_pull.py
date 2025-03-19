@@ -24,15 +24,10 @@ class TestCurrencyEndpointProcessor(CurrencyEndpointProcessor):
     def get_schema(self) -> List[bigquery.SchemaField]:
         """Get the schema for test data."""
         return [
+            bigquery.SchemaField("server_timestamp", "TIMESTAMP", mode="REQUIRED"),
             bigquery.SchemaField("faction_id", "INTEGER", mode="REQUIRED"),
-            bigquery.SchemaField("points_balance", "INTEGER", mode="REQUIRED"),
-            bigquery.SchemaField("money_balance", "INTEGER", mode="REQUIRED"),
-            bigquery.SchemaField("points_accumulated", "INTEGER"),
-            bigquery.SchemaField("points_total", "INTEGER"),
-            bigquery.SchemaField("money_accumulated", "INTEGER"),
-            bigquery.SchemaField("money_total", "INTEGER"),
-            bigquery.SchemaField("server_timestamp", "TIMESTAMP"),
-            bigquery.SchemaField("fetched_at", "TIMESTAMP")
+            bigquery.SchemaField("points", "INTEGER", mode="REQUIRED"),
+            bigquery.SchemaField("money", "INTEGER", mode="REQUIRED")
         ]
 
     def convert_timestamps(self, df: pd.DataFrame, exclude_cols: list[str] = None) -> pd.DataFrame:
@@ -184,19 +179,10 @@ def mock_currency_response():
     """Mock response from currency endpoint."""
     return {
         "currency": {
-            "points_balance": 1000,
-            "money_balance": 5000000,
-            "points": {
-                "accumulated": 500,
-                "total": 1500
-            },
-            "money": {
-                "accumulated": 2500000,
-                "total": 7500000
-            }
+            "points": 1000,
+            "money": 5000000
         },
-        "timestamp": 1647432000,
-        "fetched_at": "2024-03-16T09:32:31.281852"
+        "timestamp": 1647432000
     }
 
 class TestCurrencyPull:
@@ -221,10 +207,10 @@ class TestCurrencyPull:
             # Verify results
             assert not result.empty
             assert "faction_id" in result.columns
-            assert "points_balance" in result.columns
-            assert "money_balance" in result.columns
-            assert result.iloc[0]["points_balance"] == 1000
-            assert result.iloc[0]["money_balance"] == 5000000
+            assert "points" in result.columns
+            assert "money" in result.columns
+            assert result.iloc[0]["points"] == 1000
+            assert result.iloc[0]["money"] == 5000000
     
     def test_currency_data_validation(self, currency_processor, mock_currency_response):
         """Test data validation."""
@@ -274,8 +260,6 @@ class TestCurrencyPull:
         invalid_response = {
             "currency": {
                 # All fields are invalid or null
-                "points_balance": None,
-                "money_balance": None,
                 "points": None,
                 "money": None
             },
@@ -290,16 +274,8 @@ class TestCurrencyPull:
         response = {
             "currency": {
                 # All fields that would be dropped during processing
-                "points_balance": "invalid",
-                "money_balance": "invalid",
-                "points": {
-                    "accumulated": "invalid",
-                    "total": "invalid"
-                },
-                "money": {
-                    "accumulated": "invalid",
-                    "total": "invalid"
-                }
+                "points": "invalid",
+                "money": "invalid"
             },
             "timestamp": "invalid",
             "fetched_at": "2024-03-16T00:00:00"
@@ -336,16 +312,8 @@ class TestCurrencyPull:
         # Mock response with valid structure but currency data that will result in no records
         mock_currency_response = {
             "currency": {
-                "points_balance": 1000,  # Valid field
-                "money_balance": None,  # Required field is None
-                "points": {
-                    "accumulated": 500,
-                    "total": 1500
-                },
-                "money": {
-                    "accumulated": 2500000,
-                    "total": 7500000
-                }
+                "points": 1000,  # Valid field
+                "money": None,  # Required field is None
             },
             "timestamp": 1647432000,
             "fetched_at": "2024-03-16T00:00:00"
@@ -389,16 +357,8 @@ class TestCurrencyPull:
         # Create mock response
         mock_response = {
             "currency": {
-                "points_balance": 1000,
-                "money_balance": 5000000,
-                "points": {
-                    "accumulated": 500,
-                    "total": 1500
-                },
-                "money": {
-                    "accumulated": 2500000,
-                    "total": 7500000
-                }
+                "points": 1000,
+                "money": 5000000
             },
             "timestamp": 1647432000,
             "fetched_at": "2024-03-16T09:32:31.281852"
@@ -469,16 +429,8 @@ class TestCurrencyPull:
         # Create mock response with invalid numeric data
         mock_response = {
             "currency": {
-                "points_balance": "invalid",
-                "money_balance": "not_a_number",
-                "points": {
-                    "accumulated": None,
-                    "total": "error"
-                },
-                "money": {
-                    "accumulated": "NaN",
-                    "total": "undefined"
-                }
+                "points": "invalid",
+                "money": "not_a_number"
             },
             "timestamp": 1647432000,
             "fetched_at": "2024-03-16T09:32:31.281852"
@@ -492,12 +444,8 @@ class TestCurrencyPull:
 
         # Verify DataFrame contains NaN values for numeric columns
         assert not result.empty
-        assert pd.isna(result['points_balance'].iloc[0])
-        assert pd.isna(result['money_balance'].iloc[0])
-        assert pd.isna(result['points_accumulated'].iloc[0])
-        assert pd.isna(result['points_total'].iloc[0])
-        assert pd.isna(result['money_accumulated'].iloc[0])
-        assert pd.isna(result['money_total'].iloc[0])
+        assert pd.isna(result['points'].iloc[0])
+        assert pd.isna(result['money'].iloc[0])
 
         # Verify non-numeric columns are still present and valid
         assert result['faction_id'].iloc[0] == 17991
@@ -509,16 +457,8 @@ class TestCurrencyPull:
         # Create a response with invalid timestamp data
         mock_response = {
             "currency": {
-                "points_balance": 1000,
-                "money_balance": 5000000,
-                "points": {
-                    "accumulated": 500,
-                    "total": 1500
-                },
-                "money": {
-                    "accumulated": 2500000,
-                    "total": 7500000
-                }
+                "points": 1000,
+                "money": 5000000
             },
             "timestamp": "invalid_timestamp",  # Invalid timestamp
             "fetched_at": "invalid_datetime"  # Invalid datetime

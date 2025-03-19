@@ -1,24 +1,52 @@
-"""Processor for Torn City faction basic endpoint."""
+"""Processor for Torn City basic faction endpoint."""
 
 import logging
 from datetime import datetime
-from typing import Dict
+from typing import Dict, List, Any
 
 import pandas as pd
+from google.cloud import bigquery
 
 from app.services.torncity.base import BaseEndpointProcessor
 
-class BasicEndpointProcessor(BaseEndpointProcessor):
-    """Process data from the /v2/faction/basic endpoint.
-    
-    This processor handles basic faction data including:
-    - Faction information (ID, name, tag)
-    - Leader and co-leader information
-    - Age and creation date
-    - Respect earned
-    - Territory and capacity stats
-    """
-    
+class BasicFactionEndpointProcessor(BaseEndpointProcessor):
+    """Processor for Torn City basic faction data."""
+
+    def __init__(self, config: Dict[str, Any]):
+        """Initialize the basic faction processor.
+
+        Args:
+            config: Configuration dictionary containing API and storage settings.
+        """
+        super().__init__(config)
+
+    def get_schema(self) -> List[bigquery.SchemaField]:
+        """Get the BigQuery schema for basic faction data.
+
+        Returns:
+            List of BigQuery SchemaField objects defining the table schema.
+        """
+        return [
+            bigquery.SchemaField('server_timestamp', 'TIMESTAMP', mode='REQUIRED'),
+            bigquery.SchemaField('id', 'INTEGER', mode='REQUIRED'),
+            bigquery.SchemaField('name', 'STRING', mode='REQUIRED'),
+            bigquery.SchemaField('tag', 'STRING', mode='REQUIRED'),
+            bigquery.SchemaField('tag_image', 'STRING', mode='REQUIRED'),
+            bigquery.SchemaField('leader_id', 'INTEGER', mode='REQUIRED'),
+            bigquery.SchemaField('co_leader_id', 'INTEGER', mode='REQUIRED'),
+            bigquery.SchemaField('respect', 'INTEGER', mode='REQUIRED'),
+            bigquery.SchemaField('days_old', 'INTEGER', mode='REQUIRED'),
+            bigquery.SchemaField('capacity', 'INTEGER', mode='REQUIRED'),
+            bigquery.SchemaField('members', 'INTEGER', mode='REQUIRED'),
+            bigquery.SchemaField('is_enlisted', 'BOOLEAN', mode='REQUIRED'),
+            bigquery.SchemaField('rank_level', 'INTEGER', mode='REQUIRED'),
+            bigquery.SchemaField('rank_name', 'STRING', mode='REQUIRED'),
+            bigquery.SchemaField('rank_division', 'INTEGER', mode='REQUIRED'),
+            bigquery.SchemaField('rank_position', 'INTEGER', mode='REQUIRED'),
+            bigquery.SchemaField('rank_wins', 'INTEGER', mode='REQUIRED'),
+            bigquery.SchemaField('best_chain', 'INTEGER', mode='REQUIRED')
+        ]
+
     def transform_data(self, data: Dict) -> pd.DataFrame:
         """Transform basic faction data into a normalized DataFrame.
         

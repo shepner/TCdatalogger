@@ -261,15 +261,15 @@ class TestCurrencyProcessor:
         
         # Verify required fields
         required_fields = [field.name for field in schema if field.mode == "REQUIRED"]
+        assert "server_timestamp" in required_fields
         assert "currency_id" in required_fields
         assert "name" in required_fields
-        assert "timestamp" in required_fields
         
         # Verify field types
         field_types = {field.name: field.field_type for field in schema}
+        assert field_types["server_timestamp"] == "TIMESTAMP"
         assert field_types["currency_id"] == "INTEGER"
         assert field_types["name"] == "STRING"
         assert field_types["buy_price"] == "FLOAT"
         assert field_types["sell_price"] == "FLOAT"
-        assert field_types["circulation"] == "INTEGER"
-        assert field_types["timestamp"] == "TIMESTAMP" 
+        assert field_types["circulation"] == "INTEGER" 
