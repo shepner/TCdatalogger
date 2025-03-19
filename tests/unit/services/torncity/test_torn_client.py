@@ -25,7 +25,7 @@ def test_init_with_nonexistent_file():
 def test_make_request(mock_torn_api):
     client = TornClient("test_key")
     response = client.make_request("test_endpoint")
-    assert response == {"test": "data"}
+    assert response == {"status": True, "data": {"test": "data"}}
 
 def test_rate_limit_handling(mock_torn_api, monkeypatch):
     monkeypatch.setattr(requests, "get", mock_torn_api["rate_limit"])
@@ -42,4 +42,4 @@ def test_timeout_handling(mock_torn_api, monkeypatch):
 def test_concurrent_requests(mock_torn_api):
     client = TornClient("test_key")
     responses = client.make_concurrent_requests(["endpoint1", "endpoint2"])
-    assert all(response == {"test": "data"} for response in responses) 
+    assert all(response == {"status": True, "data": {"test": "data"}} for response in responses) 

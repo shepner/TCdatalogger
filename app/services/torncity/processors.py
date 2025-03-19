@@ -246,6 +246,75 @@ class CrimeProcessor(CrimesEndpointProcessor):
         """
         super().__init__(config)
 
+    def transform_data(self, data: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Transform crime data into a list of dictionaries.
+
+        Args:
+            data: Dictionary containing crime data.
+
+        Returns:
+            List of dictionaries containing transformed data.
+        """
+        if not data or not isinstance(data, dict):
+            raise DataValidationError("No crime data found in API response")
+
+        server_timestamp = pd.Timestamp.now()
+        transformed_crimes = []
+
+        for crime_id, crime_data in data.items():
+            try:
+                if not isinstance(crime_data, dict):
+                    continue
+
+                # Get participants
+                participants = crime_data.get('participants', [])
+                if not isinstance(participants, list):
+                    participants = []
+
+                # Map old field names to new schema
+                crime = {
+                    'server_timestamp': server_timestamp,
+                    'id': int(crime_id),
+                    'name': str(crime_data.get('crime_name', '')),
+                    'difficulty': '',  # Not available in old schema
+                    'status': 'completed' if crime_data.get('success') else 'failed',
+                    'created_at': pd.Timestamp.fromtimestamp(crime_data.get('time_started')) if crime_data.get('time_started') else None,
+                    'planning_at': None,  # Not available in old schema
+                    'executed_at': pd.Timestamp.fromtimestamp(crime_data.get('time_completed')) if crime_data.get('time_completed') else None,
+                    'ready_at': None,  # Not available in old schema
+                    'expired_at': None,  # Not available in old schema
+                    'rewards_money': int(crime_data.get('rewards_money', 0)),
+                    'rewards_respect': 0.0,  # Not available in old schema
+                    'rewards_payout_type': '',  # Not available in old schema
+                    'rewards_payout_percentage': 0.0,  # Not available in old schema
+                    'rewards_payout_paid_by': 0,  # Not available in old schema
+                    'rewards_payout_paid_at': None,  # Not available in old schema
+                    'rewards_items_id': None,  # Not available in old schema
+                    'rewards_items_quantity': None,  # Not available in old schema
+                    'slots_position': None,  # Not available in old schema
+                    'slots_user_id': None,  # Not available in old schema
+                    'slots_success_chance': None,  # Not available in old schema
+                    'slots_crime_pass_rate': None,  # Not available in old schema
+                    'slots_item_requirement_id': None,
+                    'slots_item_requirement_is_reusable': False,  # Not available in old schema
+                    'slots_item_requirement_is_available': False,  # Not available in old schema
+                    'slots_user_joined_at': None,  # Not available in old schema
+                    'slots_user_progress': None,  # Not available in old schema
+                    'participant_count': len(participants),
+                    'participant_ids': ','.join(str(p) for p in participants) if participants else ''
+                }
+
+                transformed_crimes.append(crime)
+
+            except Exception as e:
+                logging.error(f"Error processing crime {crime_id}: {str(e)}")
+                continue
+
+        if not transformed_crimes:
+            raise DataValidationError("No valid crime data found after processing")
+
+        return transformed_crimes
+
 class CurrencyProcessor(CurrencyEndpointProcessor):
     """Processor for Torn City currency data."""
 

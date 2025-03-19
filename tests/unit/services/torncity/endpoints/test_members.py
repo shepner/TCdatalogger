@@ -226,7 +226,7 @@ class TestMembersProcessor:
         with pytest.raises(DataValidationError) as exc:
             processor.process_data({"data": invalid_data})
 
-        assert "Invalid type for" in str(exc.value)
+        assert "Invalid numeric value for level field: invalid" in str(exc.value)
 
     @patch("app.services.torncity.client.TornClient.fetch_data")
     @patch("app.services.google.bigquery.client.BigQueryClient.write_data")

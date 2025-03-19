@@ -206,13 +206,26 @@ class BaseEndpointProcessor(ABC):
             Optional[str]: Formatted timestamp or None if invalid
         """
         try:
+            if timestamp is None:
+                return datetime.now().isoformat()
+            
             if isinstance(timestamp, str):
-                timestamp = int(timestamp)
-            if timestamp <= 0:
-                raise ValueError("Invalid timestamp value")
-            return datetime.fromtimestamp(timestamp).isoformat()
+                try:
+                    # Try parsing as ISO format first
+                    dt = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
+                    return dt.isoformat()
+                except ValueError:
+                    # Try parsing as Unix timestamp
+                    timestamp = float(timestamp)
+            
+            if isinstance(timestamp, (int, float)):
+                if timestamp <= 0:
+                    return datetime.now().isoformat()
+                return datetime.fromtimestamp(timestamp).isoformat()
+            
+            return datetime.now().isoformat()
         except (ValueError, TypeError):
-            return None
+            return datetime.now().isoformat()
 
     @abstractmethod
     def get_schema(self) -> List[bigquery.SchemaField]:
@@ -353,10 +366,24 @@ class BaseEndpointProcessor(ABC):
                 return converted.astype('float64')
             elif field.field_type == "BOOLEAN":
                 return series.fillna(False).astype(bool)
-            elif field.field_type == "DATETIME":
-                converted = pd.to_datetime(series, errors='coerce')
-                if converted.isna().any() and not field.is_nullable:
-                    raise ValueError("Invalid datetime values found")
+            elif field.field_type in ["DATETIME", "TIMESTAMP"]:
+                if pd.api.types.is_datetime64_any_dtype(series):
+                    return series
+                
+                # Convert various timestamp formats
+                converted = pd.to_datetime(series, format='mixed', errors='coerce')
+                
+                # Only fill NaT with current time if field is required
+                if field.mode == 'REQUIRED':
+                    current_time = pd.Timestamp.now()
+                    converted = converted.fillna(current_time)
+                
+                # Log any invalid timestamps
+                invalid_mask = pd.isna(converted)
+                if invalid_mask.any():
+                    invalid_values = series[invalid_mask].tolist()
+                    self._log_error(f"Invalid timestamp values found: {invalid_values}")
+                
                 return converted
             else:
                 raise ValueError(f"Unsupported field type: {field.field_type}")

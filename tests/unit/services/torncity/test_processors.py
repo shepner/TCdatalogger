@@ -378,7 +378,7 @@ class TestCrimeProcessor:
                 "time_completed": 1646960400,
                 "initiated_by": "12345",
                 "success": True,
-                "money_gained": 5000
+                "rewards_money": 5000
             }
         }
         
@@ -387,7 +387,7 @@ class TestCrimeProcessor:
         assert transformed[0]["id"] == 456
         assert transformed[0]["name"] == "Test Crime"
         assert transformed[0]["status"] == "completed"
-        assert transformed[0]["reward_money"] == 5000
+        assert transformed[0]["rewards_money"] == 5000
         assert transformed[0]["participant_count"] == 2
         assert transformed[0]["participant_ids"] == "12345,67890"
 

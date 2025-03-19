@@ -53,6 +53,8 @@ class TornClient:
         """
         self.api_keys = {}
         self.api_key_or_file = api_key_or_file
+        self._last_request_time = {}  # Initialize the request time tracking dict
+        self.logger = logging.getLogger(__name__)  # Initialize logger
         self._load_api_keys()
 
     def _load_api_keys(self) -> None:
@@ -258,68 +260,84 @@ class TornClient:
         """Make an internal request to the Torn API.
 
         Args:
-            endpoint: API endpoint to call
-            api_key: API key to use
-            timeout: Request timeout in seconds
+            endpoint: The API endpoint to request.
+            api_key: The API key to use.
+            timeout: Optional request timeout in seconds.
 
         Returns:
-            Dict[str, Any]: API response data
+            Dict containing the API response data.
 
         Raises:
-            TornAPITimeoutError: If the request times out
-            TornAPIRateLimitError: If the rate limit is exceeded
-            TornAPIError: For other API errors
+            TornAPIError: For any API-related errors.
         """
         url = f"https://api.torn.com/{endpoint}?key={api_key}"
+        
         try:
-            response = requests.get(url, timeout=timeout or 10)
-            data = response.json()
-
-            if response.status_code == 429:
-                raise TornAPIRateLimitError(f"Rate limit exceeded for key {api_key}")
-            elif response.status_code != 200:
-                raise TornAPIError(f"API request failed with status code {response.status_code}")
-
-            if 'error' in data:
-                error_code = data['error'].get('code', 0)
-                error_msg = data['error'].get('error', 'Unknown error')
-                if error_code == 2:  # Rate limit exceeded
-                    raise TornAPIRateLimitError(f"Rate limit exceeded for key {api_key}")
-                else:
-                    raise TornAPIError(f"API error: {error_msg}")
-
-            # Extract just the data portion if it exists
-            if isinstance(data, dict) and 'data' in data:
-                return data['data']
-            return data
-
-        except requests.exceptions.Timeout as e:
-            raise TornAPITimeoutError(f"Request timed out: {str(e)}")
-        except requests.exceptions.RequestException as e:
-            raise TornAPIError(f"API request failed: {str(e)}")
-        except (ValueError, KeyError) as e:
-            raise TornAPIError(f"Invalid API response: {str(e)}")
+            # Enforce rate limiting
+            self._enforce_rate_limit(api_key)
+            
+            # Make the request with retries
+            for attempt in range(3):  # Try up to 3 times
+                try:
+                    response = requests.get(url, timeout=self.get_timeout_config(timeout))
+                    data = response.json()
+                    
+                    # Check for error response
+                    if "error" in data:
+                        error_code = data["error"].get("code", 0)
+                        error_msg = data["error"].get("error", "Unknown error")
+                        
+                        if error_code == 5:  # Too many requests
+                            logging.warning(f"Rate limit hit for key {api_key}, attempt {attempt + 1}")
+                            time.sleep(2 ** attempt)  # Exponential backoff
+                            continue
+                        elif error_code == 2:  # Incorrect key
+                            raise TornAPIKeyError(f"Invalid API key: {error_msg}")
+                        else:
+                            raise TornAPIError(f"API error: {error_msg}")
+                    
+                    return data
+                    
+                except (requests.exceptions.RequestException, json.JSONDecodeError) as e:
+                    if attempt == 2:  # Last attempt
+                        raise TornAPIConnectionError(f"Failed to connect to Torn API: {str(e)}")
+                    time.sleep(2 ** attempt)  # Exponential backoff
+                    continue
+            
+            # If we get here, we've exhausted our retries
+            raise TornAPIRateLimitError(f"Rate limit exceeded for key {api_key}")
+            
+        except Exception as e:
+            if isinstance(e, (TornAPIError, TornAPIKeyError, TornAPIRateLimitError, TornAPIConnectionError)):
+                raise
+            raise TornAPIError(f"Unexpected error: {str(e)}")
 
     def make_request(self, endpoint: str, selection: str = "default") -> Dict[str, Any]:
         """Make a request to the Torn API.
 
         Args:
-            endpoint: API endpoint to call
-            selection: API key selection to use
+            endpoint: The API endpoint to request
+            selection: The API key selection to use
 
         Returns:
-            Dict[str, Any]: API response data
+            The API response data
 
         Raises:
-            TornAPIError: If the API request fails
+            TornAPIError: For general API errors
+            TornAPIKeyError: For API key related errors
+            TornAPIRateLimitError: For rate limit errors
+            TornAPITimeoutError: For timeout errors
+            TornAPIConnectionError: For connection errors
         """
-        api_key = self._get_api_key(selection)
         try:
+            api_key = self._get_api_key(selection)
             return self._make_request_internal(endpoint, api_key)
-        except TornAPIRateLimitError:
-            raise TornAPIRateLimitError(f"Rate limit exceeded for key {selection}")
-        except TornAPITimeoutError as e:
-            raise e
+        except TornAPITimeoutError:
+            raise
+        except TornAPIConnectionError as e:
+            if "Request timed out" in str(e):
+                raise TornAPITimeoutError("Request timed out")
+            raise TornAPIError(f"API request failed: {str(e)}")
         except Exception as e:
             raise TornAPIError(f"API request failed: {str(e)}")
 

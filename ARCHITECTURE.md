@@ -272,13 +272,33 @@ TCdatalogger/
 
    e. Crimes Table (`torn.crimes`):
    ```
-   - server_timestamp: TIMESTAMP (REQUIRED) - server time
-   - crime_id: INTEGER (REQUIRED) - Crime identifier
-   - crime_name: STRING (REQUIRED) - Name of the crime
-   - participants: INTEGER - Number of participants
-   - success: BOOLEAN - Whether crime was successful
-   - money_gained: INTEGER - Money gained from crime
-   - respect_gained: FLOAT - Respect gained from crime
+   - server_timestamp: TIMESTAMP (REQUIRED) - Server time when data was fetched
+   - id: INTEGER (REQUIRED) - Unique crime identifier
+   - name: STRING (REQUIRED) - Name of the crime
+   - difficulty: STRING (REQUIRED) - Difficulty level of the crime
+   - status: STRING (REQUIRED) - Current status of the crime (e.g., completed, failed)
+   - created_at: TIMESTAMP (REQUIRED) - When the crime was created
+   - planning_at: TIMESTAMP (NULLABLE) - When the crime entered planning phase
+   - executed_at: TIMESTAMP (NULLABLE) - When the crime was executed
+   - ready_at: TIMESTAMP (NULLABLE) - When the crime will be ready
+   - expired_at: TIMESTAMP (NULLABLE) - When the crime will expire
+   - rewards_money: INTEGER (REQUIRED) - Money reward amount
+   - rewards_respect: FLOAT (REQUIRED) - Respect reward amount
+   - rewards_payout_type: STRING (NULLABLE) - Type of payout
+   - rewards_payout_percentage: FLOAT (NULLABLE) - Percentage of payout
+   - rewards_payout_paid_by: INTEGER (NULLABLE) - ID of player who paid out
+   - rewards_payout_paid_at: TIMESTAMP (NULLABLE) - When the payout was made
+   - rewards_items_id: STRING (NULLABLE) - Comma-separated list of reward item IDs
+   - rewards_items_quantity: STRING (NULLABLE) - Comma-separated list of reward item quantities
+   - slots_position: INTEGER (NULLABLE) - Position in the crime
+   - slots_user_id: INTEGER (NULLABLE) - ID of user in the slot
+   - slots_success_chance: FLOAT (NULLABLE) - Success chance for the slot
+   - slots_crime_pass_rate: FLOAT (NULLABLE) - Pass rate for the crime
+   - slots_item_requirement_id: INTEGER (NULLABLE) - ID of required item for the slot
+   - slots_item_requirement_is_reusable: BOOLEAN (NULLABLE) - Whether the required item is reusable
+   - slots_item_requirement_is_available: BOOLEAN (NULLABLE) - Whether the required item is available
+   - slots_user_joined_at: TIMESTAMP (NULLABLE) - When the user joined the slot
+   - slots_user_progress: FLOAT (NULLABLE) - User's progress in the slot
    ```
 
    f. Basic Faction Table (`torn.basic`):

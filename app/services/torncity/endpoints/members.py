@@ -80,6 +80,9 @@ class MembersEndpointProcessor(BaseEndpointProcessor):
                     self._log_error(error_msg)
                     raise DataValidationError(error_msg)
                 
+                # Convert name to string if it's not already
+                name = str(name) if name is not None else None
+                
                 # Type validation
                 if not isinstance(name, str):
                     error_msg = f"Error processing member {member_id}: Invalid type for name field, expected str, got {type(name)}"

@@ -48,10 +48,9 @@ def mock_api_keys(tmp_path) -> str:
         "default": "test_key_1",
         "secondary": "test_key_2"
     }
-    keys_file = tmp_path / "api_keys.json"
-    with open(keys_file, "w") as f:
-        json.dump(api_keys, f)
-    return str(keys_file)
+    api_keys_file = tmp_path / "api_keys.json"
+    api_keys_file.write_text(json.dumps(api_keys))
+    return str(api_keys_file)
 
 @pytest.fixture
 def mock_credentials(tmp_path) -> str:

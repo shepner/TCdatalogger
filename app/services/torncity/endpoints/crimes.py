@@ -39,12 +39,33 @@ class CrimesEndpointProcessor(BaseEndpointProcessor):
         """Get the BigQuery schema for crimes data."""
         return [
             bigquery.SchemaField('server_timestamp', 'TIMESTAMP', mode='REQUIRED'),
-            bigquery.SchemaField('crime_id', 'INTEGER', mode='REQUIRED'),
-            bigquery.SchemaField('crime_name', 'STRING', mode='REQUIRED'),
-            bigquery.SchemaField('participants', 'INTEGER', mode='NULLABLE'),
-            bigquery.SchemaField('success', 'BOOLEAN', mode='NULLABLE'),
-            bigquery.SchemaField('money_gained', 'INTEGER', mode='NULLABLE'),
-            bigquery.SchemaField('respect_gained', 'FLOAT', mode='NULLABLE')
+            bigquery.SchemaField('id', 'INTEGER', mode='REQUIRED'),
+            bigquery.SchemaField('name', 'STRING', mode='REQUIRED'),
+            bigquery.SchemaField('difficulty', 'STRING', mode='REQUIRED'),
+            bigquery.SchemaField('status', 'STRING', mode='REQUIRED'),
+            bigquery.SchemaField('created_at', 'TIMESTAMP', mode='REQUIRED'),
+            bigquery.SchemaField('planning_at', 'TIMESTAMP', mode='NULLABLE'),
+            bigquery.SchemaField('executed_at', 'TIMESTAMP', mode='NULLABLE'),
+            bigquery.SchemaField('ready_at', 'TIMESTAMP', mode='NULLABLE'),
+            bigquery.SchemaField('expired_at', 'TIMESTAMP', mode='NULLABLE'),
+            bigquery.SchemaField('rewards_money', 'INTEGER', mode='REQUIRED'),
+            bigquery.SchemaField('rewards_respect', 'FLOAT', mode='REQUIRED'),
+            bigquery.SchemaField('rewards_payout_type', 'STRING', mode='NULLABLE'),
+            bigquery.SchemaField('rewards_payout_percentage', 'FLOAT', mode='NULLABLE'),
+            bigquery.SchemaField('rewards_payout_paid_by', 'INTEGER', mode='NULLABLE'),
+            bigquery.SchemaField('rewards_payout_paid_at', 'TIMESTAMP', mode='NULLABLE'),
+            bigquery.SchemaField('rewards_items_id', 'STRING', mode='NULLABLE'),
+            bigquery.SchemaField('rewards_items_quantity', 'STRING', mode='NULLABLE'),
+            bigquery.SchemaField('slots_position', 'INTEGER', mode='NULLABLE'),
+            bigquery.SchemaField('slots_user_id', 'INTEGER', mode='NULLABLE'),
+            bigquery.SchemaField('slots_success_chance', 'FLOAT', mode='NULLABLE'),
+            bigquery.SchemaField('slots_crime_pass_rate', 'FLOAT', mode='NULLABLE'),
+            bigquery.SchemaField('slots_item_requirement_id', 'INTEGER', mode='NULLABLE'),
+            bigquery.SchemaField('slots_item_requirement_is_reusable', 'BOOLEAN', mode='NULLABLE'),
+            bigquery.SchemaField('slots_item_requirement_is_available', 'BOOLEAN', mode='NULLABLE'),
+            bigquery.SchemaField('slots_user_joined_at', 'TIMESTAMP', mode='NULLABLE'),
+            bigquery.SchemaField('slots_user_progress', 'FLOAT', mode='NULLABLE'),
+            bigquery.SchemaField('reward_item_count', 'INTEGER', mode='REQUIRED')
         ]
 
     def convert_timestamps(self, df: pd.DataFrame, exclude_cols: List[str] = None) -> pd.DataFrame:
@@ -63,9 +84,61 @@ class CrimesEndpointProcessor(BaseEndpointProcessor):
         
         for col in timestamp_cols:
             try:
-                df[col] = pd.to_datetime(df[col], errors='coerce')
-            except (ValueError, TypeError):
-                pass
+                # Try multiple timestamp formats
+                timestamps = []
+                for val in df[col]:
+                    try:
+                        if pd.isna(val):
+                            timestamps.append(pd.NaT)
+                        elif isinstance(val, (int, float)):
+                            timestamps.append(pd.Timestamp.fromtimestamp(val))
+                        elif isinstance(val, str):
+                            try:
+                                # Try ISO format first
+                                timestamps.append(pd.Timestamp(val))
+                            except ValueError:
+                                # Try Unix timestamp as string
+                                timestamps.append(pd.Timestamp.fromtimestamp(float(val)))
+                        else:
+                            timestamps.append(pd.NaT)
+                    except (ValueError, TypeError):
+                        timestamps.append(pd.NaT)
+                
+                df[col] = timestamps
+            except Exception as e:
+                logging.warning(f"Failed to convert timestamps for column {col}: {str(e)}")
+                continue
+        
+        return df
+
+    def convert_column_types(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Convert column types to their expected types.
+        
+        Args:
+            df: DataFrame to convert
+            
+        Returns:
+            DataFrame with converted types
+        """
+        type_conversions = {
+            'id': lambda x: pd.to_numeric(x, errors='coerce').fillna(0).astype(int),
+            'reward_money': lambda x: pd.to_numeric(x, errors='coerce').fillna(0).astype(int),
+            'reward_respect': lambda x: pd.to_numeric(x, errors='coerce').fillna(0).astype(float),
+            'reward_item_count': lambda x: pd.to_numeric(x, errors='coerce').fillna(0).astype(int),
+            'participant_count': lambda x: pd.to_numeric(x, errors='coerce').fillna(0).astype(int)
+        }
+        
+        for col, conversion in type_conversions.items():
+            if col in df.columns:
+                try:
+                    df[col] = conversion(df[col])
+                except Exception as e:
+                    logging.warning(f"Failed to convert column {col}: {str(e)}")
+                    # Set default values based on column type
+                    if col in ['id', 'reward_money', 'reward_item_count', 'participant_count']:
+                        df[col] = 0
+                    elif col == 'reward_respect':
+                        df[col] = 0.0
         
         return df
 
@@ -89,21 +162,59 @@ class CrimesEndpointProcessor(BaseEndpointProcessor):
         if not crimes_data:
             raise DataValidationError("No crimes data found in API response")
 
+        # Parse server timestamp
         server_timestamp = data.get('timestamp', pd.Timestamp.now())
-        fetched_at = data.get('fetched_at', pd.Timestamp.now())
-
         try:
             if isinstance(server_timestamp, (int, float)):
                 server_timestamp = pd.Timestamp.fromtimestamp(server_timestamp)
+            elif isinstance(server_timestamp, str):
+                try:
+                    # Try parsing as ISO format first
+                    server_timestamp = pd.Timestamp(server_timestamp)
+                except ValueError:
+                    # Try parsing as Unix timestamp
+                    server_timestamp = pd.Timestamp.fromtimestamp(float(server_timestamp))
             else:
-                server_timestamp = pd.Timestamp(server_timestamp)
+                server_timestamp = pd.Timestamp.now()
         except (ValueError, TypeError):
             server_timestamp = pd.Timestamp.now()
 
+        # Parse fetched_at timestamp
+        fetched_at = data.get('fetched_at', pd.Timestamp.now())
         try:
-            fetched_at = pd.Timestamp(fetched_at)
+            if isinstance(fetched_at, (int, float)):
+                fetched_at = pd.Timestamp.fromtimestamp(fetched_at)
+            elif isinstance(fetched_at, str):
+                try:
+                    # Try parsing as ISO format first
+                    fetched_at = pd.Timestamp(fetched_at)
+                except ValueError:
+                    # Try parsing as Unix timestamp
+                    fetched_at = pd.Timestamp.fromtimestamp(float(fetched_at))
+            else:
+                fetched_at = pd.Timestamp.now()
         except (ValueError, TypeError):
             fetched_at = pd.Timestamp.now()
+
+        def parse_timestamp(value):
+            """Parse timestamp value to pandas Timestamp."""
+            if value is None:
+                return None
+            try:
+                if isinstance(value, (int, float)):
+                    return pd.Timestamp.fromtimestamp(value)
+                elif isinstance(value, str):
+                    try:
+                        # Try parsing as ISO format first
+                        return pd.Timestamp(value)
+                    except ValueError:
+                        # Try parsing as Unix timestamp
+                        return pd.Timestamp.fromtimestamp(float(value))
+                elif isinstance(value, pd.Timestamp):
+                    return value
+                return None
+            except (ValueError, TypeError):
+                return None
 
         processed_crimes = []
         for crime_id, crime_data in crimes_data.items():
@@ -111,116 +222,69 @@ class CrimesEndpointProcessor(BaseEndpointProcessor):
                 if not isinstance(crime_data, dict):
                     continue
 
-                # Map old field names to new ones
-                crime_data = {
-                    'name': crime_data.get('crime_name', crime_data.get('name', '')),
-                    'created_at': crime_data.get('time_started', crime_data.get('created_at')),
-                    'executed_at': crime_data.get('time_completed', crime_data.get('executed_at')),
-                    'status': 'completed' if crime_data.get('success') else crime_data.get('status', ''),
-                    'reward_money': crime_data.get('money_gained', crime_data.get('reward_money', 0)),
-                    'participants': crime_data.get('participants', []),
-                    'difficulty': crime_data.get('difficulty', ''),
-                    'planning_at': crime_data.get('planning_at'),
-                    'ready_at': crime_data.get('ready_at'),
-                    'expired_at': crime_data.get('expired_at'),
-                    'rewards': crime_data.get('rewards', {})
-                }
-
-                # Process timestamps
-                timestamps = {
-                    'created_at': crime_data.get('created_at'),
-                    'planning_at': crime_data.get('planning_at'),
-                    'ready_at': crime_data.get('ready_at'),
-                    'executed_at': crime_data.get('executed_at'),
-                    'expired_at': crime_data.get('expired_at')
-                }
-                
-                for key, value in timestamps.items():
-                    try:
-                        if isinstance(value, (int, float)):
-                            timestamps[key] = pd.Timestamp.fromtimestamp(value)
-                        elif isinstance(value, str):
-                            timestamps[key] = pd.Timestamp(value)
-                        else:
-                            timestamps[key] = None
-                    except (ValueError, TypeError):
-                        timestamps[key] = None
-
-                # Process rewards
-                rewards = crime_data.get('rewards', {})
-                if not isinstance(rewards, dict):
-                    rewards = {}
-
-                reward_items = rewards.get('items', [])
-                if not isinstance(reward_items, list):
-                    reward_items = []
-
-                item_ids = []
-                item_quantities = []
-                for item in reward_items:
-                    if isinstance(item, dict):
-                        item_id = item.get('id')
-                        quantity = item.get('quantity')
-                        if item_id is not None and quantity is not None:
-                            try:
-                                item_ids.append(str(int(item_id)))
-                                item_quantities.append(str(int(quantity)))
-                            except (ValueError, TypeError):
-                                continue
-
-                # Process participants
-                participants = crime_data.get('participants', [])
-                if not isinstance(participants, list):
-                    participants = []
-
-                participant_ids = []
-                participant_names = []
-                for participant in participants:
-                    if isinstance(participant, dict):
-                        p_id = participant.get('id')
-                        p_name = participant.get('name')
-                        if p_id is not None and p_name is not None:
-                            try:
-                                participant_ids.append(str(int(p_id)))
-                                participant_names.append(str(p_name))
-                            except (ValueError, TypeError):
-                                continue
-                    elif isinstance(participant, str):
-                        # Handle old format where participants is just a list of IDs
-                        try:
-                            participant_ids.append(str(int(participant)))
-                        except (ValueError, TypeError):
-                            continue
-
+                # Create base crime record
                 processed_crime = {
-                    'id': int(crime_id) if isinstance(crime_id, (int, str)) else 0,
-                    'name': str(crime_data.get('name', '')),
-                    'created_at': timestamps['created_at'],
-                    'planning_at': timestamps['planning_at'],
-                    'ready_at': timestamps['ready_at'],
-                    'executed_at': timestamps['executed_at'],
-                    'expired_at': timestamps['expired_at'],
-                    'status': str(crime_data.get('status', '')),
-                    'difficulty': str(crime_data.get('difficulty', '')),
-                    'reward_money': int(float(rewards.get('money', 0))),
-                    'reward_respect': float(rewards.get('respect', 0.0)),
-                    'reward_item_count': len(reward_items),
-                    'reward_item_ids': ','.join(item_ids) if item_ids else None,
-                    'reward_item_quantities': ','.join(item_quantities) if item_quantities else None,
-                    'participant_count': len(participants),
-                    'participant_ids': ','.join(participant_ids) if participant_ids else None,
-                    'participant_names': ','.join(participant_names) if participant_names else None,
                     'server_timestamp': server_timestamp,
-                    'fetched_at': fetched_at
+                    'id': int(crime_id) if str(crime_id).isdigit() else 0,
+                    'name': crime_data.get('name', ''),
+                    'difficulty': crime_data.get('difficulty', 'unknown'),
+                    'status': crime_data.get('status', 'unknown'),
+                    'created_at': parse_timestamp(crime_data.get('created_at')) or server_timestamp,
+                    'planning_at': parse_timestamp(crime_data.get('planning_at')),
+                    'ready_at': parse_timestamp(crime_data.get('ready_at')),
+                    'executed_at': parse_timestamp(crime_data.get('executed_at')),
+                    'expired_at': parse_timestamp(crime_data.get('expired_at')),
+                    'rewards_money': int(crime_data.get('rewards', {}).get('money', 0)),
+                    'rewards_respect': float(crime_data.get('rewards', {}).get('respect', 0.0)),
+                    'rewards_payout_type': crime_data.get('rewards', {}).get('payout', {}).get('type'),
+                    'rewards_payout_percentage': float(crime_data.get('rewards', {}).get('payout', {}).get('percentage', 0.0)),
+                    'rewards_payout_paid_by': int(crime_data.get('rewards', {}).get('payout', {}).get('paid_by', 0)),
+                    'rewards_payout_paid_at': parse_timestamp(crime_data.get('rewards', {}).get('payout', {}).get('paid_at')),
+                    'fetched_at': fetched_at,
+                    'reward_item_count': 0  # Initialize counter for valid reward items
                 }
+
+                # Process reward items
+                reward_items = crime_data.get('rewards', {}).get('items', [])
+                if isinstance(reward_items, list):
+                    item_ids = []
+                    item_quantities = []
+                    valid_item_count = 0
+                    for item in reward_items:
+                        if isinstance(item, dict):
+                            try:
+                                item_id = int(item.get('id', 0))
+                                quantity = int(item.get('quantity', 0))
+                                if item_id > 0 and quantity > 0:
+                                    item_ids.append(str(item_id))
+                                    item_quantities.append(str(quantity))
+                                    valid_item_count += 1
+                            except (ValueError, TypeError):
+                                continue
+                    processed_crime['rewards_items_id'] = ','.join(item_ids) if item_ids else None
+                    processed_crime['rewards_items_quantity'] = ','.join(item_quantities) if item_quantities else None
+                    processed_crime['reward_item_count'] = valid_item_count
+
+                # Process slots data
+                slots = crime_data.get('slots', {})
+                if isinstance(slots, dict):
+                    processed_crime.update({
+                        'slots_position': int(slots.get('position', 0)),
+                        'slots_user_id': int(slots.get('user_id', 0)),
+                        'slots_success_chance': float(slots.get('success_chance', 0.0)),
+                        'slots_crime_pass_rate': float(slots.get('crime_pass_rate', 0.0)),
+                        'slots_item_requirement_id': int(slots.get('item_requirement', {}).get('id', 0)),
+                        'slots_item_requirement_is_reusable': bool(slots.get('item_requirement', {}).get('is_reusable', False)),
+                        'slots_item_requirement_is_available': bool(slots.get('item_requirement', {}).get('is_available', False)),
+                        'slots_user_joined_at': parse_timestamp(slots.get('user_joined_at')),
+                        'slots_user_progress': float(slots.get('user_progress', 0.0))
+                    })
+
                 processed_crimes.append(processed_crime)
 
-            except (ValueError, TypeError) as e:
+            except Exception as e:
                 self._log_error(f"Error processing crime {crime_id}: {str(e)}")
                 continue
-
-        if not processed_crimes:
-            raise DataValidationError("No valid crimes data found in API response")
 
         return processed_crimes
 

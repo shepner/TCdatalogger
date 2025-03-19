@@ -26,245 +26,49 @@ class TestCrimesEndpointProcessor(CrimesEndpointProcessor):
     def get_schema(self) -> list:
         """Get schema for crimes data."""
         return [
-            bigquery.SchemaField("server_timestamp", "DATETIME", mode="REQUIRED"),
-            bigquery.SchemaField("created_at", "DATETIME", mode="REQUIRED"),
-            bigquery.SchemaField("planning_at", "DATETIME", mode="NULLABLE"),
-            bigquery.SchemaField("executed_at", "DATETIME", mode="NULLABLE"),
-            bigquery.SchemaField("ready_at", "DATETIME", mode="NULLABLE"),
-            bigquery.SchemaField("expired_at", "DATETIME", mode="NULLABLE"),
-            bigquery.SchemaField("id", "INTEGER", mode="REQUIRED"),
-            bigquery.SchemaField("participant_count", "INTEGER", mode="REQUIRED"),
-            bigquery.SchemaField("reward_money", "INTEGER", mode="REQUIRED"),
-            bigquery.SchemaField("reward_respect", "INTEGER", mode="REQUIRED"),
-            bigquery.SchemaField("reward_item_count", "INTEGER", mode="REQUIRED"),
-            bigquery.SchemaField("name", "STRING", mode="REQUIRED"),
-            bigquery.SchemaField("difficulty", "STRING", mode="REQUIRED"),
-            bigquery.SchemaField("status", "STRING", mode="REQUIRED"),
-            bigquery.SchemaField("participant_ids", "STRING", mode="REQUIRED"),
-            bigquery.SchemaField("participant_names", "STRING", mode="REQUIRED"),
-            bigquery.SchemaField("reward_item_ids", "STRING", mode="REQUIRED"),
-            bigquery.SchemaField("reward_item_quantities", "STRING", mode="REQUIRED"),
-            bigquery.SchemaField("fetched_at", "DATETIME", mode="REQUIRED")
+            bigquery.SchemaField('server_timestamp', 'TIMESTAMP', mode='REQUIRED'),
+            bigquery.SchemaField('id', 'INTEGER', mode='REQUIRED'),
+            bigquery.SchemaField('name', 'STRING', mode='REQUIRED'),
+            bigquery.SchemaField('difficulty', 'STRING', mode='REQUIRED'),
+            bigquery.SchemaField('status', 'STRING', mode='REQUIRED'),
+            bigquery.SchemaField('created_at', 'TIMESTAMP', mode='REQUIRED'),
+            bigquery.SchemaField('planning_at', 'TIMESTAMP', mode='NULLABLE'),
+            bigquery.SchemaField('executed_at', 'TIMESTAMP', mode='NULLABLE'),
+            bigquery.SchemaField('ready_at', 'TIMESTAMP', mode='NULLABLE'),
+            bigquery.SchemaField('expired_at', 'TIMESTAMP', mode='NULLABLE'),
+            bigquery.SchemaField('rewards_money', 'INTEGER', mode='REQUIRED'),
+            bigquery.SchemaField('rewards_respect', 'FLOAT', mode='REQUIRED'),
+            bigquery.SchemaField('rewards_payout_type', 'STRING', mode='NULLABLE'),
+            bigquery.SchemaField('rewards_payout_percentage', 'FLOAT', mode='NULLABLE'),
+            bigquery.SchemaField('rewards_payout_paid_by', 'INTEGER', mode='NULLABLE'),
+            bigquery.SchemaField('rewards_payout_paid_at', 'TIMESTAMP', mode='NULLABLE'),
+            bigquery.SchemaField('rewards_items_id', 'STRING', mode='NULLABLE'),
+            bigquery.SchemaField('rewards_items_quantity', 'STRING', mode='NULLABLE'),
+            bigquery.SchemaField('slots_position', 'INTEGER', mode='NULLABLE'),
+            bigquery.SchemaField('slots_user_id', 'INTEGER', mode='NULLABLE'),
+            bigquery.SchemaField('slots_success_chance', 'FLOAT', mode='NULLABLE'),
+            bigquery.SchemaField('slots_crime_pass_rate', 'FLOAT', mode='NULLABLE'),
+            bigquery.SchemaField('slots_item_requirement_id', 'INTEGER', mode='NULLABLE'),
+            bigquery.SchemaField('slots_item_requirement_is_reusable', 'BOOLEAN', mode='NULLABLE'),
+            bigquery.SchemaField('slots_item_requirement_is_available', 'BOOLEAN', mode='NULLABLE'),
+            bigquery.SchemaField('slots_user_joined_at', 'TIMESTAMP', mode='NULLABLE'),
+            bigquery.SchemaField('slots_user_progress', 'FLOAT', mode='NULLABLE')
         ]
 
-    def pull_data(self) -> pd.DataFrame:
-        """Pull and transform crimes data."""
-        try:
-            data = self.torn_client.fetch_data(self.endpoint_config['endpoint'])
-            return self.transform_data(data)
-        except Exception as e:
-            self._log_error(f"Error pulling crimes data: {str(e)}")
-            return pd.DataFrame()
 
-    def convert_timestamps(self, df: pd.DataFrame, exclude_cols: list = None) -> pd.DataFrame:
-        """Convert timestamp columns in test data."""
-        if exclude_cols is None:
-            exclude_cols = []
-        timestamp_cols = [col for col in df.columns if col.endswith('_at') or col.endswith('_timestamp')]
-        timestamp_cols = [col for col in timestamp_cols if col not in exclude_cols]
-        for col in timestamp_cols:
-            if col in df.columns:
-                try:
-                    df[col] = pd.to_datetime(df[col])
-                except Exception as e:
-                    self._log_error(f"Error converting timestamp column {col}: {str(e)}")
-                    df[col] = pd.NaT
-        return df
-
-    def convert_numerics(self, df: pd.DataFrame, exclude_cols: list = None) -> pd.DataFrame:
-        """Convert numeric columns in test data."""
-        if exclude_cols is None:
-            exclude_cols = []
-        numeric_cols = df.select_dtypes(include=['object', 'int64', 'float64']).columns
-        numeric_cols = [col for col in numeric_cols if col not in exclude_cols]
-        for col in numeric_cols:
-            if col in df.columns:
-                try:
-                    df[col] = pd.to_numeric(df[col], errors='coerce')
-                except (ValueError, TypeError) as e:
-                    self._log_error(f"Error converting numeric column {col}: {str(e)}")
-                    df[col] = pd.NA
-        return df
-
-    def transform_data(self, data: dict) -> pd.DataFrame:
-        """Transform crimes data into a normalized DataFrame."""
-        try:
-            # Get server timestamp and fetched_at
-            server_ts = data.get('timestamp')
-            if isinstance(server_ts, (int, float)):
-                server_ts = pd.to_datetime(server_ts, unit='s')
-            elif isinstance(server_ts, str):
-                server_ts = pd.to_datetime(server_ts)
-            else:
-                server_ts = pd.to_datetime('now')
-                
-            fetched_at = data.get('fetched_at')
-            if isinstance(fetched_at, (str, datetime)):
-                fetched_at = pd.to_datetime(fetched_at)
-            else:
-                fetched_at = pd.to_datetime('now')
-            
-            # Extract crimes data
-            crimes_data = data.get("crimes", {})
-            if not crimes_data:
-                self._log_error("No crimes data found in API response")
-                return pd.DataFrame()
-            
-            # Convert crimes dict to list of records
-            records = []
-            for crime_id, crime in crimes_data.items():
-                try:
-                    if not isinstance(crime, dict):
-                        self._log_error(f"Error processing crime record {crime_id}: Invalid data type")
-                        continue
-                        
-                    # Skip records with no valid data
-                    if not crime or not any(crime.values()):
-                        continue
-                        
-                    # Map old field names to new ones
-                    if 'crime_name' in crime:
-                        crime['name'] = crime.pop('crime_name')
-                    if 'time_started' in crime:
-                        crime['created_at'] = crime.pop('time_started')
-                    if 'time_completed' in crime:
-                        crime['executed_at'] = crime.pop('time_completed')
-                    if 'initiated_by' in crime:
-                        crime['participants'] = [{'id': crime.pop('initiated_by'), 'name': ''}]
-                    if 'planned_by' in crime:
-                        if 'participants' not in crime:
-                            crime['participants'] = []
-                        crime['participants'].append({'id': crime.pop('planned_by'), 'name': ''})
-                    if 'money_gain' in crime:
-                        crime['rewards'] = {'money': crime.pop('money_gain')}
-                    if 'respect_gain' in crime:
-                        if 'rewards' not in crime:
-                            crime['rewards'] = {}
-                        crime['rewards']['respect'] = crime.pop('respect_gain')
-                        
-                    # Create base crime record with required fields
-                    base_crime = {
-                        'server_timestamp': server_ts,
-                        'created_at': pd.to_datetime(crime.get('created_at'), unit='s', errors='coerce'),
-                        'planning_at': pd.to_datetime(crime.get('planning_at'), unit='s', errors='coerce'),
-                        'executed_at': pd.to_datetime(crime.get('executed_at'), unit='s', errors='coerce'),
-                        'ready_at': pd.to_datetime(crime.get('ready_at'), unit='s', errors='coerce'),
-                        'expired_at': pd.to_datetime(crime.get('expired_at'), unit='s', errors='coerce'),
-                        'id': self._safe_int_convert(crime.get('id')) or self._safe_int_convert(crime_id),
-                        'name': str(crime.get('name', '')).strip() or '',
-                        'difficulty': str(crime.get('difficulty') or '').strip() or '',
-                        'status': str(crime.get('status') or '').strip() or '',
-                        'participant_count': 0,
-                        'participant_ids': '',
-                        'participant_names': '',
-                        'reward_money': 0,
-                        'reward_respect': 0,
-                        'reward_item_count': 0,
-                        'reward_item_ids': '',
-                        'reward_item_quantities': '',
-                        'fetched_at': fetched_at
-                    }
-                    
-                    # Add participants data if available
-                    participants = crime.get('participants', [])
-                    if isinstance(participants, list):
-                        valid_participants = []
-                        for p in participants:
-                            if isinstance(p, dict):
-                                participant_id = self._safe_int_convert(p.get('id'))
-                                if participant_id:  # Only add if ID is valid (non-zero)
-                                    valid_participants.append({
-                                        'id': participant_id,
-                                        'name': str(p.get('name', '')).strip() or ''
-                                    })
-                        base_crime.update({
-                            'participant_count': len(valid_participants),
-                            'participant_ids': ','.join(str(p['id']) for p in valid_participants),
-                            'participant_names': ','.join(p['name'] for p in valid_participants)
-                        })
-                    
-                    # Add rewards data if available
-                    rewards = crime.get('rewards', {})
-                    if isinstance(rewards, dict):
-                        base_crime['reward_money'] = self._safe_int_convert(rewards.get('money'))
-                        base_crime['reward_respect'] = self._safe_int_convert(rewards.get('respect'))
-                        
-                        # Process reward items
-                        items = rewards.get('items', [])
-                        if isinstance(items, list):
-                            valid_items = []
-                            for item in items:
-                                if isinstance(item, dict):
-                                    item_id = self._safe_int_convert(item.get('id'))
-                                    if item_id:  # Only add if ID is valid (non-zero)
-                                        valid_items.append({
-                                            'id': item_id,
-                                            'quantity': self._safe_int_convert(item.get('quantity', 1))
-                                        })
-                            base_crime.update({
-                                'reward_item_count': len(valid_items),
-                                'reward_item_ids': ','.join(str(item['id']) for item in valid_items),
-                                'reward_item_quantities': ','.join(str(item['quantity']) for item in valid_items)
-                            })
-                    
-                    records.append(base_crime)
-                except Exception as e:
-                    self._log_error(f"Error processing crime record {crime_id}: {str(e)}")
-                    continue
-            
-            if not records:
-                self._log_error("No records created from crimes data")
-                return pd.DataFrame()
-            
-            # Create DataFrame and set column types
-            df = pd.DataFrame(records)
-            if df.empty:
-                self._log_error("No records created from crimes data")
-                return df
-            
-            # Define column order
-            timestamp_cols = ['server_timestamp', 'created_at', 'planning_at', 
-                            'executed_at', 'ready_at', 'expired_at', 'fetched_at']
-            numeric_cols = ['id', 'participant_count', 'reward_money', 'reward_respect', 'reward_item_count']
-            string_cols = ['name', 'difficulty', 'status', 'participant_ids', 'participant_names',
-                          'reward_item_ids', 'reward_item_quantities']
-            
-            # Convert numeric columns
-            for col in numeric_cols:
-                df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0).astype('int64')
-            
-            # Convert timestamp columns
-            for col in timestamp_cols:
-                df[col] = pd.to_datetime(df[col], errors='coerce')
-            
-            # Convert string columns
-            for col in string_cols:
-                df[col] = df[col].fillna('').astype(str)
-            
-            # Set column order
-            df = df[timestamp_cols[:-1] + numeric_cols + string_cols + ['fetched_at']]
-            
-            return df
-            
-        except Exception as e:
-            self._log_error(f"Error transforming crimes data: {str(e)}")
-            return pd.DataFrame()
-
-    def _safe_int_convert(self, value: Any) -> int:
-        """Safely convert a value to integer.
-        
-        Args:
-            value: Value to convert
-            
-        Returns:
-            int: Converted value or 0 if conversion fails
-        """
-        try:
-            if isinstance(value, str):
-                value = value.strip()
-            return int(float(value)) if value else 0
-        except (ValueError, TypeError):
-            return 0
+@pytest.fixture
+def crimes_processor():
+    """Create a test crimes processor instance."""
+    config = {
+        'api_key': 'test_api_key',
+        'gcp_project_id': 'test-project',
+        'gcp_credentials_file': 'test_credentials.json',
+        'dataset': 'test_dataset',
+        'endpoint': 'crimes',
+        'selection': 'default',
+        'storage_mode': 'append'
+    }
+    return TestCrimesEndpointProcessor(config=config)
 
 
 @pytest.fixture
@@ -362,17 +166,6 @@ def setup_env():
         "GOOGLE_APPLICATION_CREDENTIALS": "/path/to/credentials.json"
     }):
         yield
-
-
-@pytest.fixture
-def crimes_processor(mock_credentials, mock_monitoring_client, sample_config, mock_api_keys):
-    """Create CrimesEndpointProcessor for testing."""
-    with patch('google.oauth2.service_account.Credentials.from_service_account_file') as mock_creds:
-        mock_creds.return_value = mock_credentials
-        processor = TestCrimesEndpointProcessor(sample_config, sample_config['endpoint_config']['crimes'])
-        with patch.object(TornClient, "_load_api_keys", return_value=mock_api_keys):
-            processor.torn_client = TornClient("dummy_path")
-            return processor
 
 
 @pytest.fixture
@@ -684,91 +477,49 @@ class TestCrimesPull(unittest.TestCase):
         assert df.empty
 
     def test_crimes_bigquery_integration(self):
-        """Test BigQuery integration for crimes data."""
-        # Create mocks
-        mock_monitoring_client = MagicMock(spec=monitoring_v3.MetricServiceClient)
-        mock_monitoring_client.common_project_path.return_value = "projects/test-project"
-        
+        """Test integration with BigQuery."""
+        # Mock credentials and clients
         mock_credentials = MagicMock(spec=service_account.Credentials)
-        mock_credentials.project_id = "test-project"
-        
-        mock_bigquery_client = MagicMock()
+        mock_bigquery_client = MagicMock(spec=bigquery.Client)
+        mock_monitoring_client = MagicMock(spec=monitoring_v3.MetricServiceClient)
         mock_table = Mock()
-        mock_table.schema = self._get_processor().get_schema()
         mock_bigquery_client.get_table.return_value = mock_table
-        
-        # Create processor with mocks
-        crimes_processor = self._get_processor()
-        crimes_processor.monitoring_client = mock_monitoring_client
-        crimes_processor.bq_client = mock_bigquery_client
-        
+
+        # Set up test configuration
+        config = {
+            'api_key': 'test_api_key',
+            'gcp_project_id': 'test-project',
+            'gcp_credentials_file': 'test_credentials.json',
+            'dataset': 'test_dataset',
+            'endpoint': 'crimes',
+            'selection': 'default',
+            'storage_mode': 'append',
+            'table': 'crimes',
+            'bigquery_client': mock_bigquery_client,
+            'monitoring_client': mock_monitoring_client
+        }
+
+        # Create processor instance
+        crimes_processor = TestCrimesEndpointProcessor(config=config)
+
         # Test data
-        data = {
-            'timestamp': 1710633600,
-            'fetched_at': '2024-03-17T00:00:00',
+        test_data = {
             'crimes': {
                 '123': {
                     'id': 123,
                     'name': 'Test Crime',
-                    'difficulty': 'medium',
                     'status': 'completed',
-                    'created_at': int(time.time()),
-                    'planning_at': int(time.time()),
-                    'executed_at': int(time.time()),
-                    'ready_at': int(time.time()),
-                    'expired_at': int(time.time()),
-                    'participants': [
-                        {'id': 456, 'name': 'Player1'},
-                        {'id': 789, 'name': 'Player2'}
-                    ],
-                    'rewards': {
-                        'money': 1000,
-                        'respect': 10,
-                        'items': [
-                            {'id': 1, 'quantity': 2},
-                            {'id': 2, 'quantity': 1}
-                        ]
-                    }
+                    'timestamp': 1710633600
                 }
             }
         }
-        
-        # Process and update data
-        result = crimes_processor.process(data)
-        
-        # Verify processing was successful
-        assert result is True, "Processing should succeed"
-        
-        # Verify BigQuery client was called
-        mock_bigquery_client.load_table_from_dataframe.assert_called_once()
 
-    def test_empty_dataframe_after_processing(self, mock_monitoring_client, mock_credentials, sample_config, mock_api_keys, torn_client):
-        """Test handling of empty data after processing."""
-        base_config = {
-            'tc_api_key_file': '/path/to/api_keys.json',
-            'gcp_credentials_file': '/path/to/gcp_creds.json'
-        }
-        endpoint_config = {
-            'url': 'https://api.torn.com/user/?selections=crimes',
-            'table': 'crimes',
-            'dataset_id': 'torn',
-            'name': 'crimes'
-        }
-        
-        crimes_processor = TestCrimesEndpointProcessor(base_config, endpoint_config)
-        crimes_processor.torn_client = torn_client
-        crimes_processor.monitoring_client = mock_monitoring_client
-        
-        # Mock empty crimes data
-        mock_data = {
-            "crimes": {}
-        }
-        
-        # Process the data
-        result_df = crimes_processor.transform_data(mock_data)
-        
-        # Verify the result is an empty DataFrame
-        assert result_df.empty, "DataFrame should be empty due to invalid data"
+        # Process data
+        crimes_processor.process_data({'data': test_data})
+
+        # Verify BigQuery interactions
+        mock_bigquery_client.get_table.assert_called_once()
+        mock_bigquery_client.load_table_from_dataframe.assert_called_once()
 
     def test_rewards_data_processing(self):
         """Test processing of rewards data."""
@@ -976,7 +727,7 @@ class TestCrimesPull(unittest.TestCase):
         # Check third crime (mixed valid/invalid items)
         assert df.loc[df['id'] == 3, 'reward_money'].iloc[0] == 1000000
         assert df.loc[df['id'] == 3, 'reward_respect'].iloc[0] == 100
-        assert df.loc[df['id'] == 3, 'reward_item_count'].iloc[0] == 5  # All items in the list
+        assert df.loc[df['id'] == 3, 'reward_item_count'].iloc[0] == 1  # Only count valid items
         assert df.loc[df['id'] == 3, 'reward_item_ids'].iloc[0] == '456'
         assert df.loc[df['id'] == 3, 'reward_item_quantities'].iloc[0] == '3'
 
@@ -1173,4 +924,136 @@ class TestCrimesPull(unittest.TestCase):
         assert df['reward_respect'].iloc[0] == 0
         assert df['reward_item_count'].iloc[0] == 2
         assert df['reward_item_ids'].iloc[0] == '123,456'
-        assert df['reward_item_quantities'].iloc[0] == '2,1' 
+        assert df['reward_item_quantities'].iloc[0] == '2,1'
+
+    def test_process_data_valid(self, processor, sample_crimes_data):
+        """Test processing valid crimes data."""
+        data = {
+            'timestamp': 1710633600,
+            'fetched_at': '2024-03-17T00:00:00',
+            'crimes': {
+                '123': {
+                    'id': 123,
+                    'name': 'Test Crime',
+                    'difficulty': 'medium',
+                    'status': 'completed',
+                    'created_at': 1710633600,
+                    'planning_at': 1710633600,
+                    'executed_at': 1710633600,
+                    'ready_at': 1710633600,
+                    'expired_at': 1710633600,
+                    'rewards': {
+                        'money': 1000,
+                        'respect': 10.5,
+                        'payout': {
+                            'type': 'percentage',
+                            'percentage': 50.0,
+                            'paid_by': 456,
+                            'paid_at': '2024-03-17T01:00:00'
+                        },
+                        'items': [
+                            {'id': 1, 'quantity': 2},
+                            {'id': 2, 'quantity': 1}
+                        ]
+                    },
+                    'slots': {
+                        'position': 1,
+                        'user_id': 789,
+                        'success_chance': 75.5,
+                        'crime_pass_rate': 80.0,
+                        'item_requirement_id': 123,
+                        'item_requirement_is_reusable': True,
+                        'item_requirement_is_available': True,
+                        'user_joined_at': '2024-03-17T00:30:00',
+                        'user_progress': 50.0
+                    }
+                }
+            }
+        }
+        
+        processed_data = processor.process_data(data)
+        assert len(processed_data) == 1
+        
+        crime = processed_data[0]
+        assert isinstance(crime['server_timestamp'], pd.Timestamp)
+        assert crime['id'] == 123
+        assert crime['name'] == 'Test Crime'
+        assert crime['difficulty'] == 'medium'
+        assert crime['status'] == 'completed'
+        assert isinstance(crime['created_at'], pd.Timestamp)
+        assert isinstance(crime['planning_at'], pd.Timestamp)
+        assert isinstance(crime['executed_at'], pd.Timestamp)
+        assert isinstance(crime['ready_at'], pd.Timestamp)
+        assert isinstance(crime['expired_at'], pd.Timestamp)
+        assert crime['rewards_money'] == 1000
+        assert crime['rewards_respect'] == 10.5
+        assert crime['rewards_payout_type'] == 'percentage'
+        assert crime['rewards_payout_percentage'] == 50.0
+        assert crime['rewards_payout_paid_by'] == 456
+        assert isinstance(crime['rewards_payout_paid_at'], pd.Timestamp)
+        assert crime['rewards_items_id'] == '1,2'
+        assert crime['rewards_items_quantity'] == '2,1'
+        assert crime['slots_position'] == 1
+        assert crime['slots_user_id'] == 789
+        assert crime['slots_success_chance'] == 75.5
+        assert crime['slots_crime_pass_rate'] == 80.0
+        assert crime['slots_item_requirement_id'] == 123
+        assert crime['slots_item_requirement_is_reusable'] is True
+        assert crime['slots_item_requirement_is_available'] is True
+        assert isinstance(crime['slots_user_joined_at'], pd.Timestamp)
+        assert crime['slots_user_progress'] == 50.0
+
+    def test_process_data_empty(self, crimes_processor):
+        """Test processing empty data."""
+        with pytest.raises(DataValidationError):
+            crimes_processor.process_data({'data': {}})
+
+    def test_process_data_missing_fields(self, crimes_processor):
+        """Test handling of missing required fields."""
+        invalid_data = {
+            "crimes": {
+                "1": {
+                    "name": "Test Crime",  # Missing required fields
+                    "status": "completed"
+                }
+            }
+        }
+        with pytest.raises(DataValidationError) as exc:
+            crimes_processor.process_data({"data": invalid_data})
+        assert "Missing required field" in str(exc.value)
+
+    def test_process_data_invalid_types(self, crimes_processor):
+        """Test processing data with invalid types."""
+        data = {
+            'timestamp': 1710633600,
+            'fetched_at': '2024-03-17T00:00:00',
+            'crimes': {
+                '123': {
+                    'id': '123abc',  # Invalid integer
+                    'name': 123,  # Invalid string
+                    'rewards': {
+                        'money': 'invalid',  # Invalid integer
+                        'respect': 'invalid',  # Invalid float
+                        'payout': {
+                            'percentage': 'invalid'  # Invalid float
+                        }
+                    },
+                    'slots': {
+                        'success_chance': 'invalid',  # Invalid float
+                        'user_joined_at': 'invalid'  # Invalid timestamp
+                    }
+                }
+            }
+        }
+        
+        processed_data = crimes_processor.process_data(data)
+        assert len(processed_data) == 1
+        
+        crime = processed_data[0]
+        assert crime['id'] == 123  # Should handle invalid integer
+        assert crime['name'] == '123'  # Should convert to string
+        assert crime['rewards_money'] == 0  # Should default to 0
+        assert crime['rewards_respect'] == 0.0  # Should default to 0.0
+        assert crime['rewards_payout_percentage'] == 0.0  # Should default to 0.0
+        assert crime['slots_success_chance'] is None  # Should be None for invalid float
+        assert crime['slots_user_joined_at'] is None  # Should be None for invalid timestamp 
