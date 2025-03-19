@@ -36,9 +36,10 @@ class EnvSetup:
         """Initialize setup with base directory."""
         self.base_dir = Path(base_dir) if base_dir else Path(__file__).parent.parent
         self.venv_dir = self.base_dir / '.venv'
-        self.requirements_file = self.base_dir / 'tests' / 'requirements.txt'
+        self.requirements_file = self.base_dir / 'app' / 'requirements.txt'  # Use app/requirements.txt
         self.scripts_dir = self.base_dir / 'scripts'
         self.tests_dir = self.base_dir / 'tests'
+        self.app_dir = self.base_dir / 'app'
         
         # Required directory structure
         self.required_dirs = {
@@ -46,23 +47,11 @@ class EnvSetup:
             'tests': self.tests_dir,
             'tests/unit': self.tests_dir / 'unit',
             'tests/integration': self.tests_dir / 'integration',
-            'tests/fixtures': self.tests_dir / 'fixtures'
+            'tests/fixtures': self.tests_dir / 'fixtures',
+            'app': self.app_dir,
+            'app/core': self.app_dir / 'core',
+            'app/services': self.app_dir / 'services'
         }
-        
-        # Required test dependencies
-        self.test_dependencies = [
-            'pytest==8.0.2',
-            'pytest-cov==4.1.0',
-            'pytest-mock==3.12.0',
-            'pytest-asyncio==0.23.5',
-            'pytest-timeout==2.2.0',
-            'pytest-xdist==3.5.0',
-            'pytest-randomly==3.15.0',
-            'pytest-sugar==1.0.0',
-            'pytest-html==4.1.1',
-            'google-cloud-monitoring>=2.0.0',
-            'google-cloud-bigquery>=3.0.0'
-        ]
 
     def ensure_directory_structure(self) -> None:
         """Ensure all required directories exist."""
@@ -75,23 +64,11 @@ class EnvSetup:
                 logger.info("Directory exists: %s", name)
 
     def ensure_requirements_file(self) -> None:
-        """Ensure requirements.txt exists with correct dependencies."""
+        """Ensure requirements.txt exists."""
         logger.info("Checking requirements file...")
-        
-        if not self.requirements_file.exists() or self.requirements_file.stat().st_size == 0:
-            logger.info("Creating requirements.txt with test dependencies")
-            with open(self.requirements_file, 'w') as f:
-                f.write('\n'.join(self.test_dependencies))
-        else:
-            # Check if we need to update existing requirements
-            with open(self.requirements_file, 'r') as f:
-                current_deps = set(f.read().splitlines())
-            
-            missing_deps = set(self.test_dependencies) - current_deps
-            if missing_deps:
-                logger.info("Updating requirements.txt with missing dependencies")
-                with open(self.requirements_file, 'a') as f:
-                    f.write('\n' + '\n'.join(missing_deps))
+        if not self.requirements_file.exists():
+            logger.error("requirements.txt not found at %s", self.requirements_file)
+            raise FileNotFoundError(f"requirements.txt not found at {self.requirements_file}")
 
     def make_self_executable(self) -> None:
         """Make this script executable."""
@@ -168,8 +145,12 @@ class EnvSetup:
             env["PATH"] = f"{self.venv_dir / 'bin'}:{env['PATH']}"
             env["VIRTUAL_ENV"] = str(self.venv_dir)
         
-        # Add project root to PYTHONPATH
-        env["PYTHONPATH"] = str(self.base_dir)
+        # Add project root and app directory to PYTHONPATH
+        python_path = str(self.base_dir)
+        if "PYTHONPATH" in env:
+            env["PYTHONPATH"] = f"{python_path}:{env['PYTHONPATH']}"
+        else:
+            env["PYTHONPATH"] = python_path
         
         # Remove PYTHONHOME if it exists
         env.pop("PYTHONHOME", None)
@@ -276,13 +257,50 @@ class EnvSetup:
         os.environ["VIRTUAL_ENV"] = venv_path
         os.environ["PATH"] = f"{self.venv_dir/'bin'}{os.pathsep}{os.environ['PATH']}"
         
+        # Add project root to PYTHONPATH
+        python_path = str(self.base_dir)
+        if "PYTHONPATH" in os.environ:
+            os.environ["PYTHONPATH"] = f"{python_path}:{os.environ['PYTHONPATH']}"
+        else:
+            os.environ["PYTHONPATH"] = python_path
+        
         # Remove PYTHONHOME if it exists
         os.environ.pop("PYTHONHOME", None)
         
         # Update sys.path
+        sys.path.insert(0, str(self.base_dir))
         sys.path.insert(0, venv_path)
         
         logger.info("Virtual environment activated: %s", venv_path)
+
+    def run_main(self) -> None:
+        """Run the main application."""
+        logger.info("Running main application...")
+        try:
+            # Ensure virtual environment exists
+            if not self.venv_dir.exists():
+                logger.info("Virtual environment not found, running setup first...")
+                self.setup()
+
+            # Get the Python executable from the virtual environment
+            python = self.get_venv_python()
+            main_script = self.app_dir / "main.py"
+
+            if not main_script.exists():
+                raise RuntimeError(f"Main script not found at {main_script}")
+
+            # Run the main script with proper Python path
+            self.run_in_venv(
+                [str(python), str(main_script)],
+                check=True
+            )
+            logger.info("Main application completed successfully")
+        except subprocess.CalledProcessError as e:
+            logger.error("Main application failed with exit code %d", e.returncode)
+            raise
+        except Exception as e:
+            logger.error("Failed to run main application: %s", str(e))
+            raise
 
 def main():
     """Main setup function."""
@@ -316,10 +334,14 @@ def main():
                     sys.exit(1)
                 
                 setup.run_in_venv(sys.argv[2:], check=True)
+
+            elif command == "main":
+                # Run the main application
+                setup.run_main()
             
             else:
                 logger.error("Unknown command: %s", command)
-                logger.info("Available commands: setup, test, activate, run")
+                logger.info("Available commands: setup, test, activate, run, main")
                 sys.exit(1)
         else:
             # Default to setup if no command specified
