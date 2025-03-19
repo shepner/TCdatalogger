@@ -1,67 +1,218 @@
-"""Base class for Torn City API endpoint processors.
+"""Base classes for Torn City API endpoint processors.
 
-This class provides common functionality for endpoint processors:
-- Configuration management
-- Data transformation pipeline
-- Schema management
-- Monitoring and metrics
-- Error handling and logging
+This module provides base classes for processing data from Torn City API endpoints:
+- BaseEndpointProcessor: Abstract base class for all endpoint processors
+- EndpointRegistry: Registry for managing endpoint processors
 """
 
 import logging
-import os
-import time
 from abc import ABC, abstractmethod
-from datetime import datetime
-from typing import Dict, Optional, Any, List
-
+from typing import Dict, List, Any, Optional, Type, Union
 import pandas as pd
-from google.cloud import monitoring_v3, bigquery
+from datetime import datetime
+import time
+import json
 
-from app.services.google.bigquery.client import BigQueryClient
+from google.cloud import bigquery
+from google.cloud import monitoring_v3
+
+from app.services.common.types import SchemaType, DataType, ConfigType, validate_schema
 from app.services.torncity.client import TornClient
-
-
-class ProcessingError(Exception):
-    """Base exception for processing errors."""
-    pass
-
-
-class SchemaError(ProcessingError):
-    """Raised when there are schema-related issues."""
-    pass
-
-
-class DataValidationError(ProcessingError):
-    """Raised when data validation fails."""
-    pass
+from app.services.torncity.exceptions import (
+    EndpointError,
+    SchemaError,
+    ProcessingError,
+    StorageError,
+    DataValidationError
+)
+from app.services.google.bigquery.client import BigQueryClient
 
 
 class BaseEndpointProcessor(ABC):
-    """Base class for processing Torn City API endpoints."""
+    """Base class for Torn City API endpoint processors."""
 
-    def __init__(self, config: Dict[str, Any], endpoint_config: Dict[str, Any]):
-        """Initialize the endpoint processor.
+    def __init__(self, config: Dict[str, Any]) -> None:
+        """Initialize the BaseEndpointProcessor.
+
+        Args:
+            config: Configuration dictionary containing:
+                - gcp_project_id: Google Cloud project ID
+                - gcp_credentials_file: Path to Google Cloud credentials file
+                - dataset: BigQuery dataset name
+                - endpoint: Torn City API endpoint name
+                - selection: Fields to select from the API response
+                - storage_mode: Storage mode (either 'append' or 'replace')
+                - api_key: Torn City API key (optional)
+                - tc_api_key_file: Path to Torn City API keys file (optional)
+                At least one of api_key or tc_api_key_file must be provided.
+
+        Raises:
+            ValueError: If the configuration is invalid.
+        """
+        self.validate_config(config)
+        self.config = config
+        self.logger = logging.getLogger(__name__)
+        
+        # Initialize endpoint configuration with default values
+        self.endpoint_config = {
+            'name': None,  # Set by child classes
+            'url': None,   # Set by child classes
+            'table': None, # Set by child classes
+            'endpoint': config['endpoint'],
+            'selection': config['selection'],
+            'storage_mode': config.get('storage_mode', 'append'),
+            'frequency': None  # Set by child classes
+        }
+
+        # Initialize Torn client with API key
+        self.torn_client = TornClient(
+            api_key_or_file=config.get('api_key') or config.get('tc_api_key_file')
+        )
+        
+        # Initialize BigQuery client with full config
+        self._bq_client = None
+        self.gcp_project_id = config['gcp_project_id']
+        self.gcp_credentials_file = config['gcp_credentials_file']
+        self.dataset = config['dataset']
+        
+    @property
+    def bq_client(self) -> BigQueryClient:
+        """Get or create the BigQuery client.
+
+        Returns:
+            BigQueryClient: The BigQuery client instance.
+        """
+        if self._bq_client is None:
+            self._bq_client = BigQueryClient(
+                project_id={
+                    'gcp_project_id': self.gcp_project_id,
+                    'gcp_credentials_file': self.gcp_credentials_file,
+                    'dataset': self.dataset,
+                    'storage_mode': self.config.get('storage_mode', 'append')
+                }
+            )
+        return self._bq_client
+
+    @staticmethod
+    def validate_config(config: Dict[str, Any]) -> None:
+        """Validate the configuration.
+
+        Args:
+            config: Configuration dictionary.
+
+        Raises:
+            ValueError: If the configuration is invalid.
+        """
+        if not isinstance(config, dict):
+            raise ValueError("Configuration must be a dictionary")
+
+        required_fields = [
+            "gcp_project_id",
+            "gcp_credentials_file",
+            "dataset",
+            "endpoint",
+            "selection"
+        ]
+
+        missing_fields = [field for field in required_fields if field not in config]
+        if missing_fields:
+            raise ValueError(f"Missing required configuration fields: {', '.join(missing_fields)}")
+
+        # Validate storage mode if provided
+        if "storage_mode" in config:
+            if config["storage_mode"] not in ["append", "replace"]:
+                raise ValueError("Invalid storage mode. Must be either 'append' or 'replace'")
+
+        # Validate API key configuration
+        if not config.get('api_key') and not config.get('tc_api_key_file'):
+            raise ValueError("Either 'api_key' or 'tc_api_key_file' must be provided")
+
+    def fetch_torn_data(self) -> Dict[str, Any]:
+        """Fetch data from the Torn City API using the configured endpoint and selection.
+
+        Returns:
+            Dictionary containing the API response data.
+
+        Raises:
+            Exception: If the API request fails.
+        """
+        try:
+            return self.torn_client.make_request(
+                self.endpoint_config['endpoint'],
+                self.endpoint_config['selection']
+            )
+        except Exception as e:
+            self.logger.error(f"Failed to fetch data from Torn API: {str(e)}")
+            raise
+
+    def write_to_bigquery(self, data: Union[List[Dict], pd.DataFrame], table: Optional[str] = None) -> None:
+        """Write data to BigQuery.
         
         Args:
-            config: Application configuration dictionary
-            endpoint_config: Endpoint-specific configuration dictionary
+            data: Data to write, either as a list of dictionaries or a DataFrame
+            table: Optional table name. If not provided, uses the one from endpoint_config
+            
+        Raises:
+            ValueError: If no table is specified and none is found in endpoint_config
         """
-        self.config = config
-        self.endpoint_config = endpoint_config
-        self.name = endpoint_config["name"]
-        self.table = endpoint_config["table"]
-        self.storage_mode = endpoint_config.get("storage_mode", "append")
+        if table is None:
+            if 'table' not in self.endpoint_config:
+                raise ValueError("No table specified and no table found in endpoint_config")
+            table = self.endpoint_config['table']
+            
+        # Map storage modes to BigQuery write dispositions
+        storage_mode = self.endpoint_config.get('storage_mode', 'append').lower()
+        write_disposition_map = {
+            'append': 'WRITE_APPEND',
+            'truncate': 'WRITE_TRUNCATE',
+            'empty': 'WRITE_EMPTY'
+        }
+        write_disposition = write_disposition_map.get(storage_mode, 'WRITE_APPEND')
+            
+        if not isinstance(data, pd.DataFrame):
+            data = pd.DataFrame(data)
+            
+        try:
+            self.bq_client.write_data(data, table, write_disposition=write_disposition)
+        except Exception as e:
+            self.logger.error(f"Failed to write data to BigQuery: {str(e)}")
+            raise
+
+    def run(self) -> None:
+        """Run the processor to fetch and process data."""
+        try:
+            data = self.fetch_torn_data()
+            processed_data = self.process_data(data)
+            self.write_to_bigquery(processed_data, self.endpoint_config['table'])
+        except Exception as e:
+            self.logger.error(f"Error running processor: {str(e)}")
+            raise
+
+    def _get_current_timestamp(self) -> str:
+        """Get the current timestamp in ISO format.
         
-        # Initialize clients
-        self.torn_client = TornClient(config["tc_api_key_file"])
-        self.bq_client = BigQueryClient(config)
+        Returns:
+            str: Current timestamp in ISO format
+        """
+        return datetime.fromtimestamp(int(time.time())).isoformat()
+
+    def _format_timestamp(self, timestamp) -> Optional[str]:
+        """Format a Unix timestamp as an ISO format string.
         
-        # Initialize monitoring
-        self.monitoring_client = monitoring_v3.MetricServiceClient()
-        self.project_path = self.monitoring_client.common_project_path(
-            os.getenv('GCP_PROJECT_ID')
-        )
+        Args:
+            timestamp: Unix timestamp to format
+            
+        Returns:
+            Optional[str]: Formatted timestamp or None if invalid
+        """
+        try:
+            if isinstance(timestamp, str):
+                timestamp = int(timestamp)
+            if timestamp <= 0:
+                raise ValueError("Invalid timestamp value")
+            return datetime.fromtimestamp(timestamp).isoformat()
+        except (ValueError, TypeError):
+            return None
 
     @abstractmethod
     def get_schema(self) -> List[bigquery.SchemaField]:
@@ -72,69 +223,52 @@ class BaseEndpointProcessor(ABC):
         """
         pass
 
-    def process(self) -> bool:
-        """Process the endpoint data.
+    def process(self, data: Dict) -> bool:
+        """Process data from the endpoint.
         
-        Orchestrates the entire process:
-        1. Fetch data from API
-        2. Transform and validate data
-        3. Upload to BigQuery with schema management
-        
-        Returns:
-            bool: True if processing was successful
-        """
-        start_time = time.time()
-        success = False
-        error_message = None
-        
-        try:
-            # Fetch data using the client
-            data = self.torn_client.fetch_data(
-                self.endpoint_config["url"],
-                self.endpoint_config.get("api_key", "default")
-            )
+        Args:
+            data: Raw data from the API
             
+        Returns:
+            bool: True if processing succeeded
+            
+        Raises:
+            DataValidationError: If data cannot be transformed
+        """
+        try:
             # Transform data
-            df = self.transform_data(data)
+            transformed = self.transform_data(data)
+            
+            if not transformed:
+                self._log_error("No data to process")
+                return False
+            
+            # Convert to DataFrame if necessary
+            if isinstance(transformed, list):
+                df = pd.DataFrame(transformed)
+            else:
+                df = transformed
+            
             if df.empty:
-                raise DataValidationError("No data transformed")
+                self._log_error("No data to process")
+                return False
             
             # Validate against schema
             schema = self.get_schema()
-            self._validate_schema(df, schema)
+            df = self._validate_schema(df, schema)
             
             # Upload to BigQuery
             self._upload_data(df, schema)
             
-            success = True
             return True
-
-        except Exception as e:
-            error_message = str(e)
-            self._log_error(f"Processing failed: {error_message}")
             
-            # Record error metrics
-            self._record_metrics(
-                error_count=1,
-                error_type=type(e).__name__
-            )
+        except SchemaError as e:
+            self._log_error(f"Processing failed: {str(e)}")
             return False
-        
-        finally:
-            duration = time.time() - start_time
             
-            # Record final metrics
-            self._record_metrics(
-                processing_time=duration,
-                success=success
-            )
-            
-            # Log completion
-            self._log_completion(
-                success=success,
-                duration=duration,
-                error=error_message
-            )
+        except Exception as e:
+            self._log_error(str(e))
+            return False
 
     @abstractmethod
     def transform_data(self, data: Dict) -> pd.DataFrame:
@@ -151,12 +285,15 @@ class BaseEndpointProcessor(ABC):
         """
         pass
 
-    def _validate_schema(self, df: pd.DataFrame, schema: List[bigquery.SchemaField]) -> None:
+    def _validate_schema(self, df: pd.DataFrame, schema: List[bigquery.SchemaField]) -> pd.DataFrame:
         """Validate DataFrame against BigQuery schema.
         
         Args:
             df: DataFrame to validate
             schema: Expected BigQuery schema
+            
+        Returns:
+            pd.DataFrame: The validated DataFrame with proper types
             
         Raises:
             SchemaError: If validation fails
@@ -166,40 +303,65 @@ class BaseEndpointProcessor(ABC):
         # Check required columns
         missing_cols = [
             field.name for field in schema 
-            if not field.is_nullable and field.name not in df.columns
+            if field.mode == "REQUIRED" and field.name not in df.columns
         ]
         if missing_cols:
             raise SchemaError(f"Missing required columns: {missing_cols}")
+        
+        # Check for null values in required fields
+        for field in schema:
+            if field.mode == "REQUIRED" and field.name in df.columns:
+                if df[field.name].isnull().any():
+                    raise SchemaError(f"Invalid type for column {field.name}: null values found in required field")
         
         # Validate data types
         for col in df.columns:
             if col in schema_fields:
                 field = schema_fields[col]
                 try:
-                    self._validate_column_type(df[col], field)
+                    df[col] = self._validate_column_type(df[col], field)
                 except (ValueError, TypeError) as e:
                     raise SchemaError(f"Invalid type for column {col}: {str(e)}")
+        
+        return df
 
-    def _validate_column_type(self, series: pd.Series, field: bigquery.SchemaField) -> None:
+    def _validate_column_type(self, series: pd.Series, field: bigquery.SchemaField) -> pd.Series:
         """Validate a column's data type.
         
         Args:
             series: Column data to validate
             field: Expected schema field
             
+        Returns:
+            pd.Series: The validated and converted series
+            
         Raises:
             ValueError: If validation fails
         """
-        if field.field_type == "STRING":
-            series.astype(str)
-        elif field.field_type == "INTEGER":
-            pd.to_numeric(series, errors='raise')
-        elif field.field_type == "FLOAT":
-            pd.to_numeric(series, errors='raise')
-        elif field.field_type == "BOOLEAN":
-            series.astype(bool)
-        elif field.field_type == "DATETIME":
-            pd.to_datetime(series, errors='raise')
+        try:
+            if field.field_type == "STRING":
+                return series.fillna('').astype(str)
+            elif field.field_type == "INTEGER":
+                converted = pd.to_numeric(series, errors='coerce').fillna(0)
+                if not converted.dtype.kind in ['i', 'u']:  # Check if integer type
+                    raise ValueError("Non-integer values found")
+                return converted.astype('int64')
+            elif field.field_type == "FLOAT":
+                converted = pd.to_numeric(series, errors='coerce').fillna(0.0)
+                if not converted.dtype.kind in ['f', 'i', 'u']:  # Check if numeric type
+                    raise ValueError("Non-numeric values found")
+                return converted.astype('float64')
+            elif field.field_type == "BOOLEAN":
+                return series.fillna(False).astype(bool)
+            elif field.field_type == "DATETIME":
+                converted = pd.to_datetime(series, errors='coerce')
+                if converted.isna().any() and not field.is_nullable:
+                    raise ValueError("Invalid datetime values found")
+                return converted
+            else:
+                raise ValueError(f"Unsupported field type: {field.field_type}")
+        except Exception as e:
+            raise ValueError(f"Validation failed: {str(e)}")
 
     def _upload_data(self, df: pd.DataFrame, schema: List[bigquery.SchemaField]) -> None:
         """Upload data to BigQuery with proper schema management.
@@ -210,18 +372,18 @@ class BaseEndpointProcessor(ABC):
         """
         try:
             # Construct fully qualified table ID
-            table_id = f"{self.bq_client.project_id}.{self.config['dataset']}.{self.table}"
+            table_id = f"{self.bq_client.project_id}.{self.dataset}.{self.endpoint_config['table']}"
             
             self.bq_client.upload_dataframe(
                 df=df,
                 table_id=table_id,
-                write_disposition=self.storage_mode
+                write_disposition=self.endpoint_config['storage_mode']
             )
             
             # Record upload metrics
             self._record_metrics(
                 upload_size=len(df),
-                table_name=self.table
+                table_name=self.endpoint_config['table']
             )
             
         except Exception as e:
@@ -243,8 +405,8 @@ class BaseEndpointProcessor(ABC):
             series = monitoring_v3.TimeSeries()
             series.metric.type = "custom.googleapis.com/tcdatalogger/endpoint"
             series.metric.labels.update({
-                "endpoint": self.name,
-                "storage_mode": self.storage_mode,
+                "endpoint": self.endpoint_config['name'],
+                "storage_mode": self.endpoint_config['storage_mode'],
                 "metric_type": "processing"
             })
             
@@ -275,7 +437,7 @@ class BaseEndpointProcessor(ABC):
         """Log an error with context."""
         logging.error({
             "event": "endpoint_error",
-            "endpoint": self.name,
+            "endpoint": self.endpoint_config['name'],
             "error": message,
             "timestamp": datetime.now().isoformat()
         })
@@ -284,9 +446,65 @@ class BaseEndpointProcessor(ABC):
         """Log completion status with metrics."""
         logging.info({
             "event": "endpoint_completion",
-            "endpoint": self.name,
+            "endpoint": self.endpoint_config['name'],
             "success": success,
             "duration_seconds": round(duration, 3),
             "error": error,
             "timestamp": datetime.now().isoformat()
-        }) 
+        })
+
+    @abstractmethod
+    def process_data(self, data: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Process the data from the API response.
+        
+        Args:
+            data: Raw data from the API response
+            
+        Returns:
+            List[Dict[str, Any]]: List of processed data records
+            
+        Raises:
+            NotImplementedError: If not implemented by child class
+        """
+        raise NotImplementedError("Child class must implement process_data method")
+
+    def validate_schema(self, data: pd.DataFrame) -> None:
+        """Validate that the data matches the schema.
+        
+        Args:
+            data: DataFrame to validate
+            
+        Raises:
+            SchemaError: If schema validation fails
+        """
+        schema = self.get_schema()
+        required_fields = [field.name for field in schema if field.mode == "REQUIRED"]
+        
+        # Check for missing required fields
+        missing_fields = [field for field in required_fields if field not in data.columns]
+        if missing_fields:
+            raise SchemaError(f"Missing required fields in DataFrame: {missing_fields}")
+        
+        # Check for null values in required fields
+        for field in required_fields:
+            if data[field].isnull().any():
+                raise SchemaError(f"Found null values in required field: {field}")
+        
+        # Validate data types
+        for field in schema:
+            if field.name not in data.columns:
+                continue
+                
+            values = data[field.name].dropna()
+            if len(values) == 0:
+                continue
+                
+            if field.field_type == "INTEGER":
+                if not pd.api.types.is_numeric_dtype(values):
+                    raise SchemaError(f"Invalid type for field {field.name}: expected INTEGER, got {values.dtype}")
+            elif field.field_type == "STRING":
+                if not pd.api.types.is_string_dtype(values):
+                    raise SchemaError(f"Invalid type for field {field.name}: expected STRING, got {values.dtype}")
+            elif field.field_type == "TIMESTAMP":
+                if not pd.api.types.is_datetime64_any_dtype(values):
+                    raise SchemaError(f"Invalid type for field {field.name}: expected TIMESTAMP, got {values.dtype}") 

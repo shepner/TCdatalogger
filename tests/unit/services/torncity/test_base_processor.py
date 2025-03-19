@@ -5,7 +5,7 @@ import pytest
 from google.cloud import bigquery
 from google.api_core import exceptions
 
-from app.services.torncity.base import TornBaseProcessor
+from app.services.torncity.base import BaseEndpointProcessor
 from app.services.torncity.client import (
     TornAPIError,
     TornAPIKeyError,
@@ -20,7 +20,7 @@ class TestTornBaseProcessorErrorHandling:
     @pytest.fixture
     def processor(self, sample_config, mock_api_keys):
         """Create a test processor instance."""
-        class TestProcessor(TornBaseProcessor):
+        class TestProcessor(BaseEndpointProcessor):
             def process_data(self, data):
                 return data
 
@@ -115,7 +115,7 @@ class TestTornBaseProcessorValidation:
         
         for config in invalid_configs:
             with pytest.raises(ValueError) as exc:
-                TornBaseProcessor.validate_config(config)
+                BaseEndpointProcessor.validate_config(config)
             assert "Missing required configuration" in str(exc.value)
 
     def test_config_validation_invalid_storage_mode(self, sample_config):
@@ -123,7 +123,7 @@ class TestTornBaseProcessorValidation:
         sample_config["storage_mode"] = "invalid_mode"
         
         with pytest.raises(ValueError) as exc:
-            TornBaseProcessor.validate_config(sample_config)
+            BaseEndpointProcessor.validate_config(sample_config)
         assert "Invalid storage mode" in str(exc.value)
 
     def test_config_validation_invalid_project_id(self, sample_config):
@@ -137,7 +137,7 @@ class TestTornBaseProcessorValidation:
         for project_id in invalid_project_ids:
             sample_config["gcp_project_id"] = project_id
             with pytest.raises(ValueError) as exc:
-                TornBaseProcessor.validate_config(sample_config)
+                BaseEndpointProcessor.validate_config(sample_config)
             assert "Invalid project ID" in str(exc.value)
 
     def test_config_validation_invalid_api_key_file(self, sample_config):
@@ -151,13 +151,13 @@ class TestTornBaseProcessorValidation:
         for path in invalid_paths:
             sample_config["tc_api_key_file"] = path
             with pytest.raises(ValueError) as exc:
-                TornBaseProcessor.validate_config(sample_config)
+                BaseEndpointProcessor.validate_config(sample_config)
             assert "Invalid API key file path" in str(exc.value)
 
     def test_config_validation_success(self, sample_config):
         """Test successful configuration validation."""
         # Should not raise any exceptions
-        TornBaseProcessor.validate_config(sample_config)
+        BaseEndpointProcessor.validate_config(sample_config)
 
     def test_schema_validation(self, processor):
         """Test validation of BigQuery schema."""

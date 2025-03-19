@@ -1,0 +1,284 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites><testsuite name="pytest" errors="0" failures="10" skipped="0" tests="135" time="4.470" timestamp="2025-03-18T19:29:58.343173" hostname="WS01.local"><testcase classname="unit.services.torncity.test_processors.TestItemsProcessor" name="test_items_data_processing" time="0.007" /><testcase classname="unit.services.torncity.test_processors.TestMembersProcessor" name="test_members_data_processing" time="0.002" /><testcase classname="unit.services.torncity.test_processors.TestProcessorErrorHandling" name="test_invalid_data_types" time="0.003" /><testcase classname="unit.services.torncity.test_processors.TestProcessorErrorHandling" name="test_invalid_timestamp" time="0.002" /><testcase classname="unit.services.torncity.test_processors.TestProcessorErrorHandling" name="test_nested_data_handling" time="0.002" /><testcase classname="unit.services.torncity.test_processors.TestProcessorErrorHandling" name="test_missing_required_fields" time="0.002" /><testcase classname="unit.services.torncity.test_processors.TestProcessorErrorHandling" name="test_empty_response_handling" time="0.002" /><testcase classname="unit.services.torncity.test_processors.TestBaseProcessor" name="test_completion_logging" time="0.002" /><testcase classname="unit.services.torncity.test_processors.TestBaseProcessor" name="test_config_validation" time="0.003" /><testcase classname="unit.services.torncity.test_processors.TestBaseProcessor" name="test_fetch_torn_data" time="0.003" /><testcase classname="unit.services.torncity.test_processors.TestBaseProcessor" name="test_error_logging" time="0.003" /><testcase classname="unit.services.torncity.test_processors.TestBaseProcessor" name="test_validate_column_type_conversions" time="0.009" /><testcase classname="unit.services.torncity.test_processors.TestBaseProcessor" name="test_upload_data" time="0.004" /><testcase classname="unit.services.torncity.test_processors.TestBaseProcessor" name="test_validate_schema_required_fields" time="0.005" /><testcase classname="unit.services.torncity.test_processors.TestBaseProcessor" name="test_process_method" time="0.004" /><testcase classname="unit.services.torncity.test_processors.TestBaseProcessor" name="test_schema_validation" time="0.002" /><testcase classname="unit.services.torncity.test_processors.TestBaseProcessor" name="test_data_transformation" time="0.002" /><testcase classname="unit.services.torncity.test_processors.TestBaseProcessor" name="test_record_metrics" time="0.002" /><testcase classname="unit.services.torncity.test_processors.TestCrimeProcessor" name="test_crime_data_processing" time="0.003"><failure message="KeyError: 'crime_id'">tests/unit/services/torncity/test_processors.py:387: in test_crime_data_processing
+    assert transformed[0]["crime_id"] == 456
+E   KeyError: 'crime_id'
+        processor  = &lt;app.services.torncity.processors.CrimeProcessor object at 0x10ff2fe00&gt;
+        sample_data = {'456': {'crime_id': 456,
+         'crime_name': 'Test Crime',
+         'initiated_by': '12345',
+         'money_gained': 5000,
+         'participants': ['12345', '67890'],
+         'success': True,
+         'time_completed': 1646960400,
+         'time_started': 1646956800}}
+        self       = &lt;test_processors.TestCrimeProcessor object at 0x10fd0ead0&gt;
+        transformed = [{'created_at': Timestamp('2022-03-10 18:00:00'),
+  'difficulty': '',
+  'executed_at': Timestamp('2022-03-10 19:00:00'),
+  'expired_at': None,
+  'fetched_at': Timestamp('2025-03-18 19:29:59.403833'),
+  'id': 456,
+  'name': 'Test Crime',
+  'participant_count': 2,
+  'participant_ids': '12345,67890',
+  'participant_names': None,
+  'planning_at': None,
+  'ready_at': None,
+  'reward_item_count': 0,
+  'reward_item_ids': None,
+  'reward_item_quantities': None,
+  'reward_money': 0,
+  'reward_respect': 0.0,
+  'server_timestamp': Timestamp('2025-03-18 19:29:59.403811'),
+  'status': 'completed'}]</failure></testcase><testcase classname="unit.services.torncity.test_processors.TestCurrencyProcessor" name="test_currency_data_processing" time="0.005" /><testcase classname="unit.services.torncity.test_processors.TestUserProcessor" name="test_user_data_processing" time="0.003" /><testcase classname="unit.services.torncity.test_base.TestBaseProcessor" name="test_run_processor" time="0.004" /><testcase classname="unit.services.torncity.test_base.TestBaseProcessor" name="test_init_with_invalid_config" time="0.001" /><testcase classname="unit.services.torncity.test_base.TestBaseProcessor" name="test_storage_mode_validation" time="0.002" /><testcase classname="unit.services.torncity.test_base.TestBaseProcessor" name="test_process_data" time="0.003" /><testcase classname="unit.services.torncity.test_base.TestBaseProcessor" name="test_fetch_torn_data" time="0.002" /><testcase classname="unit.services.torncity.test_base.TestBaseProcessor" name="test_error_handling" time="0.002" /><testcase classname="unit.services.torncity.test_base.TestBaseProcessor" name="test_write_to_bigquery" time="0.005" /><testcase classname="unit.services.torncity.test_base.TestBaseProcessor" name="test_init_with_valid_config" time="0.003" /><testcase classname="unit.services.torncity.test_base.TestBaseProcessor" name="test_init_with_invalid_storage_mode" time="0.003" /><testcase classname="unit.services.torncity.test_base.TestBaseProcessor" name="test_validate_config" time="0.002" /><testcase classname="unit.services.google.bigquery.test_schema.TestBigQuerySchemaManagement" name="test_schema_field_name_validation" time="0.002" /><testcase classname="unit.services.google.bigquery.test_schema.TestBigQuerySchemaManagement" name="test_schema_evolution" time="0.003" /><testcase classname="unit.services.google.bigquery.test_schema.TestBigQuerySchemaManagement" name="test_schema_type_validation" time="0.005" /><testcase classname="unit.services.google.bigquery.test_schema.TestBigQuerySchemaManagement" name="test_schema_mode_validation" time="0.002" /><testcase classname="unit.services.google.bigquery.test_schema.TestBigQuerySchemaManagement" name="test_validate_schema_compatibility" time="0.003" /><testcase classname="unit.services.google.bigquery.test_schema.TestBigQuerySchemaManagement" name="test_create_table_with_schema" time="0.003" /><testcase classname="unit.services.google.bigquery.test_schema.TestBigQuerySchemaManagement" name="test_update_table_schema" time="0.003" /><testcase classname="unit.services.google.bigquery.test_schema.TestBigQuerySchemaManagement" name="test_get_table_schema" time="0.003" /><testcase classname="unit.services.google.bigquery.test_schema.TestBigQuerySchemaManagement" name="test_schema_description_validation" time="0.004" /><testcase classname="unit.core.test_common.TestPolling" name="test_wait_for_next_poll" time="0.002" /><testcase classname="unit.core.test_common.TestDurationParsing" name="test_valid_durations[PT1S-expected7]" time="0.001" /><testcase classname="unit.core.test_common.TestDurationParsing" name="test_valid_durations[PT1H30M-expected3]" time="0.001" /><testcase classname="unit.core.test_common.TestDurationParsing" name="test_valid_durations[PT15M-expected0]" time="0.001" /><testcase classname="unit.core.test_common.TestDurationParsing" name="test_invalid_durations[P1H]" time="0.001" /><testcase classname="unit.core.test_common.TestDurationParsing" name="test_valid_durations[PT1H-expected1]" time="0.001" /><testcase classname="unit.core.test_common.TestDurationParsing" name="test_invalid_durations[15M]" time="0.001" /><testcase classname="unit.core.test_common.TestDurationParsing" name="test_invalid_durations[PT]" time="0.001" /><testcase classname="unit.core.test_common.TestDurationParsing" name="test_valid_durations[P1DT12H-expected4]" time="0.001" /><testcase classname="unit.core.test_common.TestDurationParsing" name="test_invalid_durations[P]" time="0.001" /><testcase classname="unit.core.test_common.TestDurationParsing" name="test_invalid_durations[None]" time="0.001" /><testcase classname="unit.core.test_common.TestDurationParsing" name="test_valid_durations[P1D-expected2]" time="0.001" /><testcase classname="unit.core.test_common.TestDurationParsing" name="test_invalid_durations[PTM]" time="0.001" /><testcase classname="unit.core.test_common.TestDurationParsing" name="test_invalid_durations[P0D]" time="0.001" /><testcase classname="unit.core.test_common.TestDurationParsing" name="test_invalid_durations[]" time="0.001" /><testcase classname="unit.core.test_common.TestDurationParsing" name="test_invalid_durations[PT1X]" time="0.001" /><testcase classname="unit.core.test_common.TestDurationParsing" name="test_valid_durations[P1M-expected6]" time="0.001" /><testcase classname="unit.core.test_common.TestDurationParsing" name="test_valid_durations[P1Y-expected5]" time="0.001" /><testcase classname="unit.core.test_common.TestConfigManagement" name="test_find_config_directory" time="0.002" /><testcase classname="unit.core.test_common.TestConfigManagement" name="test_load_config" time="0.002" /><testcase classname="unit.core.test_common.TestCommonUtilities" name="test_placeholder" time="0.001" /><testcase classname="unit.core.test_common" name="test_imports" time="0.001" /><testcase classname="unit.core.test_common" name="test_setup_logging" time="0.001" /><testcase classname="unit.services.torncity.test_torn_client" name="test_make_request" time="0.001" /><testcase classname="unit.services.torncity.test_torn_client" name="test_init_with_nonexistent_file" time="0.002" /><testcase classname="unit.services.torncity.test_torn_client" name="test_timeout_handling" time="0.001" /><testcase classname="unit.services.torncity.test_torn_client" name="test_init_with_api_keys_file" time="0.002" /><testcase classname="unit.services.torncity.test_torn_client" name="test_init_with_malformed_api_keys_file" time="0.002" /><testcase classname="unit.services.torncity.test_torn_client" name="test_init_with_api_key" time="0.001" /><testcase classname="unit.services.torncity.test_torn_client" name="test_concurrent_requests" time="0.001" /><testcase classname="unit.services.torncity.test_torn_client" name="test_rate_limit_handling" time="0.002" /><testcase classname="unit.services.integration.test_data_pipeline.TestDataPipelineIntegration" name="test_retry_and_recovery" time="0.003" /><testcase classname="unit.services.integration.test_data_pipeline.TestDataPipelineIntegration" name="test_batch_processing" time="0.003" /><testcase classname="unit.services.integration.test_data_pipeline.TestDataPipelineIntegration" name="test_data_validation" time="0.003" /><testcase classname="unit.services.integration.test_data_pipeline.TestDataPipelineIntegration" name="test_pipeline_error_handling" time="0.003"><failure message="app.services.torncity.exceptions.DataValidationError: Error processing member invalid: Invalid type for name field, expected str, got &lt;class 'int'&gt;">tests/unit/services/integration/test_data_pipeline.py:190: in test_pipeline_error_handling
+    members_processor.transform_data(invalid_data)
+        invalid_data = {'data': {'members': {'invalid': {'level': '10',
+                                  'name': 123,
+                                  'status': 'Okay'}}}}
+        members_processor = &lt;app.services.torncity.processors.MembersProcessor object at 0x10ffc0b00&gt;
+        mock_bigquery_client = &lt;MagicMock name='Client' id='4562231584'&gt;
+        mock_fetch = &lt;MagicMock name='fetch_data' id='4561940704'&gt;
+        self       = &lt;test_data_pipeline.TestDataPipelineIntegration object at 0x10fb0a520&gt;
+        torn_client = &lt;app.services.torncity.client.TornClient object at 0x10febf7d0&gt;
+app/services/torncity/endpoints/members.py:81: in transform_data
+    raise DataValidationError(error_msg)
+E   app.services.torncity.exceptions.DataValidationError: Error processing member invalid: Invalid type for name field, expected str, got &lt;class 'int'&gt;
+        data       = {'data': {'members': {'invalid': {'level': '10',
+                                  'name': 123,
+                                  'status': 'Okay'}}}}
+        error_msg  = ('Error processing member invalid: Invalid type for name field, expected str, '
+ "got &lt;class 'int'&gt;")
+        level      = '10'
+        member_data = {'level': '10', 'name': 123, 'status': 'Okay'}
+        member_id  = 'invalid'
+        members_data = {'invalid': {'level': '10', 'name': 123, 'status': 'Okay'}}
+        name       = 123
+        self       = &lt;app.services.torncity.processors.MembersProcessor object at 0x10ffc0b00&gt;
+        transformed_data = []</failure></testcase><testcase classname="unit.services.integration.test_data_pipeline.TestDataPipelineIntegration" name="test_concurrent_processing" time="0.005" /><testcase classname="unit.services.integration.test_data_pipeline.TestDataPipelineIntegration" name="test_schema_evolution_handling" time="0.003" /><testcase classname="unit.services.integration.test_data_pipeline.TestDataPipelineIntegration" name="test_data_type_consistency" time="0.003" /><testcase classname="unit.services.integration.test_data_pipeline.TestDataPipelineIntegration" name="test_error_recovery_and_partial_success" time="0.004" /><testcase classname="unit.services.integration.test_data_pipeline.TestDataPipelineIntegration" name="test_end_to_end_data_pipeline" time="0.173"><failure message="app.services.torncity.exceptions.TornAPIRateLimitError: Rate limit exceeded for key default">app/services/torncity/client.py:318: in make_request
+    return self._make_request_internal(endpoint, api_key)
+        api_key    = 'test_api_key'
+        endpoint   = 'user'
+        selection  = 'default'
+        self       = &lt;app.services.torncity.client.TornClient object at 0x10fde5f10&gt;
+app/services/torncity/client.py:287: in _make_request_internal
+    raise TornAPIRateLimitError(f"Rate limit exceeded for key {api_key}")
+E   app.services.torncity.exceptions.TornAPIRateLimitError: Rate limit exceeded for key test_api_key
+        api_key    = 'test_api_key'
+        data       = {'error': {'code': 2, 'error': 'Incorrect key'}}
+        endpoint   = 'user'
+        error_code = 2
+        error_msg  = 'Incorrect key'
+        response   = &lt;Response [200]&gt;
+        self       = &lt;app.services.torncity.client.TornClient object at 0x10fde5f10&gt;
+        timeout    = None
+        url        = 'https://api.torn.com/user?key=test_api_key'
+
+During handling of the above exception, another exception occurred:
+tests/unit/services/integration/test_data_pipeline.py:116: in test_end_to_end_data_pipeline
+    result = processor.run()
+        mock_bigquery_client = &lt;MagicMock name='Client' id='4562229232'&gt;
+        mock_torn_response = {'data': {'members': {'12345': {'faction': {'days_in_faction': 100,
+                                            'faction_id': 17991,
+                                            'position': 'Member'},
+                                'last_action': {'status': 'Online',
+                                                'timestamp': 1710766800},
+                                'level': 10,
+                                'life': {'current': 100, 'maximum': 100},
+                                'name': 'TestUser',
+                                'status': {'description': 'Online',
+                                           'state': 'Okay'},
+                                'timestamp': 1710766800}}}}
+        processor  = &lt;app.services.torncity.processors.MembersProcessor object at 0x10fe45650&gt;
+        sample_config = {'api_key': 'test_api_key',
+ 'credentials_path': 'test_credentials.json',
+ 'dataset': 'test_dataset',
+ 'dataset_id': 'test_dataset',
+ 'endpoint': 'user',
+ 'gcp_credentials_file': 'test_credentials.json',
+ 'gcp_project_id': 'test-project',
+ 'project_id': 'test-project',
+ 'selection': 'default',
+ 'storage_mode': 'append',
+ 'table_id': 'test_table'}
+        self       = &lt;test_data_pipeline.TestDataPipelineIntegration object at 0x10fb5bed0&gt;
+app/services/torncity/base.py:184: in run
+    data = self.fetch_torn_data()
+        self       = &lt;app.services.torncity.processors.MembersProcessor object at 0x10fe45650&gt;
+app/services/torncity/base.py:140: in fetch_torn_data
+    return self.torn_client.make_request(
+        self       = &lt;app.services.torncity.processors.MembersProcessor object at 0x10fe45650&gt;
+app/services/torncity/client.py:320: in make_request
+    raise TornAPIRateLimitError(f"Rate limit exceeded for key {selection}")
+E   app.services.torncity.exceptions.TornAPIRateLimitError: Rate limit exceeded for key default
+        api_key    = 'test_api_key'
+        endpoint   = 'user'
+        selection  = 'default'
+        self       = &lt;app.services.torncity.client.TornClient object at 0x10fde5f10&gt;</failure></testcase><testcase classname="unit.core.test_scheduler" name="test_imports" time="0.001" /><testcase classname="unit.core.test_scheduler.TestScheduler" name="test_placeholder" time="0.001" /><testcase classname="unit.services.google.bigquery.test_client" name="test_write_data_with_retry_success" time="0.002" /><testcase classname="unit.services.google.bigquery.test_client" name="test_validate_data_types_success" time="0.002" /><testcase classname="unit.services.google.bigquery.test_client" name="test_write_data_success" time="0.002" /><testcase classname="unit.services.google.bigquery.test_client" name="test_table_exists_success" time="0.001" /><testcase classname="unit.services.google.bigquery.test_client" name="test_create_table" time="0.001" /><testcase classname="unit.services.google.bigquery.test_client" name="test_init_failure" time="0.002" /><testcase classname="unit.services.google.bigquery.test_client" name="test_write_data_invalid_disposition" time="0.002" /><testcase classname="unit.services.google.bigquery.test_client" name="test_validate_data_types_required_null" time="0.002" /><testcase classname="unit.services.google.bigquery.test_client" name="test_get_table_schema_success" time="0.002" /><testcase classname="unit.services.google.bigquery.test_client" name="test_delete_table_success" time="0.001" /><testcase classname="unit.services.google.bigquery.test_client" name="test_get_table_schema_not_found" time="0.002" /><testcase classname="unit.services.google.bigquery.test_client" name="test_validate_schema_compatibility_type_mismatch" time="0.003" /><testcase classname="unit.services.google.bigquery.test_client" name="test_table_exists_not_found" time="0.001" /><testcase classname="unit.services.google.bigquery.test_client" name="test_write_data_empty" time="0.002" /><testcase classname="unit.services.google.bigquery.test_client" name="test_write_data_with_retry_failure" time="2.008" /><testcase classname="unit.services.google.bigquery.test_client" name="test_validate_data_types_invalid_type" time="0.002" /><testcase classname="unit.services.google.bigquery.test_client" name="test_validate_schema_compatibility_required_field_missing" time="0.002" /><testcase classname="unit.services.google.bigquery.test_client" name="test_delete_table_failure" time="0.002" /><testcase classname="unit.services.google.bigquery.test_client" name="test_validate_schema_compatibility_success" time="0.002" /><testcase classname="unit.services.google.bigquery.test_client" name="test_table_exists_auth_error" time="0.002" /><testcase classname="unit.services.google.bigquery.test_client" name="test_write_data_in_batches" time="0.004" /><testcase classname="unit.services.torncity.endpoints.test_members.TestMembersProcessor" name="test_init" time="0.002" /><testcase classname="unit.services.torncity.endpoints.test_members.TestMembersProcessor" name="test_process_data_missing_fields" time="0.003" /><testcase classname="unit.services.torncity.endpoints.test_members.TestMembersProcessor" name="test_process_data_empty" time="0.003" /><testcase classname="unit.services.torncity.endpoints.test_members.TestMembersProcessor" name="test_process_data_valid" time="0.003" /><testcase classname="unit.services.torncity.endpoints.test_members.TestMembersProcessor" name="test_process_data_invalid_types" time="0.003" /><testcase classname="unit.services.torncity.endpoints.test_members.TestMembersProcessor" name="test_run_end_to_end" time="0.165"><failure message="app.services.torncity.exceptions.TornAPIRateLimitError: Rate limit exceeded for key default">app/services/torncity/client.py:318: in make_request
+    return self._make_request_internal(endpoint, api_key)
+        api_key    = 'test_key_1'
+        endpoint   = 'user'
+        selection  = 'default'
+        self       = &lt;app.services.torncity.client.TornClient object at 0x10fff5f70&gt;
+app/services/torncity/client.py:287: in _make_request_internal
+    raise TornAPIRateLimitError(f"Rate limit exceeded for key {api_key}")
+E   app.services.torncity.exceptions.TornAPIRateLimitError: Rate limit exceeded for key test_key_1
+        api_key    = 'test_key_1'
+        data       = {'error': {'code': 2, 'error': 'Incorrect key'}}
+        endpoint   = 'user'
+        error_code = 2
+        error_msg  = 'Incorrect key'
+        response   = &lt;Response [200]&gt;
+        self       = &lt;app.services.torncity.client.TornClient object at 0x10fff5f70&gt;
+        timeout    = None
+        url        = 'https://api.torn.com/user?key=test_key_1'
+
+During handling of the above exception, another exception occurred:
+tests/unit/services/torncity/endpoints/test_members.py:286: in test_run_end_to_end
+    result = processor.run()
+        mock_data  = {'data': {'1': {'last_action': {'status': 'Online', 'timestamp': 1710766800},
+                'level': 10,
+                'member_id': 1,
+                'name': 'TestUser',
+                'status': {'state': 'Okay'},
+                'timestamp': 1710766800}}}
+        processor  = &lt;app.services.torncity.endpoints.members.MembersEndpointProcessor object at 0x1180784d0&gt;
+        self       = &lt;test_members.TestMembersProcessor object at 0x10fc2cc00&gt;
+app/services/torncity/base.py:184: in run
+    data = self.fetch_torn_data()
+        self       = &lt;app.services.torncity.endpoints.members.MembersEndpointProcessor object at 0x1180784d0&gt;
+app/services/torncity/base.py:140: in fetch_torn_data
+    return self.torn_client.make_request(
+        self       = &lt;app.services.torncity.endpoints.members.MembersEndpointProcessor object at 0x1180784d0&gt;
+app/services/torncity/client.py:320: in make_request
+    raise TornAPIRateLimitError(f"Rate limit exceeded for key {selection}")
+E   app.services.torncity.exceptions.TornAPIRateLimitError: Rate limit exceeded for key default
+        api_key    = 'test_key_1'
+        endpoint   = 'user'
+        selection  = 'default'
+        self       = &lt;app.services.torncity.client.TornClient object at 0x10fff5f70&gt;</failure></testcase><testcase classname="unit.services.torncity.test_members_pull.TestMembersPull" name="test_members_data_pull" time="0.007" /><testcase classname="unit.services.torncity.test_members_pull.TestMembersPull" name="test_empty_members_response" time="0.006" /><testcase classname="unit.services.torncity.test_members_pull.TestMembersPull" name="test_empty_records_list" time="0.006" /><testcase classname="unit.services.torncity.test_members_pull.TestMembersPull" name="test_members_bigquery_integration" time="0.005" /><testcase classname="unit.services.torncity.test_members_pull.TestMembersPull" name="test_empty_dataframe_after_processing" time="0.006" /><testcase classname="unit.services.torncity.test_members_pull.TestMembersPull" name="test_transform_data_exception" time="0.006" /><testcase classname="unit.services.torncity.test_members_pull.TestMembersPull" name="test_timestamp_conversion_error" time="0.009" /><testcase classname="unit.services.torncity.test_members_pull.TestMembersPull" name="test_invalid_members_data" time="0.006" /><testcase classname="unit.services.torncity.test_members_pull.TestMembersPull" name="test_members_data_validation" time="0.010" /><testcase classname="unit.services.torncity.test_members_pull.TestMembersPull" name="test_empty_valid_members_data" time="0.007" /><testcase classname="unit.services.torncity.test_members_pull.TestMembersPull" name="test_members_error_handling" time="0.006" /><testcase classname="unit.services.torncity.test_members_pull.TestMembersPull" name="test_numeric_conversion_error" time="0.006"><failure message="AssertionError: assert 'Error processing member' in 'Invalid numeric value for level field for member 123: not_a_number'&#10; +  where 'Invalid numeric value for level field for member 123: not_a_number' = str(DataValidationError('Invalid numeric value for level field for member 123: not_a_number'))&#10; +    where DataValidationError('Invalid numeric value for level field for member 123: not_a_number') = &lt;ExceptionInfo DataValidationError('Invalid numeric value for level field for member 123: not_a_number') tblen=2&gt;.value">tests/unit/services/torncity/test_members_pull.py:680: in test_numeric_conversion_error
+    assert "Error processing member" in str(exc_info.value)
+E   AssertionError: assert 'Error processing member' in 'Invalid numeric value for level field for member 123: not_a_number'
+E    +  where 'Invalid numeric value for level field for member 123: not_a_number' = str(DataValidationError('Invalid numeric value for level field for member 123: not_a_number'))
+E    +    where DataValidationError('Invalid numeric value for level field for member 123: not_a_number') = &lt;ExceptionInfo DataValidationError('Invalid numeric value for level field for member 123: not_a_number') tblen=2&gt;.value
+        exc_info   = &lt;ExceptionInfo DataValidationError('Invalid numeric value for level field for member 123: not_a_number') tblen=2&gt;
+        members_processor = &lt;test_members_pull.TestMembersEndpointProcessor object at 0x10fd565d0&gt;
+        mock_log_error = &lt;Mock id='4699920032'&gt;
+        mock_response = {'data': {'members': {'123': {'faction': {'faction_id': '17991'},
+                              'last_action': {'relative': '1 hour ago',
+                                              'timestamp': 'not_a_timestamp'},
+                              'level': 'not_a_number',
+                              'name': 'Test User',
+                              'status': {'description': 'Online',
+                                         'state': 'online',
+                                         'until': 'invalid'}}}},
+ 'fetched_at': '2024-03-16T09:32:31.281852'}
+        self       = &lt;test_members_pull.TestMembersPull object at 0x10fcfb770&gt;</failure></testcase><testcase classname="unit.services.torncity.test_members_pull.TestMembersPull" name="test_members_data_update" time="0.006" /><testcase classname="unit.services.torncity.test_crimes_pull.TestCrimesPull" name="test_old_field_name_mapping" time="0.013" /><testcase classname="unit.services.torncity.test_crimes_pull.TestCrimesPull" name="test_rewards_data_processing" time="0.011" /><testcase classname="unit.services.torncity.test_crimes_pull.TestCrimesPull" name="test_participants_data_processing" time="0.010" /><testcase classname="unit.services.torncity.test_crimes_pull.TestCrimesPull" name="test_invalid_participant_types" time="0.011" /><testcase classname="unit.services.torncity.test_crimes_pull.TestCrimesPull" name="test_empty_records_list" time="0.007" /><testcase classname="unit.services.torncity.test_crimes_pull.TestCrimesPull" name="test_mixed_participant_data" time="0.012" /><testcase classname="unit.services.torncity.test_crimes_pull.TestCrimesPull" name="test_crimes_bigquery_integration" time="0.016"><failure message="AssertionError: Processing should succeed&#10;assert False is True">tests/unit/services/torncity/test_crimes_pull.py:756: in test_crimes_bigquery_integration
+    assert result is True, "Processing should succeed"
+E   AssertionError: Processing should succeed
+E   assert False is True
+        crimes_processor = &lt;test_crimes_pull.TestCrimesEndpointProcessor object at 0x10fd8ce20&gt;
+        data       = {'crimes': {'123': {'created_at': 1742344202,
+                    'difficulty': 'medium',
+                    'executed_at': 1742344202,
+                    'expired_at': 1742344202,
+                    'id': 123,
+                    'name': 'Test Crime',
+                    'participants': [{'id': 456, 'name': 'Player1'},
+                                     {'id': 789, 'name': 'Player2'}],
+                    'planning_at': 1742344202,
+                    'ready_at': 1742344202,
+                    'rewards': {'items': [{'id': 1, 'quantity': 2},
+                                          {'id': 2, 'quantity': 1}],
+                                'money': 1000,
+                                'respect': 10},
+                    'status': 'completed'}},
+ 'fetched_at': '2024-03-17T00:00:00',
+ 'timestamp': 1710633600}
+        mock_bigquery_client = &lt;MagicMock id='4700149408'&gt;
+        mock_credentials = &lt;MagicMock spec='Credentials' id='4700149072'&gt;
+        mock_monitoring_client = &lt;MagicMock spec='MetricServiceClient' id='4700148400'&gt;
+        mock_table = &lt;Mock name='mock.get_table()' id='4700149744'&gt;
+        result     = False
+        self       = &lt;test_crimes_pull.TestCrimesPull testMethod=test_crimes_bigquery_integration&gt;</failure></testcase><testcase classname="unit.services.torncity.test_crimes_pull.TestCrimesPull" name="test_convert_numerics_method" time="0.008" /><testcase classname="unit.services.torncity.test_crimes_pull.TestCrimesPull" name="test_invalid_rewards_types" time="0.013"><failure message="assert np.int64(2) == 1">tests/unit/services/torncity/test_crimes_pull.py:995: in test_invalid_rewards_types
+    assert df.loc[df['id'] == 3, 'reward_item_count'].iloc[0] == 1
+E   assert np.int64(2) == 1
+        crimes_processor = &lt;test_crimes_pull.TestCrimesEndpointProcessor object at 0x10fe46750&gt;
+        data       = {'crimes': {'1': {'id': 1, 'name': 'Test Crime', 'rewards': 'not_a_dict'},
+            '2': {'id': 2,
+                  'name': 'Test Crime 2',
+                  'rewards': {'items': 'not_a_list',
+                              'money': 'not_a_number',
+                              'respect': None}},
+            '3': {'id': 3,
+                  'name': 'Test Crime 3',
+                  'rewards': {'items': ['not_a_dict',
+                                        {'wrong_field': 123},
+                                        {'id': 'not_a_number', 'quantity': 2},
+                                        {'id': 123, 'quantity': 'not_a_number'},
+                                        {'id': 456, 'quantity': 3}],
+                              'money': 1000000,
+                              'respect': 100}}},
+ 'fetched_at': '2024-03-17T00:00:00',
+ 'timestamp': 1710633600}
+        df         =   server_timestamp created_at planning_at  ... reward_item_ids reward_item_quantities fetched_at
+0       2024-03-17        NaT         NaT  ...                                        2024-03-17
+1       2024-03-17        NaT         NaT  ...                                        2024-03-17
+2       2024-03-17        NaT         NaT  ...         123,456                    0,3 2024-03-17
+
+[3 rows x 19 columns]
+        self       = &lt;test_crimes_pull.TestCrimesPull testMethod=test_invalid_rewards_types&gt;</failure></testcase><testcase classname="unit.services.torncity.test_crimes_pull.TestCrimesPull" name="test_server_timestamp_handling" time="0.024"><failure message="assert not True&#10; +  where True = Empty DataFrame\nColumns: []\nIndex: [].empty">tests/unit/services/torncity/test_crimes_pull.py:871: in test_server_timestamp_handling
+    assert not df.empty
+E   assert not True
+E    +  where True = Empty DataFrame\nColumns: []\nIndex: [].empty
+        crimes_processor = &lt;test_crimes_pull.TestCrimesEndpointProcessor object at 0x10fd56d50&gt;
+        data       = {'crimes': {'1': {'id': 1, 'name': 'Test Crime'}},
+ 'fetched_at': '2024-03-17T00:00:00',
+ 'timestamp': 'invalid'}
+        df         = Empty DataFrame
+Columns: []
+Index: []
+        expected_ts = Timestamp('2025-03-18 19:30:02')
+        input_ts   = 'invalid'
+        self       = &lt;test_crimes_pull.TestCrimesPull testMethod=test_server_timestamp_handling&gt;
+        test_cases = [(1710633600, Timestamp('2024-03-17 00:00:00')),
+ ('2024-03-17T00:00:00', Timestamp('2024-03-17 00:00:00')),
+ (None, Timestamp('2025-03-18 19:30:02')),
+ ('invalid', Timestamp('2025-03-18 19:30:02'))]</failure></testcase><testcase classname="unit.services.torncity.test_crimes_pull.TestCrimesPull" name="test_mixed_rewards_data" time="0.012" /><testcase classname="unit.services.torncity.test_crimes_pull.TestCrimesPull" name="test_timestamp_formats" time="0.012"><failure message="assert False&#10; +  where False = &lt;function notna at 0x10b76d120&gt;(NaT)&#10; +    where &lt;function notna at 0x10b76d120&gt; = pd.notna">tests/unit/services/torncity/test_crimes_pull.py:1066: in test_timestamp_formats
+    assert pd.notna(df['ready_at'].iloc[0])
+E   assert False
+E    +  where False = &lt;function notna at 0x10b76d120&gt;(NaT)
+E    +    where &lt;function notna at 0x10b76d120&gt; = pd.notna
+        crimes_processor = &lt;test_crimes_pull.TestCrimesEndpointProcessor object at 0x10fd844b0&gt;
+        data       = {'crimes': {'1': {'created_at': 1710633600,
+                  'difficulty': 'medium',
+                  'executed_at': 'invalid_date',
+                  'expired_at': 1710720000,
+                  'id': 1,
+                  'name': 'Test Crime',
+                  'planning_at': None,
+                  'ready_at': '2024-03-17T00:00:00',
+                  'status': 'completed'}},
+ 'fetched_at': '2024-03-17T00:00:00',
+ 'timestamp': 1710633600}
+        df         =   server_timestamp created_at planning_at  ... reward_item_ids reward_item_quantities fetched_at
+0       2024-03-17 2024-03-17         NaT  ...                                        2024-03-17
+
+[1 rows x 19 columns]
+        self       = &lt;test_crimes_pull.TestCrimesPull testMethod=test_timestamp_formats&gt;</failure></testcase><testcase classname="unit.services.torncity.test_crimes_pull.TestCrimesPull" name="test_column_type_conversion" time="0.011"><failure message="assert np.int64(1) == 0">tests/unit/services/torncity/test_crimes_pull.py:1121: in test_column_type_conversion
+    assert df['id'].iloc[0] == 0
+E   assert np.int64(1) == 0
+        crimes_processor = &lt;test_crimes_pull.TestCrimesEndpointProcessor object at 0x10fd84c90&gt;
+        data       = {'crimes': {'1': {'difficulty': None,
+                  'id': None,
+                  'name': None,
+                  'participant_count': '5',
+                  'reward_item_count': None,
+                  'reward_money': 1000.5,
+                  'reward_respect': '100',
+                  'status': None}},
+ 'fetched_at': '2024-03-17T00:00:00',
+ 'timestamp': 1710633600}
+        df         =   server_timestamp created_at planning_at  ... reward_item_ids reward_item_quantities fetched_at
+0       2024-03-17        NaT         NaT  ...                                        2024-03-17
+
+[1 rows x 19 columns]
+        self       = &lt;test_crimes_pull.TestCrimesPull testMethod=test_column_type_conversion&gt;</failure></testcase></testsuite></testsuites>

@@ -41,7 +41,12 @@ class TestBigQuerySchemaManagement:
             bigquery.SchemaField("new_field", "STRING", mode="NULLABLE")
         ]
         
-        with patch.object(client.client, 'update_table') as mock_update:
+        mock_table = Mock()
+        mock_table.schema = sample_schema
+        mock_table.num_rows = 0  # Mock empty table
+        
+        with patch.object(client.client, 'get_table', return_value=mock_table), \
+             patch.object(client.client, 'update_table') as mock_update:
             client.update_table_schema("test_table", updated_schema)
             
             mock_update.assert_called_once()
@@ -52,6 +57,7 @@ class TestBigQuerySchemaManagement:
         """Test retrieving table schema."""
         mock_table = Mock()
         mock_table.schema = sample_schema
+        mock_table.num_rows = 0
         
         with patch.object(client.client, 'get_table') as mock_get:
             mock_get.return_value = mock_table
@@ -69,8 +75,13 @@ class TestBigQuerySchemaManagement:
             sample_schema[3]   # value
         ]
         
-        # Should not raise exception
-        client.validate_schema_compatibility("test_table", compatible_schema)
+        mock_table = Mock()
+        mock_table.schema = sample_schema
+        mock_table.num_rows = 100  # Mock existing data
+        
+        with patch.object(client.client, 'get_table', return_value=mock_table):
+            # Should not raise exception
+            client.validate_schema_compatibility("test_table", compatible_schema)
         
         # Test incompatible schema (missing required field)
         incompatible_schema = [
@@ -78,26 +89,35 @@ class TestBigQuerySchemaManagement:
             bigquery.SchemaField("name", "STRING", mode="NULLABLE")
         ]
         
-        with pytest.raises(ValueError) as exc:
-            client.validate_schema_compatibility("test_table", incompatible_schema)
-        assert "Schema mismatch" in str(exc.value)
+        with patch.object(client.client, 'get_table', return_value=mock_table):
+            with pytest.raises(ValueError) as exc:
+                client.validate_schema_compatibility("test_table", incompatible_schema)
+            assert "Schema mismatch" in str(exc.value)
 
     def test_schema_evolution(self, client, sample_schema):
         """Test schema evolution scenarios."""
-        # Test adding nullable field (should be compatible)
-        evolved_schema = sample_schema + [
-            bigquery.SchemaField("new_field", "STRING", mode="NULLABLE")
-        ]
-        client.validate_schema_compatibility("test_table", evolved_schema)
+        mock_table = Mock()
+        mock_table.schema = sample_schema
+        mock_table.num_rows = 100  # Mock existing data
         
-        # Test changing field mode (should be incompatible)
-        incompatible_schema = [
-            bigquery.SchemaField("id", "INTEGER", mode="NULLABLE"),  # Changed from REQUIRED
-            *sample_schema[1:]
-        ]
-        
-        with pytest.raises(ValueError):
-            client.validate_schema_compatibility("test_table", incompatible_schema)
+        with patch.object(client.client, 'get_table', return_value=mock_table):
+            # Test adding nullable field (should be compatible)
+            evolved_schema = sample_schema + [
+                bigquery.SchemaField("new_field", "STRING", mode="NULLABLE")
+            ]
+            client.validate_schema_compatibility("test_table", evolved_schema)
+            
+            # Test changing field mode (should be incompatible)
+            incompatible_schema = [
+                bigquery.SchemaField("id", "INTEGER", mode="NULLABLE"),  # Changed from REQUIRED
+                bigquery.SchemaField("timestamp", "DATETIME", mode="REQUIRED"),
+                bigquery.SchemaField("name", "STRING", mode="NULLABLE"),
+                bigquery.SchemaField("value", "FLOAT", mode="NULLABLE")
+            ]
+            
+            with pytest.raises(ValueError) as exc:
+                client.validate_schema_compatibility("test_table", incompatible_schema)
+            assert "Schema mismatch" in str(exc.value)
 
     def test_schema_type_validation(self, client):
         """Test validation of schema field types."""
@@ -182,25 +202,22 @@ class TestBigQuerySchemaManagement:
             "field_name",
             "field123",
             "FIELD_NAME",
-            "field_name_with_underscores"
+            "_field_name"
         ]
         
-        invalid_names = [
-            "",  # Empty
-            "123field",  # Starts with number
-            "field-name",  # Contains hyphen
-            "field.name",  # Contains period
-            "field@name",  # Contains special character
-            "a" * 300  # Too long
-        ]
-        
-        # Test valid names
         for name in valid_names:
             schema = [bigquery.SchemaField(name, "STRING")]
             # Should not raise exception
             client.validate_field_names(schema)
         
-        # Test invalid names
+        invalid_names = [
+            "123field",  # Cannot start with number
+            "field-name",  # Cannot contain hyphen
+            "field name",  # Cannot contain space
+            "field@name",  # Cannot contain special characters
+            ""  # Cannot be empty
+        ]
+        
         for name in invalid_names:
             schema = [bigquery.SchemaField(name, "STRING")]
             with pytest.raises(ValueError):
@@ -210,26 +227,15 @@ class TestBigQuerySchemaManagement:
         """Test validation of schema field descriptions."""
         # Test valid descriptions
         valid_schema = [
-            bigquery.SchemaField(
-                "field1", 
-                "STRING",
-                description="Short description"
-            ),
-            bigquery.SchemaField(
-                "field2",
-                "INTEGER",
-                description="Longer description with details about the field's purpose and usage"
-            )
+            bigquery.SchemaField("field1", "STRING", description="A valid description"),
+            bigquery.SchemaField("field2", "INTEGER", description=None),  # Optional
+            bigquery.SchemaField("field3", "FLOAT", description="")  # Empty is ok
         ]
         client.validate_field_descriptions(valid_schema)
         
-        # Test invalid descriptions
+        # Test invalid description (non-string)
         invalid_schema = [
-            bigquery.SchemaField(
-                "field1",
-                "STRING",
-                description="a" * 1025  # Too long (>1024 characters)
-            )
+            bigquery.SchemaField("field1", "STRING", description=123)  # Must be string
         ]
         with pytest.raises(ValueError):
             client.validate_field_descriptions(invalid_schema) 

@@ -1,140 +1,223 @@
-"""Unit tests for BigQuery client."""
-
-from unittest.mock import Mock, patch
-
 import pytest
+from unittest.mock import Mock, patch
 from google.cloud import bigquery
 from google.api_core import exceptions
+from app.services.google.bigquery.client import BigQueryClient, BigQueryError
+from datetime import datetime
 
-from app.services.google.bigquery.client import BigQueryClient
+@pytest.fixture
+def mock_bigquery_client():
+    with patch('google.cloud.bigquery.Client') as mock_client:
+        yield mock_client
 
-class TestBigQueryClient:
-    """Test suite for BigQueryClient."""
+@pytest.fixture
+def bq_client(mock_bigquery_client):
+    return BigQueryClient(project_id='test-project')
 
-    @pytest.fixture
-    def client(self, sample_config):
-        """Create a BigQueryClient instance for testing."""
-        return BigQueryClient(sample_config)
+def test_init_failure(mocker):
+    """Test client initialization failure."""
+    mock_client = mocker.patch('google.cloud.bigquery.Client')
+    mock_client.side_effect = Exception("Auth failed")
+    
+    with pytest.raises(BigQueryError, match="Failed to authenticate with BigQuery: Auth failed"):
+        BigQueryClient(project_id='test-project')
 
-    def test_init_with_valid_config(self, sample_config):
-        """Test client initialization with valid configuration."""
-        client = BigQueryClient(sample_config)
-        assert client.project_id == sample_config["gcp_project_id"]
-        assert client.dataset == sample_config["dataset"]
-        assert client.storage_mode == sample_config["storage_mode"]
-        assert isinstance(client.client, bigquery.Client)
+def test_table_exists_success(bq_client, mock_bigquery_client):
+    """Test successful table existence check."""
+    mock_bigquery_client.return_value.get_table.return_value = Mock()
+    assert bq_client.table_exists('test_table') is True
 
-    def test_init_with_invalid_config(self):
-        """Test client initialization with invalid configuration."""
-        with pytest.raises(ValueError, match="Missing required configuration"):
-            BigQueryClient({})
+def test_table_exists_not_found(bq_client, mock_bigquery_client):
+    """Test table not found case."""
+    mock_bigquery_client.return_value.get_table.side_effect = exceptions.NotFound('not found')
+    assert bq_client.table_exists('test_table') is False
 
-    @patch("google.cloud.bigquery.Client")
-    def test_write_data_append_mode(self, mock_bq_client, client, sample_bigquery_schema):
-        """Test writing data in append mode."""
-        test_data = [{"id": 1, "name": "test"}]
-        mock_job = Mock()
-        mock_bq_client.return_value.load_table_from_json.return_value = mock_job
-        
-        client.write_data(test_data, "test_table", sample_bigquery_schema, "append")
-        
-        mock_bq_client.return_value.load_table_from_json.assert_called_once()
-        mock_job.result.assert_called_once()
+def test_table_exists_auth_error(bq_client, mock_bigquery_client):
+    """Test authentication error handling."""
+    mock_bigquery_client.return_value.get_table.side_effect = exceptions.Forbidden('forbidden')
+    with pytest.raises(ValueError, match='Authentication error'):
+        bq_client.table_exists('test_table')
 
-    @patch("google.cloud.bigquery.Client")
-    def test_write_data_overwrite_mode(self, mock_bq_client, client, sample_bigquery_schema):
-        """Test writing data in overwrite mode."""
-        test_data = [{"id": 1, "name": "test"}]
-        mock_job = Mock()
-        mock_bq_client.return_value.load_table_from_json.return_value = mock_job
-        
-        client.write_data(test_data, "test_table", sample_bigquery_schema, "overwrite")
-        
-        mock_bq_client.return_value.load_table_from_json.assert_called_once()
-        mock_job.result.assert_called_once()
+def test_write_data_success(bq_client, mock_bigquery_client):
+    """Test successful data write."""
+    mock_job = Mock()
+    mock_job.result.return_value = None
+    mock_bigquery_client.return_value.load_table_from_dataframe.return_value = mock_job
+    
+    data = [{'col1': 'val1'}]
+    bq_client.write_data(data, 'test_table', write_disposition='WRITE_APPEND')
+    
+    mock_bigquery_client.return_value.load_table_from_dataframe.assert_called_once()
 
-    @patch("google.cloud.bigquery.Client")
-    def test_write_data_invalid_mode(self, mock_bq_client, client, sample_bigquery_schema):
-        """Test writing data with invalid storage mode."""
-        test_data = [{"id": 1, "name": "test"}]
-        
-        with pytest.raises(ValueError, match="Invalid storage mode"):
-            client.write_data(test_data, "test_table", sample_bigquery_schema, "invalid")
+def test_write_data_invalid_disposition(bq_client):
+    """Test invalid write disposition."""
+    with pytest.raises(ValueError, match='Invalid write disposition'):
+        bq_client.write_data([], 'test_table', write_disposition='INVALID')
 
-    @patch("google.cloud.bigquery.Client")
-    def test_write_data_empty_data(self, mock_bq_client, client, sample_bigquery_schema):
-        """Test writing empty data."""
-        with pytest.raises(ValueError, match="No data to write"):
-            client.write_data([], "test_table", sample_bigquery_schema, "append")
+def test_write_data_empty(bq_client, mock_bigquery_client):
+    """Test write with empty data."""
+    with pytest.raises(ValueError, match='No data to write'):
+        bq_client.write_data([], 'test_table')
 
-    @patch("google.cloud.bigquery.Client")
-    def test_write_data_api_error(self, mock_bq_client, client, sample_bigquery_schema):
-        """Test handling of BigQuery API errors."""
-        test_data = [{"id": 1, "name": "test"}]
-        mock_job = Mock()
-        mock_job.result.side_effect = exceptions.BadRequest("Invalid data")
-        mock_bq_client.return_value.load_table_from_json.return_value = mock_job
-        
-        with pytest.raises(exceptions.BadRequest, match="Invalid data"):
-            client.write_data(test_data, "test_table", sample_bigquery_schema, "append")
+def test_create_table(bq_client, mock_bigquery_client):
+    """Test table creation."""
+    schema = [
+        {'name': 'col1', 'type': 'STRING', 'mode': 'REQUIRED'},
+        {'name': 'col2', 'type': 'INTEGER', 'mode': 'NULLABLE'}
+    ]
+    bq_client.create_table('test_table', schema)
+    mock_bigquery_client.return_value.create_table.assert_called_once()
 
-    @patch("google.cloud.bigquery.Client")
-    def test_table_exists(self, mock_bq_client, client):
-        """Test checking if table exists."""
-        # Test when table exists
-        mock_bq_client.return_value.get_table.return_value = Mock()
-        assert client.table_exists("test_table") is True
-        
-        # Test when table doesn't exist
-        mock_bq_client.return_value.get_table.side_effect = exceptions.NotFound("Table not found")
-        assert client.table_exists("test_table") is False
+def test_validate_schema_compatibility_success(bq_client, mock_bigquery_client):
+    """Test successful schema compatibility validation."""
+    existing_schema = [
+        bigquery.SchemaField('col1', 'STRING', mode='REQUIRED'),
+        bigquery.SchemaField('col2', 'INTEGER', mode='NULLABLE')
+    ]
+    new_schema = [
+        {'name': 'col1', 'type': 'STRING', 'mode': 'REQUIRED'},
+        {'name': 'col2', 'type': 'INTEGER', 'mode': 'NULLABLE'},
+        {'name': 'col3', 'type': 'STRING', 'mode': 'NULLABLE'}
+    ]
+    
+    mock_bigquery_client.return_value.get_table.return_value.schema = existing_schema
+    mock_bigquery_client.return_value.get_table.return_value.num_rows = 0
+    
+    # Should not raise any exceptions
+    bq_client.validate_schema_compatibility('test_table', new_schema)
 
-    @patch("google.cloud.bigquery.Client")
-    def test_delete_table(self, mock_bq_client, client):
-        """Test deleting a table."""
-        # Test successful deletion
-        client.delete_table("test_table")
-        mock_bq_client.return_value.delete_table.assert_called_once()
-        
-        # Test deletion of non-existent table
-        mock_bq_client.return_value.delete_table.side_effect = exceptions.NotFound("Table not found")
-        with pytest.raises(exceptions.NotFound):
-            client.delete_table("nonexistent_table")
+def test_validate_schema_compatibility_type_mismatch(bq_client, mock_bigquery_client):
+    """Test schema compatibility with type mismatch."""
+    existing_schema = [
+        bigquery.SchemaField('col1', 'STRING', mode='REQUIRED')
+    ]
+    new_schema = [
+        {'name': 'col1', 'type': 'INTEGER', 'mode': 'REQUIRED'}
+    ]
+    
+    mock_bigquery_client.return_value.get_table.return_value.schema = existing_schema
+    
+    with pytest.raises(ValueError, match='type changed from STRING to INTEGER'):
+        bq_client.validate_schema_compatibility('test_table', new_schema)
 
-    @patch("google.cloud.bigquery.Client")
-    def test_create_table(self, mock_bq_client, client, sample_bigquery_schema):
-        """Test creating a table."""
-        client.create_table("test_table", sample_bigquery_schema)
-        mock_bq_client.return_value.create_table.assert_called_once()
+def test_validate_schema_compatibility_required_field_missing(bq_client, mock_bigquery_client):
+    """Test schema compatibility with missing required field."""
+    existing_schema = [
+        bigquery.SchemaField('col1', 'STRING', mode='REQUIRED'),
+        bigquery.SchemaField('col2', 'INTEGER', mode='REQUIRED')
+    ]
+    new_schema = [
+        {'name': 'col1', 'type': 'STRING', 'mode': 'REQUIRED'}
+    ]
+    
+    mock_bigquery_client.return_value.get_table.return_value.schema = existing_schema
+    
+    with pytest.raises(ValueError, match='Required field .* is missing'):
+        bq_client.validate_schema_compatibility('test_table', new_schema)
 
-    @patch("google.cloud.bigquery.Client")
-    def test_get_table_schema(self, mock_bq_client, client):
-        """Test getting table schema."""
-        mock_table = Mock()
-        mock_table.schema = [
-            bigquery.SchemaField("id", "INTEGER"),
-            bigquery.SchemaField("name", "STRING")
-        ]
-        mock_bq_client.return_value.get_table.return_value = mock_table
-        
-        schema = client.get_table_schema("test_table")
-        assert len(schema) == 2
-        assert schema[0].name == "id"
-        assert schema[1].name == "name"
+def test_validate_data_types_success(bq_client):
+    """Test successful data type validation."""
+    schema = [
+        bigquery.SchemaField('str_col', 'STRING', mode='REQUIRED'),
+        bigquery.SchemaField('int_col', 'INTEGER', mode='REQUIRED'),
+        bigquery.SchemaField('float_col', 'FLOAT', mode='NULLABLE'),
+        bigquery.SchemaField('bool_col', 'BOOLEAN', mode='REQUIRED'),
+        bigquery.SchemaField('datetime_col', 'DATETIME', mode='NULLABLE')
+    ]
+    
+    data = [{
+        'str_col': 'test',
+        'int_col': 123,
+        'float_col': 123.45,
+        'bool_col': True,
+        'datetime_col': '2024-03-15T12:00:00'
+    }]
+    
+    # Should not raise any exceptions
+    bq_client.validate_data_types(data, schema)
 
-    @patch("google.cloud.bigquery.Client")
-    def test_validate_schema_compatibility(self, mock_bq_client, client, sample_bigquery_schema):
-        """Test schema compatibility validation."""
-        # Test with compatible schema
-        mock_table = Mock()
-        mock_table.schema = sample_bigquery_schema
-        mock_bq_client.return_value.get_table.return_value = mock_table
-        
-        client.validate_schema_compatibility("test_table", sample_bigquery_schema)
-        
-        # Test with incompatible schema
-        incompatible_schema = [
-            bigquery.SchemaField("different", "STRING")
-        ]
-        with pytest.raises(ValueError, match="Schema mismatch"):
-            client.validate_schema_compatibility("test_table", incompatible_schema) 
+def test_validate_data_types_invalid_type(bq_client):
+    """Test data type validation with invalid type."""
+    schema = [
+        bigquery.SchemaField('int_col', 'INTEGER', mode='REQUIRED')
+    ]
+    
+    data = [{
+        'int_col': 'not an integer'
+    }]
+    
+    with pytest.raises(ValueError, match='validation failed'):
+        bq_client.validate_data_types(data, schema)
+
+def test_validate_data_types_required_null(bq_client):
+    """Test data type validation with null in required field."""
+    schema = [
+        bigquery.SchemaField('str_col', 'STRING', mode='REQUIRED')
+    ]
+    
+    data = [{
+        'str_col': None
+    }]
+    
+    with pytest.raises(ValueError, match='Required field .* cannot be null'):
+        bq_client.validate_data_types(data, schema)
+
+def test_delete_table_success(bq_client, mock_bigquery_client):
+    """Test successful table deletion."""
+    bq_client.delete_table('test_table')
+    mock_bigquery_client.return_value.delete_table.assert_called_once()
+
+def test_delete_table_failure(bq_client, mock_bigquery_client):
+    """Test table deletion failure."""
+    mock_bigquery_client.return_value.delete_table.side_effect = Exception('Delete failed')
+    with pytest.raises(ValueError, match='Failed to delete table'):
+        bq_client.delete_table('test_table')
+
+def test_get_table_schema_success(bq_client, mock_bigquery_client):
+    """Test successful schema retrieval."""
+    expected_schema = [
+        bigquery.SchemaField('col1', 'STRING', mode='REQUIRED')
+    ]
+    mock_bigquery_client.return_value.get_table.return_value.schema = expected_schema
+    
+    schema = bq_client.get_table_schema('test_table')
+    assert schema == expected_schema
+
+def test_get_table_schema_not_found(bq_client, mock_bigquery_client):
+    """Test schema retrieval for non-existent table."""
+    mock_bigquery_client.return_value.get_table.side_effect = exceptions.NotFound('not found')
+    with pytest.raises(ValueError, match='Table .* does not exist'):
+        bq_client.get_table_schema('test_table')
+
+def test_write_data_with_retry_success(bq_client, mock_bigquery_client):
+    """Test successful data write with retry."""
+    mock_job = Mock()
+    mock_job.result.return_value = None
+    mock_bigquery_client.return_value.load_table_from_dataframe.return_value = mock_job
+    
+    data = [{'col1': 'val1'}]
+    bq_client.write_data_with_retry('test_table', data)
+    
+    assert mock_bigquery_client.return_value.load_table_from_dataframe.call_count == 1
+
+def test_write_data_with_retry_failure(bq_client, mock_bigquery_client):
+    """Test data write with retry exhaustion."""
+    mock_bigquery_client.return_value.load_table_from_dataframe.side_effect = Exception('Write failed')
+    
+    data = [{'col1': 'val1'}]
+    with pytest.raises(Exception, match='Write failed'):
+        bq_client.write_data_with_retry('test_table', data, max_retries=2)
+    
+    assert mock_bigquery_client.return_value.load_table_from_dataframe.call_count == 2
+
+def test_write_data_in_batches(bq_client, mock_bigquery_client):
+    """Test batch data writing."""
+    mock_job = Mock()
+    mock_job.result.return_value = None
+    mock_bigquery_client.return_value.load_table_from_dataframe.return_value = mock_job
+    
+    data = [{'col1': f'val{i}'} for i in range(2500)]  # Create 2500 records
+    bq_client.write_data_in_batches('test_table', data, batch_size=1000)
+    
+    # Should have made 3 calls (2 full batches + 1 partial)
+    assert mock_bigquery_client.return_value.load_table_from_dataframe.call_count == 3 

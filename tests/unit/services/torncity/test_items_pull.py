@@ -4,6 +4,7 @@
 import json
 import os
 from typing import List, Dict
+import time
 
 # Third-party imports
 import pytest
@@ -152,7 +153,8 @@ def sample_config():
         'endpoint_config': {
             'endpoint': 'v2/torn/items',
             'name': 'v2_torn_items',
-            'table': 'v2_torn_items'
+            'table': 'v2_torn_items',
+            'url': 'https://api.torn.com/v2/torn/items'
         }
     }
 
@@ -180,11 +182,11 @@ def bq_client(mock_credentials, sample_config):
     return BigQueryClient(sample_config)
 
 @pytest.fixture(scope='function')
-def items_processor(mock_credentials, mock_monitoring_client, sample_config):
+def items_processor(mock_credentials, mock_monitoring_client, sample_config, torn_client):
     """Create a ItemsEndpointProcessor for testing."""
     with patch("google.oauth2.service_account.Credentials.from_service_account_file",
               return_value=mock_credentials):
-        processor = TestItemsEndpointProcessor(sample_config, sample_config['endpoint_config'])
+        processor = TestItemsEndpointProcessor(sample_config)
         processor.torn_client = torn_client
         return processor
 
@@ -313,17 +315,46 @@ class TestItemsPull:
             "items": {
                 "123": {
                     # All fields that would be dropped during processing
-                    "name": "",
-                    "description": "",
-                    "type": "",
-                    "buy_price": "invalid",
-                    "market_value": "invalid"
+                    "name": None,
+                    "description": None,
+                    "type": None,
+                    "weapon_type": None,
+                    "buy_price": None,
+                    "sell_price": None,
+                    "market_value": None,
+                    "circulation": None,
+                    "image": None,
+                    "requirement": {},  # Empty dict instead of None
+                    "effect": {}  # Empty dict instead of None
                 }
             },
             "fetched_at": "2024-03-16T00:00:00"
         }
+        
         result = items_processor.transform_data(response)
-        assert result.empty
+        
+        # Verify string fields are None
+        assert result.loc[0, "name"] is None
+        assert result.loc[0, "description"] is None
+        assert result.loc[0, "type"] is None
+        assert result.loc[0, "weapon_type"] is None
+        assert result.loc[0, "image"] is None
+        
+        # Verify numeric fields are NaN
+        assert pd.isna(result.loc[0, "buy_price"])
+        assert pd.isna(result.loc[0, "sell_price"])
+        assert pd.isna(result.loc[0, "market_value"])
+        assert pd.isna(result.loc[0, "circulation"])
+        
+        # Verify requirement fields have default value of 0
+        assert result.loc[0, "requirement_level"] == 0
+        assert result.loc[0, "requirement_strength"] == 0
+        assert result.loc[0, "requirement_speed"] == 0
+        assert result.loc[0, "requirement_dexterity"] == 0
+        assert result.loc[0, "requirement_intelligence"] == 0
+        
+        # Verify timestamp is converted
+        assert pd.to_datetime(result.loc[0, "fetched_at"]) == pd.to_datetime("2024-03-16T00:00:00")
 
     def test_empty_valid_items_data(self, items_processor, torn_client):
         """Test handling of valid but empty items data that results in an empty DataFrame."""
@@ -379,4 +410,134 @@ class TestItemsPull:
             assert df.empty
             
             # Verify error was logged
-            mock_log_error.assert_called_once_with("No records created from items data") 
+            mock_log_error.assert_called_once_with("No records created from items data")
+
+    def test_items_bigquery_integration(self, items_processor, mock_items_response):
+        """Test BigQuery integration for items endpoint."""
+        # Create a unique test table name
+        test_table = f"test_items_{int(time.time())}"
+        original_table = items_processor.table
+        items_processor.table = test_table
+
+        # Mock BigQuery client operations
+        mock_row = Mock()
+        mock_row.count = 1
+        
+        mock_query_job = Mock()
+        mock_query_job.result.return_value = iter([mock_row])  # Return an iterator
+        
+        mock_bq_client = Mock()
+        mock_bq_client.query.return_value = mock_query_job
+        mock_bq_client.delete_table.return_value = None
+        
+        # Replace the actual BigQuery client with our mock
+        items_processor.bq_client.client = mock_bq_client
+
+        try:
+            # Mock the fetch_data method to return our test response
+            with patch.object(items_processor.torn_client, 'fetch_data', return_value=mock_items_response):
+                # Process the data
+                result = items_processor.process()
+                
+                # Verify processing was successful
+                assert result is True, "Processing should succeed"
+                
+                # Verify data was uploaded to BigQuery
+                query = f"""
+                SELECT COUNT(*) as count 
+                FROM `{items_processor.bq_client.project_id}.{items_processor.config['dataset']}.{test_table}`
+                """
+                query_job = items_processor.bq_client.client.query(query)
+                results = query_job.result()
+                row = next(results)
+                assert row.count > 0, "Table should contain data"
+
+        finally:
+            # Clean up - delete test table
+            items_processor.bq_client.client.delete_table(
+                f"{items_processor.bq_client.project_id}.{items_processor.config['dataset']}.{test_table}",
+                not_found_ok=True
+            )
+            items_processor.table = original_table
+
+    def test_transform_data_exception(self, items_processor):
+        """Test general exception handling in transform_data."""
+        # Mock a response that will cause an exception during processing
+        mock_response = None  # This will cause an attribute error
+        
+        # Mock the error logging
+        mock_log_error = Mock()
+        
+        with patch.object(items_processor, "_log_error", mock_log_error):
+            # Process the data
+            df = items_processor.transform_data(mock_response)
+            
+            # Assert that we got an empty DataFrame
+            assert df.empty
+            
+            # Verify error was logged
+            mock_log_error.assert_called_once()
+            assert "Error transforming items data" in mock_log_error.call_args[0][0]
+
+    def test_numeric_conversion_error(self, items_processor):
+        """Test error handling during numeric conversion."""
+        # Create a response with invalid numeric data
+        mock_response = {
+            "items": {
+                "123": {
+                    "name": "Test Item",
+                    "description": "A test item",
+                    "type": "Weapon",
+                    "buy_price": "not_a_number",  # Invalid numeric value
+                    "sell_price": "invalid",  # Invalid numeric value
+                    "market_value": "not_a_price",  # Invalid numeric value
+                    "circulation": "invalid",  # Invalid numeric value
+                    "requirement": None  # Will cause error in numeric conversion
+                }
+            },
+            "fetched_at": "2024-03-16T09:32:31.281852"
+        }
+        
+        # Mock error logging
+        mock_log_error = Mock()
+        with patch.object(items_processor, "_log_error", mock_log_error):
+            # Process the data
+            df = items_processor.transform_data(mock_response)
+            
+            # Verify error was logged
+            mock_log_error.assert_called_once()
+            assert "Error transforming items data" in mock_log_error.call_args[0][0]
+            
+            # Verify we got an empty DataFrame
+            assert df.empty
+
+    def test_timestamp_conversion_error(self, items_processor):
+        """Test error handling during timestamp conversion."""
+        # Create a response with invalid timestamp data
+        mock_response = {
+            "items": {
+                "123": {
+                    "name": "Test Item",
+                    "description": "A test item",
+                    "type": "Weapon",
+                    "buy_price": 100,
+                    "sell_price": 50,
+                    "market_value": 75,
+                    "circulation": 1000
+                }
+            },
+            "fetched_at": "invalid_timestamp"  # Invalid timestamp
+        }
+        
+        # Mock error logging
+        mock_log_error = Mock()
+        with patch.object(items_processor, "_log_error", mock_log_error):
+            # Process the data
+            df = items_processor.transform_data(mock_response)
+            
+            # Verify error was logged
+            mock_log_error.assert_called_once()
+            assert "Error transforming items data" in mock_log_error.call_args[0][0]
+            
+            # Verify we got an empty DataFrame
+            assert df.empty 

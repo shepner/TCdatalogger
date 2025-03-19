@@ -5,15 +5,15 @@ from unittest.mock import Mock, patch
 import pytest
 from google.cloud import bigquery
 
-from app.services.torncity.endpoints.crimes import CrimesProcessor
+from app.services.torncity.endpoints.crimes import CrimesEndpointProcessor
 
 class TestCrimesProcessor:
-    """Test suite for CrimesProcessor."""
+    """Test suite for CrimesEndpointProcessor."""
 
     @pytest.fixture
     def processor(self, sample_config, mock_api_keys):
-        """Create a CrimesProcessor instance for testing."""
-        return CrimesProcessor(sample_config)
+        """Create a CrimesEndpointProcessor instance for testing."""
+        return CrimesEndpointProcessor(sample_config)
 
     @pytest.fixture
     def sample_crimes_data(self):

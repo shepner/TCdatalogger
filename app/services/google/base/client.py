@@ -30,9 +30,9 @@ class BaseGoogleClient:
             config: Application configuration containing Google credentials
         """
         self.config = config
-        self.project_id = os.getenv('GCP_PROJECT_ID')
+        self.project_id = config.get('gcp_project_id') or os.getenv('GCP_PROJECT_ID')
         if not self.project_id:
-            raise ValueError("GCP_PROJECT_ID environment variable not set")
+            raise ValueError("GCP project ID not found in config or environment")
             
         self.credentials = self._get_credentials()
         

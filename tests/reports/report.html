@@ -1,0 +1,1091 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8"/>
+    <title id="head-title">report.html</title>
+      <style type="text/css">body {
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 12px;
+  /* do not increase min-width as some may use split screens */
+  min-width: 800px;
+  color: #999;
+}
+
+h1 {
+  font-size: 24px;
+  color: black;
+}
+
+h2 {
+  font-size: 16px;
+  color: black;
+}
+
+p {
+  color: black;
+}
+
+a {
+  color: #999;
+}
+
+table {
+  border-collapse: collapse;
+}
+
+/******************************
+ * SUMMARY INFORMATION
+ ******************************/
+#environment td {
+  padding: 5px;
+  border: 1px solid #e6e6e6;
+  vertical-align: top;
+}
+#environment tr:nth-child(odd) {
+  background-color: #f6f6f6;
+}
+#environment ul {
+  margin: 0;
+  padding: 0 20px;
+}
+
+/******************************
+ * TEST RESULT COLORS
+ ******************************/
+span.passed,
+.passed .col-result {
+  color: green;
+}
+
+span.skipped,
+span.xfailed,
+span.rerun,
+.skipped .col-result,
+.xfailed .col-result,
+.rerun .col-result {
+  color: orange;
+}
+
+span.error,
+span.failed,
+span.xpassed,
+.error .col-result,
+.failed .col-result,
+.xpassed .col-result {
+  color: red;
+}
+
+.col-links__extra {
+  margin-right: 3px;
+}
+
+/******************************
+ * RESULTS TABLE
+ *
+ * 1. Table Layout
+ * 2. Extra
+ * 3. Sorting items
+ *
+ ******************************/
+/*------------------
+ * 1. Table Layout
+ *------------------*/
+#results-table {
+  border: 1px solid #e6e6e6;
+  color: #999;
+  font-size: 12px;
+  width: 100%;
+}
+#results-table th,
+#results-table td {
+  padding: 5px;
+  border: 1px solid #e6e6e6;
+  text-align: left;
+}
+#results-table th {
+  font-weight: bold;
+}
+
+/*------------------
+ * 2. Extra
+ *------------------*/
+.logwrapper {
+  max-height: 230px;
+  overflow-y: scroll;
+  background-color: #e6e6e6;
+}
+.logwrapper.expanded {
+  max-height: none;
+}
+.logwrapper.expanded .logexpander:after {
+  content: "collapse [-]";
+}
+.logwrapper .logexpander {
+  z-index: 1;
+  position: sticky;
+  top: 10px;
+  width: max-content;
+  border: 1px solid;
+  border-radius: 3px;
+  padding: 5px 7px;
+  margin: 10px 0 10px calc(100% - 80px);
+  cursor: pointer;
+  background-color: #e6e6e6;
+}
+.logwrapper .logexpander:after {
+  content: "expand [+]";
+}
+.logwrapper .logexpander:hover {
+  color: #000;
+  border-color: #000;
+}
+.logwrapper .log {
+  min-height: 40px;
+  position: relative;
+  top: -50px;
+  height: calc(100% + 50px);
+  border: 1px solid #e6e6e6;
+  color: black;
+  display: block;
+  font-family: "Courier New", Courier, monospace;
+  padding: 5px;
+  padding-right: 80px;
+  white-space: pre-wrap;
+}
+
+div.media {
+  border: 1px solid #e6e6e6;
+  float: right;
+  height: 240px;
+  margin: 0 5px;
+  overflow: hidden;
+  width: 320px;
+}
+
+.media-container {
+  display: grid;
+  grid-template-columns: 25px auto 25px;
+  align-items: center;
+  flex: 1 1;
+  overflow: hidden;
+  height: 200px;
+}
+
+.media-container--fullscreen {
+  grid-template-columns: 0px auto 0px;
+}
+
+.media-container__nav--right,
+.media-container__nav--left {
+  text-align: center;
+  cursor: pointer;
+}
+
+.media-container__viewport {
+  cursor: pointer;
+  text-align: center;
+  height: inherit;
+}
+.media-container__viewport img,
+.media-container__viewport video {
+  object-fit: cover;
+  width: 100%;
+  max-height: 100%;
+}
+
+.media__name,
+.media__counter {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-around;
+  flex: 0 0 25px;
+  align-items: center;
+}
+
+.collapsible td:not(.col-links) {
+  cursor: pointer;
+}
+.collapsible td:not(.col-links):hover::after {
+  color: #bbb;
+  font-style: italic;
+  cursor: pointer;
+}
+
+.col-result {
+  width: 130px;
+}
+.col-result:hover::after {
+  content: " (hide details)";
+}
+
+.col-result.collapsed:hover::after {
+  content: " (show details)";
+}
+
+#environment-header h2:hover::after {
+  content: " (hide details)";
+  color: #bbb;
+  font-style: italic;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+#environment-header.collapsed h2:hover::after {
+  content: " (show details)";
+  color: #bbb;
+  font-style: italic;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+/*------------------
+ * 3. Sorting items
+ *------------------*/
+.sortable {
+  cursor: pointer;
+}
+.sortable.desc:after {
+  content: " ";
+  position: relative;
+  left: 5px;
+  bottom: -12.5px;
+  border: 10px solid #4caf50;
+  border-bottom: 0;
+  border-left-color: transparent;
+  border-right-color: transparent;
+}
+.sortable.asc:after {
+  content: " ";
+  position: relative;
+  left: 5px;
+  bottom: 12.5px;
+  border: 10px solid #4caf50;
+  border-top: 0;
+  border-left-color: transparent;
+  border-right-color: transparent;
+}
+
+.hidden, .summary__reload__button.hidden {
+  display: none;
+}
+
+.summary__data {
+  flex: 0 0 550px;
+}
+.summary__reload {
+  flex: 1 1;
+  display: flex;
+  justify-content: center;
+}
+.summary__reload__button {
+  flex: 0 0 300px;
+  display: flex;
+  color: white;
+  font-weight: bold;
+  background-color: #4caf50;
+  text-align: center;
+  justify-content: center;
+  align-items: center;
+  border-radius: 3px;
+  cursor: pointer;
+}
+.summary__reload__button:hover {
+  background-color: #46a049;
+}
+.summary__spacer {
+  flex: 0 0 550px;
+}
+
+.controls {
+  display: flex;
+  justify-content: space-between;
+}
+
+.filters,
+.collapse {
+  display: flex;
+  align-items: center;
+}
+.filters button,
+.collapse button {
+  color: #999;
+  border: none;
+  background: none;
+  cursor: pointer;
+  text-decoration: underline;
+}
+.filters button:hover,
+.collapse button:hover {
+  color: #ccc;
+}
+
+.filter__label {
+  margin-right: 10px;
+}
+
+      </style>
+    
+  </head>
+  <body>
+    <h1 id="title">report.html</h1>
+    <p>Report generated on 18-Mar-2025 at 19:30:02 by <a href="https://pypi.python.org/pypi/pytest-html">pytest-html</a>
+        v4.1.1</p>
+    <div id="environment-header">
+      <h2>Environment</h2>
+    </div>
+    <table id="environment"></table>
+    <!-- TEMPLATES -->
+      <template id="template_environment_row">
+      <tr>
+        <td></td>
+        <td></td>
+      </tr>
+    </template>
+    <template id="template_results-table__body--empty">
+      <tbody class="results-table-row">
+        <tr id="not-found-message">
+          <td colspan="4">No results found. Check the filters.</th>
+        </tr>
+    </template>
+    <template id="template_results-table__tbody">
+      <tbody class="results-table-row">
+        <tr class="collapsible">
+        </tr>
+        <tr class="extras-row">
+          <td class="extra" colspan="4">
+            <div class="extraHTML"></div>
+            <div class="media">
+              <div class="media-container">
+                  <div class="media-container__nav--left"><</div>
+                  <div class="media-container__viewport">
+                    <img src="" />
+                    <video controls>
+                      <source src="" type="video/mp4">
+                    </video>
+                  </div>
+                  <div class="media-container__nav--right">></div>
+                </div>
+                <div class="media__name"></div>
+                <div class="media__counter"></div>
+            </div>
+            <div class="logwrapper">
+              <div class="logexpander"></div>
+              <div class="log"></div>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </template>
+    <!-- END TEMPLATES -->
+    <div class="summary">
+      <div class="summary__data">
+        <h2>Summary</h2>
+        <div class="additional-summary prefix">
+        </div>
+        <p class="run-count">135 tests took 00:00:03.</p>
+        <p class="filter">(Un)check the boxes to filter the results.</p>
+        <div class="summary__reload">
+          <div class="summary__reload__button hidden" onclick="location.reload()">
+            <div>There are still tests running. <br />Reload this page to get the latest results!</div>
+          </div>
+        </div>
+        <div class="summary__spacer"></div>
+        <div class="controls">
+          <div class="filters">
+            <input checked="true" class="filter" name="filter_checkbox" type="checkbox" data-test-result="failed" />
+            <span class="failed">10 Failed,</span>
+            <input checked="true" class="filter" name="filter_checkbox" type="checkbox" data-test-result="passed" />
+            <span class="passed">125 Passed,</span>
+            <input checked="true" class="filter" name="filter_checkbox" type="checkbox" data-test-result="skipped" disabled/>
+            <span class="skipped">0 Skipped,</span>
+            <input checked="true" class="filter" name="filter_checkbox" type="checkbox" data-test-result="xfailed" disabled/>
+            <span class="xfailed">0 Expected failures,</span>
+            <input checked="true" class="filter" name="filter_checkbox" type="checkbox" data-test-result="xpassed" disabled/>
+            <span class="xpassed">0 Unexpected passes,</span>
+            <input checked="true" class="filter" name="filter_checkbox" type="checkbox" data-test-result="error" disabled/>
+            <span class="error">0 Errors,</span>
+            <input checked="true" class="filter" name="filter_checkbox" type="checkbox" data-test-result="rerun" disabled/>
+            <span class="rerun">0 Reruns</span>
+          </div>
+          <div class="collapse">
+            <button id="show_all_details">Show all details</button>&nbsp;/&nbsp;<button id="hide_all_details">Hide all details</button>
+          </div>
+        </div>
+      </div>
+      <div class="additional-summary summary">
+      </div>
+      <div class="additional-summary postfix">
+      </div>
+    </div>
+    <table id="results-table">
+      <thead id="results-table-head">
+        <tr>
+          <th class="sortable" data-column-type="result">Result</th>
+          <th class="sortable" data-column-type="testId">Test</th>
+          <th class="sortable" data-column-type="duration">Duration</th>
+          <th>Links</th>
+        </tr>
+      </thead>
+    </table>
+  </body>
+  <footer>
+    <div id="data-container" data-jsonblob="{&#34;environment&#34;: {&#34;Python&#34;: &#34;3.13.2&#34;, &#34;Platform&#34;: &#34;macOS-15.3.2-arm64-arm-64bit-Mach-O&#34;, &#34;Packages&#34;: {&#34;pytest&#34;: &#34;8.0.2&#34;, &#34;pluggy&#34;: &#34;1.5.0&#34;}, &#34;Plugins&#34;: {&#34;asyncio&#34;: &#34;0.23.5&#34;, &#34;timeout&#34;: &#34;2.2.0&#34;, &#34;sugar&#34;: &#34;1.0.0&#34;, &#34;html&#34;: &#34;4.1.1&#34;, &#34;metadata&#34;: &#34;3.1.1&#34;, &#34;randomly&#34;: &#34;3.15.0&#34;, &#34;cov&#34;: &#34;4.1.0&#34;, &#34;mock&#34;: &#34;3.12.0&#34;, &#34;xdist&#34;: &#34;3.5.0&#34;}}, &#34;tests&#34;: {&#34;unit/services/torncity/test_processors.py::TestItemsProcessor::test_items_data_processing&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/torncity/test_processors.py::TestItemsProcessor::test_items_data_processing&#34;, &#34;duration&#34;: &#34;7 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/torncity/test_processors.py::TestItemsProcessor::test_items_data_processing&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;7 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/torncity/test_processors.py::TestMembersProcessor::test_members_data_processing&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/torncity/test_processors.py::TestMembersProcessor::test_members_data_processing&#34;, &#34;duration&#34;: &#34;2 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/torncity/test_processors.py::TestMembersProcessor::test_members_data_processing&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;2 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/torncity/test_processors.py::TestProcessorErrorHandling::test_invalid_data_types&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/torncity/test_processors.py::TestProcessorErrorHandling::test_invalid_data_types&#34;, &#34;duration&#34;: &#34;3 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/torncity/test_processors.py::TestProcessorErrorHandling::test_invalid_data_types&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;3 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/torncity/test_processors.py::TestProcessorErrorHandling::test_invalid_timestamp&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/torncity/test_processors.py::TestProcessorErrorHandling::test_invalid_timestamp&#34;, &#34;duration&#34;: &#34;2 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/torncity/test_processors.py::TestProcessorErrorHandling::test_invalid_timestamp&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;2 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;------------------------------ Captured log call -------------------------------\nERROR    root:processors.py:134 Error transforming user data: Invalid timestamp: Invalid timestamp format: invalid_timestamp\n\n&#34;}], &#34;unit/services/torncity/test_processors.py::TestProcessorErrorHandling::test_nested_data_handling&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/torncity/test_processors.py::TestProcessorErrorHandling::test_nested_data_handling&#34;, &#34;duration&#34;: &#34;2 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/torncity/test_processors.py::TestProcessorErrorHandling::test_nested_data_handling&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;2 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/torncity/test_processors.py::TestProcessorErrorHandling::test_missing_required_fields&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/torncity/test_processors.py::TestProcessorErrorHandling::test_missing_required_fields&#34;, &#34;duration&#34;: &#34;2 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/torncity/test_processors.py::TestProcessorErrorHandling::test_missing_required_fields&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;2 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/torncity/test_processors.py::TestProcessorErrorHandling::test_empty_response_handling&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/torncity/test_processors.py::TestProcessorErrorHandling::test_empty_response_handling&#34;, &#34;duration&#34;: &#34;2 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/torncity/test_processors.py::TestProcessorErrorHandling::test_empty_response_handling&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;2 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/torncity/test_processors.py::TestBaseProcessor::test_completion_logging&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/torncity/test_processors.py::TestBaseProcessor::test_completion_logging&#34;, &#34;duration&#34;: &#34;2 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/torncity/test_processors.py::TestBaseProcessor::test_completion_logging&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;2 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/torncity/test_processors.py::TestBaseProcessor::test_config_validation&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/torncity/test_processors.py::TestBaseProcessor::test_config_validation&#34;, &#34;duration&#34;: &#34;3 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/torncity/test_processors.py::TestBaseProcessor::test_config_validation&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;3 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/torncity/test_processors.py::TestBaseProcessor::test_fetch_torn_data&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/torncity/test_processors.py::TestBaseProcessor::test_fetch_torn_data&#34;, &#34;duration&#34;: &#34;3 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/torncity/test_processors.py::TestBaseProcessor::test_fetch_torn_data&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;3 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;------------------------------ Captured log call -------------------------------\nERROR    app.services.torncity.base:base.py:145 Failed to fetch data from Torn API: API error\n\n&#34;}], &#34;unit/services/torncity/test_processors.py::TestBaseProcessor::test_error_logging&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/torncity/test_processors.py::TestBaseProcessor::test_error_logging&#34;, &#34;duration&#34;: &#34;3 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/torncity/test_processors.py::TestBaseProcessor::test_error_logging&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;3 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/torncity/test_processors.py::TestBaseProcessor::test_validate_column_type_conversions&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/torncity/test_processors.py::TestBaseProcessor::test_validate_column_type_conversions&#34;, &#34;duration&#34;: &#34;9 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/torncity/test_processors.py::TestBaseProcessor::test_validate_column_type_conversions&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;9 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/torncity/test_processors.py::TestBaseProcessor::test_upload_data&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/torncity/test_processors.py::TestBaseProcessor::test_upload_data&#34;, &#34;duration&#34;: &#34;4 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/torncity/test_processors.py::TestBaseProcessor::test_upload_data&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;4 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;------------------------------ Captured log call -------------------------------\nWARNING  root:base.py:434 Failed to record metrics: &amp;#x27;RepeatedComposite&amp;#x27; object has no attribute &amp;#x27;add&amp;#x27;\nERROR    root:base.py:438 {&amp;#x27;event&amp;#x27;: &amp;#x27;endpoint_error&amp;#x27;, &amp;#x27;endpoint&amp;#x27;: &amp;#x27;user&amp;#x27;, &amp;#x27;error&amp;#x27;: &amp;#x27;Upload failed: Upload failed&amp;#x27;, &amp;#x27;timestamp&amp;#x27;: &amp;#x27;2025-03-18T19:29:59.379649&amp;#x27;}\n\n&#34;}], &#34;unit/services/torncity/test_processors.py::TestBaseProcessor::test_validate_schema_required_fields&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/torncity/test_processors.py::TestBaseProcessor::test_validate_schema_required_fields&#34;, &#34;duration&#34;: &#34;5 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/torncity/test_processors.py::TestBaseProcessor::test_validate_schema_required_fields&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;5 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/torncity/test_processors.py::TestBaseProcessor::test_process_method&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/torncity/test_processors.py::TestBaseProcessor::test_process_method&#34;, &#34;duration&#34;: &#34;4 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/torncity/test_processors.py::TestBaseProcessor::test_process_method&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;4 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;------------------------------ Captured log call -------------------------------\nERROR    root:base.py:438 {&amp;#x27;event&amp;#x27;: &amp;#x27;endpoint_error&amp;#x27;, &amp;#x27;endpoint&amp;#x27;: &amp;#x27;user&amp;#x27;, &amp;#x27;error&amp;#x27;: &amp;#x27;No data to process&amp;#x27;, &amp;#x27;timestamp&amp;#x27;: &amp;#x27;2025-03-18T19:29:59.390901&amp;#x27;}\nERROR    root:base.py:438 {&amp;#x27;event&amp;#x27;: &amp;#x27;endpoint_error&amp;#x27;, &amp;#x27;endpoint&amp;#x27;: &amp;#x27;user&amp;#x27;, &amp;#x27;error&amp;#x27;: &amp;#x27;Invalid data&amp;#x27;, &amp;#x27;timestamp&amp;#x27;: &amp;#x27;2025-03-18T19:29:59.391185&amp;#x27;}\n\n&#34;}], &#34;unit/services/torncity/test_processors.py::TestBaseProcessor::test_schema_validation&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/torncity/test_processors.py::TestBaseProcessor::test_schema_validation&#34;, &#34;duration&#34;: &#34;2 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/torncity/test_processors.py::TestBaseProcessor::test_schema_validation&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;2 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/torncity/test_processors.py::TestBaseProcessor::test_data_transformation&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/torncity/test_processors.py::TestBaseProcessor::test_data_transformation&#34;, &#34;duration&#34;: &#34;2 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/torncity/test_processors.py::TestBaseProcessor::test_data_transformation&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;2 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/torncity/test_processors.py::TestBaseProcessor::test_record_metrics&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/torncity/test_processors.py::TestBaseProcessor::test_record_metrics&#34;, &#34;duration&#34;: &#34;2 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/torncity/test_processors.py::TestBaseProcessor::test_record_metrics&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;2 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;------------------------------ Captured log call -------------------------------\nWARNING  root:base.py:434 Failed to record metrics: &amp;#x27;RepeatedComposite&amp;#x27; object has no attribute &amp;#x27;add&amp;#x27;\n\n&#34;}], &#34;unit/services/torncity/test_processors.py::TestCrimeProcessor::test_crime_data_processing&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Failed&#34;, &#34;testId&#34;: &#34;unit/services/torncity/test_processors.py::TestCrimeProcessor::test_crime_data_processing&#34;, &#34;duration&#34;: &#34;3 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Failed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/torncity/test_processors.py::TestCrimeProcessor::test_crime_data_processing&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;3 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;tests/unit/services/torncity/test_processors.py:387: in test_crime_data_processing\n    assert transformed[0][&amp;quot;crime_id&amp;quot;] == 456\nE   KeyError: &amp;#x27;crime_id&amp;#x27;\n        processor  = &amp;lt;app.services.torncity.processors.CrimeProcessor object at 0x10ff2fe00&amp;gt;\n        sample_data = {&amp;#x27;456&amp;#x27;: {&amp;#x27;crime_id&amp;#x27;: 456,\n         &amp;#x27;crime_name&amp;#x27;: &amp;#x27;Test Crime&amp;#x27;,\n         &amp;#x27;initiated_by&amp;#x27;: &amp;#x27;12345&amp;#x27;,\n         &amp;#x27;money_gained&amp;#x27;: 5000,\n         &amp;#x27;participants&amp;#x27;: [&amp;#x27;12345&amp;#x27;, &amp;#x27;67890&amp;#x27;],\n         &amp;#x27;success&amp;#x27;: True,\n         &amp;#x27;time_completed&amp;#x27;: 1646960400,\n         &amp;#x27;time_started&amp;#x27;: 1646956800}}\n        self       = &amp;lt;test_processors.TestCrimeProcessor object at 0x10fd0ead0&amp;gt;\n        transformed = [{&amp;#x27;created_at&amp;#x27;: Timestamp(&amp;#x27;2022-03-10 18:00:00&amp;#x27;),\n  &amp;#x27;difficulty&amp;#x27;: &amp;#x27;&amp;#x27;,\n  &amp;#x27;executed_at&amp;#x27;: Timestamp(&amp;#x27;2022-03-10 19:00:00&amp;#x27;),\n  &amp;#x27;expired_at&amp;#x27;: None,\n  &amp;#x27;fetched_at&amp;#x27;: Timestamp(&amp;#x27;2025-03-18 19:29:59.403833&amp;#x27;),\n  &amp;#x27;id&amp;#x27;: 456,\n  &amp;#x27;name&amp;#x27;: &amp;#x27;Test Crime&amp;#x27;,\n  &amp;#x27;participant_count&amp;#x27;: 2,\n  &amp;#x27;participant_ids&amp;#x27;: &amp;#x27;12345,67890&amp;#x27;,\n  &amp;#x27;participant_names&amp;#x27;: None,\n  &amp;#x27;planning_at&amp;#x27;: None,\n  &amp;#x27;ready_at&amp;#x27;: None,\n  &amp;#x27;reward_item_count&amp;#x27;: 0,\n  &amp;#x27;reward_item_ids&amp;#x27;: None,\n  &amp;#x27;reward_item_quantities&amp;#x27;: None,\n  &amp;#x27;reward_money&amp;#x27;: 0,\n  &amp;#x27;reward_respect&amp;#x27;: 0.0,\n  &amp;#x27;server_timestamp&amp;#x27;: Timestamp(&amp;#x27;2025-03-18 19:29:59.403811&amp;#x27;),\n  &amp;#x27;status&amp;#x27;: &amp;#x27;completed&amp;#x27;}]\n&#34;}], &#34;unit/services/torncity/test_processors.py::TestCurrencyProcessor::test_currency_data_processing&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/torncity/test_processors.py::TestCurrencyProcessor::test_currency_data_processing&#34;, &#34;duration&#34;: &#34;5 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/torncity/test_processors.py::TestCurrencyProcessor::test_currency_data_processing&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;5 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/torncity/test_processors.py::TestUserProcessor::test_user_data_processing&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/torncity/test_processors.py::TestUserProcessor::test_user_data_processing&#34;, &#34;duration&#34;: &#34;3 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/torncity/test_processors.py::TestUserProcessor::test_user_data_processing&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;3 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/torncity/test_base.py::TestBaseProcessor::test_run_processor&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/torncity/test_base.py::TestBaseProcessor::test_run_processor&#34;, &#34;duration&#34;: &#34;4 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/torncity/test_base.py::TestBaseProcessor::test_run_processor&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;4 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/torncity/test_base.py::TestBaseProcessor::test_init_with_invalid_config&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/torncity/test_base.py::TestBaseProcessor::test_init_with_invalid_config&#34;, &#34;duration&#34;: &#34;1 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/torncity/test_base.py::TestBaseProcessor::test_init_with_invalid_config&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;1 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/torncity/test_base.py::TestBaseProcessor::test_storage_mode_validation&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/torncity/test_base.py::TestBaseProcessor::test_storage_mode_validation&#34;, &#34;duration&#34;: &#34;2 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/torncity/test_base.py::TestBaseProcessor::test_storage_mode_validation&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;2 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/torncity/test_base.py::TestBaseProcessor::test_process_data&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/torncity/test_base.py::TestBaseProcessor::test_process_data&#34;, &#34;duration&#34;: &#34;3 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/torncity/test_base.py::TestBaseProcessor::test_process_data&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;3 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/torncity/test_base.py::TestBaseProcessor::test_fetch_torn_data&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/torncity/test_base.py::TestBaseProcessor::test_fetch_torn_data&#34;, &#34;duration&#34;: &#34;2 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/torncity/test_base.py::TestBaseProcessor::test_fetch_torn_data&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;2 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/torncity/test_base.py::TestBaseProcessor::test_error_handling&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/torncity/test_base.py::TestBaseProcessor::test_error_handling&#34;, &#34;duration&#34;: &#34;2 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/torncity/test_base.py::TestBaseProcessor::test_error_handling&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;2 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;------------------------------ Captured log call -------------------------------\nERROR    app.services.torncity.base:base.py:145 Failed to fetch data from Torn API: Test error\n\n&#34;}], &#34;unit/services/torncity/test_base.py::TestBaseProcessor::test_write_to_bigquery&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/torncity/test_base.py::TestBaseProcessor::test_write_to_bigquery&#34;, &#34;duration&#34;: &#34;5 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/torncity/test_base.py::TestBaseProcessor::test_write_to_bigquery&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;5 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/torncity/test_base.py::TestBaseProcessor::test_init_with_valid_config&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/torncity/test_base.py::TestBaseProcessor::test_init_with_valid_config&#34;, &#34;duration&#34;: &#34;3 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/torncity/test_base.py::TestBaseProcessor::test_init_with_valid_config&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;3 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/torncity/test_base.py::TestBaseProcessor::test_init_with_invalid_storage_mode&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/torncity/test_base.py::TestBaseProcessor::test_init_with_invalid_storage_mode&#34;, &#34;duration&#34;: &#34;3 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/torncity/test_base.py::TestBaseProcessor::test_init_with_invalid_storage_mode&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;3 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/torncity/test_base.py::TestBaseProcessor::test_validate_config&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/torncity/test_base.py::TestBaseProcessor::test_validate_config&#34;, &#34;duration&#34;: &#34;2 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/torncity/test_base.py::TestBaseProcessor::test_validate_config&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;2 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/google/bigquery/test_schema.py::TestBigQuerySchemaManagement::test_schema_field_name_validation&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/google/bigquery/test_schema.py::TestBigQuerySchemaManagement::test_schema_field_name_validation&#34;, &#34;duration&#34;: &#34;2 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/google/bigquery/test_schema.py::TestBigQuerySchemaManagement::test_schema_field_name_validation&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;2 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/google/bigquery/test_schema.py::TestBigQuerySchemaManagement::test_schema_evolution&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/google/bigquery/test_schema.py::TestBigQuerySchemaManagement::test_schema_evolution&#34;, &#34;duration&#34;: &#34;3 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/google/bigquery/test_schema.py::TestBigQuerySchemaManagement::test_schema_evolution&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;3 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/google/bigquery/test_schema.py::TestBigQuerySchemaManagement::test_schema_type_validation&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/google/bigquery/test_schema.py::TestBigQuerySchemaManagement::test_schema_type_validation&#34;, &#34;duration&#34;: &#34;5 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/google/bigquery/test_schema.py::TestBigQuerySchemaManagement::test_schema_type_validation&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;5 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/google/bigquery/test_schema.py::TestBigQuerySchemaManagement::test_schema_mode_validation&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/google/bigquery/test_schema.py::TestBigQuerySchemaManagement::test_schema_mode_validation&#34;, &#34;duration&#34;: &#34;2 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/google/bigquery/test_schema.py::TestBigQuerySchemaManagement::test_schema_mode_validation&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;2 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/google/bigquery/test_schema.py::TestBigQuerySchemaManagement::test_validate_schema_compatibility&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/google/bigquery/test_schema.py::TestBigQuerySchemaManagement::test_validate_schema_compatibility&#34;, &#34;duration&#34;: &#34;3 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/google/bigquery/test_schema.py::TestBigQuerySchemaManagement::test_validate_schema_compatibility&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;3 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/google/bigquery/test_schema.py::TestBigQuerySchemaManagement::test_create_table_with_schema&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/google/bigquery/test_schema.py::TestBigQuerySchemaManagement::test_create_table_with_schema&#34;, &#34;duration&#34;: &#34;3 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/google/bigquery/test_schema.py::TestBigQuerySchemaManagement::test_create_table_with_schema&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;3 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/google/bigquery/test_schema.py::TestBigQuerySchemaManagement::test_update_table_schema&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/google/bigquery/test_schema.py::TestBigQuerySchemaManagement::test_update_table_schema&#34;, &#34;duration&#34;: &#34;3 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/google/bigquery/test_schema.py::TestBigQuerySchemaManagement::test_update_table_schema&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;3 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/google/bigquery/test_schema.py::TestBigQuerySchemaManagement::test_get_table_schema&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/google/bigquery/test_schema.py::TestBigQuerySchemaManagement::test_get_table_schema&#34;, &#34;duration&#34;: &#34;3 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/google/bigquery/test_schema.py::TestBigQuerySchemaManagement::test_get_table_schema&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;3 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/google/bigquery/test_schema.py::TestBigQuerySchemaManagement::test_schema_description_validation&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/google/bigquery/test_schema.py::TestBigQuerySchemaManagement::test_schema_description_validation&#34;, &#34;duration&#34;: &#34;4 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/google/bigquery/test_schema.py::TestBigQuerySchemaManagement::test_schema_description_validation&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;4 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/core/test_common.py::TestPolling::test_wait_for_next_poll&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/core/test_common.py::TestPolling::test_wait_for_next_poll&#34;, &#34;duration&#34;: &#34;2 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/core/test_common.py::TestPolling::test_wait_for_next_poll&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;2 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;------------------------------ Captured log call -------------------------------\nINFO     root:common.py:211 Waiting 60 seconds until next poll for test\n\n&#34;}], &#34;unit/core/test_common.py::TestDurationParsing::test_valid_durations[PT1S-expected7]&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/core/test_common.py::TestDurationParsing::test_valid_durations[PT1S-expected7]&#34;, &#34;duration&#34;: &#34;1 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/core/test_common.py::TestDurationParsing::test_valid_durations[PT1S-expected7]&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;1 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/core/test_common.py::TestDurationParsing::test_valid_durations[PT1H30M-expected3]&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/core/test_common.py::TestDurationParsing::test_valid_durations[PT1H30M-expected3]&#34;, &#34;duration&#34;: &#34;1 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/core/test_common.py::TestDurationParsing::test_valid_durations[PT1H30M-expected3]&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;1 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/core/test_common.py::TestDurationParsing::test_valid_durations[PT15M-expected0]&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/core/test_common.py::TestDurationParsing::test_valid_durations[PT15M-expected0]&#34;, &#34;duration&#34;: &#34;1 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/core/test_common.py::TestDurationParsing::test_valid_durations[PT15M-expected0]&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;1 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/core/test_common.py::TestDurationParsing::test_invalid_durations[P1H]&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/core/test_common.py::TestDurationParsing::test_invalid_durations[P1H]&#34;, &#34;duration&#34;: &#34;1 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/core/test_common.py::TestDurationParsing::test_invalid_durations[P1H]&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;1 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/core/test_common.py::TestDurationParsing::test_valid_durations[PT1H-expected1]&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/core/test_common.py::TestDurationParsing::test_valid_durations[PT1H-expected1]&#34;, &#34;duration&#34;: &#34;1 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/core/test_common.py::TestDurationParsing::test_valid_durations[PT1H-expected1]&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;1 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/core/test_common.py::TestDurationParsing::test_invalid_durations[15M]&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/core/test_common.py::TestDurationParsing::test_invalid_durations[15M]&#34;, &#34;duration&#34;: &#34;1 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/core/test_common.py::TestDurationParsing::test_invalid_durations[15M]&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;1 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/core/test_common.py::TestDurationParsing::test_invalid_durations[PT]&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/core/test_common.py::TestDurationParsing::test_invalid_durations[PT]&#34;, &#34;duration&#34;: &#34;1 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/core/test_common.py::TestDurationParsing::test_invalid_durations[PT]&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;1 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/core/test_common.py::TestDurationParsing::test_valid_durations[P1DT12H-expected4]&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/core/test_common.py::TestDurationParsing::test_valid_durations[P1DT12H-expected4]&#34;, &#34;duration&#34;: &#34;1 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/core/test_common.py::TestDurationParsing::test_valid_durations[P1DT12H-expected4]&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;1 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/core/test_common.py::TestDurationParsing::test_invalid_durations[P]&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/core/test_common.py::TestDurationParsing::test_invalid_durations[P]&#34;, &#34;duration&#34;: &#34;1 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/core/test_common.py::TestDurationParsing::test_invalid_durations[P]&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;1 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/core/test_common.py::TestDurationParsing::test_invalid_durations[None]&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/core/test_common.py::TestDurationParsing::test_invalid_durations[None]&#34;, &#34;duration&#34;: &#34;1 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/core/test_common.py::TestDurationParsing::test_invalid_durations[None]&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;1 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/core/test_common.py::TestDurationParsing::test_valid_durations[P1D-expected2]&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/core/test_common.py::TestDurationParsing::test_valid_durations[P1D-expected2]&#34;, &#34;duration&#34;: &#34;1 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/core/test_common.py::TestDurationParsing::test_valid_durations[P1D-expected2]&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;1 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/core/test_common.py::TestDurationParsing::test_invalid_durations[PTM]&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/core/test_common.py::TestDurationParsing::test_invalid_durations[PTM]&#34;, &#34;duration&#34;: &#34;1 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/core/test_common.py::TestDurationParsing::test_invalid_durations[PTM]&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;1 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/core/test_common.py::TestDurationParsing::test_invalid_durations[P0D]&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/core/test_common.py::TestDurationParsing::test_invalid_durations[P0D]&#34;, &#34;duration&#34;: &#34;1 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/core/test_common.py::TestDurationParsing::test_invalid_durations[P0D]&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;1 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/core/test_common.py::TestDurationParsing::test_invalid_durations[]&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/core/test_common.py::TestDurationParsing::test_invalid_durations[]&#34;, &#34;duration&#34;: &#34;1 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/core/test_common.py::TestDurationParsing::test_invalid_durations[]&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;1 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/core/test_common.py::TestDurationParsing::test_invalid_durations[PT1X]&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/core/test_common.py::TestDurationParsing::test_invalid_durations[PT1X]&#34;, &#34;duration&#34;: &#34;1 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/core/test_common.py::TestDurationParsing::test_invalid_durations[PT1X]&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;1 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/core/test_common.py::TestDurationParsing::test_valid_durations[P1M-expected6]&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/core/test_common.py::TestDurationParsing::test_valid_durations[P1M-expected6]&#34;, &#34;duration&#34;: &#34;1 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/core/test_common.py::TestDurationParsing::test_valid_durations[P1M-expected6]&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;1 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/core/test_common.py::TestDurationParsing::test_valid_durations[P1Y-expected5]&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/core/test_common.py::TestDurationParsing::test_valid_durations[P1Y-expected5]&#34;, &#34;duration&#34;: &#34;1 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/core/test_common.py::TestDurationParsing::test_valid_durations[P1Y-expected5]&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;1 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/core/test_common.py::TestConfigManagement::test_find_config_directory&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/core/test_common.py::TestConfigManagement::test_find_config_directory&#34;, &#34;duration&#34;: &#34;2 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/core/test_common.py::TestConfigManagement::test_find_config_directory&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;2 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/core/test_common.py::TestConfigManagement::test_load_config&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/core/test_common.py::TestConfigManagement::test_load_config&#34;, &#34;duration&#34;: &#34;2 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/core/test_common.py::TestConfigManagement::test_load_config&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;2 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;------------------------------ Captured log call -------------------------------\nERROR    root:common.py:57 No configuration directory found.\nERROR    root:common.py:70 Required configuration file not found: /var/folders/d2/r_89717x5m7dh95_nkl2vlhh0000gp/T/tmpzoo9du4k/credentials.json\n\n&#34;}], &#34;unit/core/test_common.py::TestCommonUtilities::test_placeholder&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/core/test_common.py::TestCommonUtilities::test_placeholder&#34;, &#34;duration&#34;: &#34;1 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/core/test_common.py::TestCommonUtilities::test_placeholder&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;1 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/core/test_common.py::test_imports&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/core/test_common.py::test_imports&#34;, &#34;duration&#34;: &#34;1 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/core/test_common.py::test_imports&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;1 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/core/test_common.py::test_setup_logging&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/core/test_common.py::test_setup_logging&#34;, &#34;duration&#34;: &#34;1 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/core/test_common.py::test_setup_logging&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;1 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;------------------------------ Captured log call -------------------------------\nINFO     root:test_common.py:34 Test message\n\n&#34;}], &#34;unit/services/torncity/test_torn_client.py::test_make_request&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/torncity/test_torn_client.py::test_make_request&#34;, &#34;duration&#34;: &#34;1 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/torncity/test_torn_client.py::test_make_request&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;1 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/torncity/test_torn_client.py::test_init_with_nonexistent_file&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/torncity/test_torn_client.py::test_init_with_nonexistent_file&#34;, &#34;duration&#34;: &#34;2 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/torncity/test_torn_client.py::test_init_with_nonexistent_file&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;2 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/torncity/test_torn_client.py::test_timeout_handling&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/torncity/test_torn_client.py::test_timeout_handling&#34;, &#34;duration&#34;: &#34;1 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/torncity/test_torn_client.py::test_timeout_handling&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;1 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/torncity/test_torn_client.py::test_init_with_api_keys_file&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/torncity/test_torn_client.py::test_init_with_api_keys_file&#34;, &#34;duration&#34;: &#34;2 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/torncity/test_torn_client.py::test_init_with_api_keys_file&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;2 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/torncity/test_torn_client.py::test_init_with_malformed_api_keys_file&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/torncity/test_torn_client.py::test_init_with_malformed_api_keys_file&#34;, &#34;duration&#34;: &#34;2 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/torncity/test_torn_client.py::test_init_with_malformed_api_keys_file&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;2 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/torncity/test_torn_client.py::test_init_with_api_key&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/torncity/test_torn_client.py::test_init_with_api_key&#34;, &#34;duration&#34;: &#34;1 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/torncity/test_torn_client.py::test_init_with_api_key&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;1 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/torncity/test_torn_client.py::test_concurrent_requests&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/torncity/test_torn_client.py::test_concurrent_requests&#34;, &#34;duration&#34;: &#34;1 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/torncity/test_torn_client.py::test_concurrent_requests&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;1 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/torncity/test_torn_client.py::test_rate_limit_handling&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/torncity/test_torn_client.py::test_rate_limit_handling&#34;, &#34;duration&#34;: &#34;2 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/torncity/test_torn_client.py::test_rate_limit_handling&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;2 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/integration/test_data_pipeline.py::TestDataPipelineIntegration::test_retry_and_recovery&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/integration/test_data_pipeline.py::TestDataPipelineIntegration::test_retry_and_recovery&#34;, &#34;duration&#34;: &#34;3 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/integration/test_data_pipeline.py::TestDataPipelineIntegration::test_retry_and_recovery&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;3 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/integration/test_data_pipeline.py::TestDataPipelineIntegration::test_batch_processing&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/integration/test_data_pipeline.py::TestDataPipelineIntegration::test_batch_processing&#34;, &#34;duration&#34;: &#34;3 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/integration/test_data_pipeline.py::TestDataPipelineIntegration::test_batch_processing&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;3 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/integration/test_data_pipeline.py::TestDataPipelineIntegration::test_data_validation&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/integration/test_data_pipeline.py::TestDataPipelineIntegration::test_data_validation&#34;, &#34;duration&#34;: &#34;3 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/integration/test_data_pipeline.py::TestDataPipelineIntegration::test_data_validation&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;3 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/integration/test_data_pipeline.py::TestDataPipelineIntegration::test_pipeline_error_handling&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Failed&#34;, &#34;testId&#34;: &#34;unit/services/integration/test_data_pipeline.py::TestDataPipelineIntegration::test_pipeline_error_handling&#34;, &#34;duration&#34;: &#34;3 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Failed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/integration/test_data_pipeline.py::TestDataPipelineIntegration::test_pipeline_error_handling&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;3 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;tests/unit/services/integration/test_data_pipeline.py:190: in test_pipeline_error_handling\n    members_processor.transform_data(invalid_data)\n        invalid_data = {&amp;#x27;data&amp;#x27;: {&amp;#x27;members&amp;#x27;: {&amp;#x27;invalid&amp;#x27;: {&amp;#x27;level&amp;#x27;: &amp;#x27;10&amp;#x27;,\n                                  &amp;#x27;name&amp;#x27;: 123,\n                                  &amp;#x27;status&amp;#x27;: &amp;#x27;Okay&amp;#x27;}}}}\n        members_processor = &amp;lt;app.services.torncity.processors.MembersProcessor object at 0x10ffc0b00&amp;gt;\n        mock_bigquery_client = &amp;lt;MagicMock name=&amp;#x27;Client&amp;#x27; id=&amp;#x27;4562231584&amp;#x27;&amp;gt;\n        mock_fetch = &amp;lt;MagicMock name=&amp;#x27;fetch_data&amp;#x27; id=&amp;#x27;4561940704&amp;#x27;&amp;gt;\n        self       = &amp;lt;test_data_pipeline.TestDataPipelineIntegration object at 0x10fb0a520&amp;gt;\n        torn_client = &amp;lt;app.services.torncity.client.TornClient object at 0x10febf7d0&amp;gt;\napp/services/torncity/endpoints/members.py:81: in transform_data\n    raise DataValidationError(error_msg)\nE   app.services.torncity.exceptions.DataValidationError: Error processing member invalid: Invalid type for name field, expected str, got &amp;lt;class &amp;#x27;int&amp;#x27;&amp;gt;\n        data       = {&amp;#x27;data&amp;#x27;: {&amp;#x27;members&amp;#x27;: {&amp;#x27;invalid&amp;#x27;: {&amp;#x27;level&amp;#x27;: &amp;#x27;10&amp;#x27;,\n                                  &amp;#x27;name&amp;#x27;: 123,\n                                  &amp;#x27;status&amp;#x27;: &amp;#x27;Okay&amp;#x27;}}}}\n        error_msg  = (&amp;#x27;Error processing member invalid: Invalid type for name field, expected str, &amp;#x27;\n &amp;quot;got &amp;lt;class &amp;#x27;int&amp;#x27;&amp;gt;&amp;quot;)\n        level      = &amp;#x27;10&amp;#x27;\n        member_data = {&amp;#x27;level&amp;#x27;: &amp;#x27;10&amp;#x27;, &amp;#x27;name&amp;#x27;: 123, &amp;#x27;status&amp;#x27;: &amp;#x27;Okay&amp;#x27;}\n        member_id  = &amp;#x27;invalid&amp;#x27;\n        members_data = {&amp;#x27;invalid&amp;#x27;: {&amp;#x27;level&amp;#x27;: &amp;#x27;10&amp;#x27;, &amp;#x27;name&amp;#x27;: 123, &amp;#x27;status&amp;#x27;: &amp;#x27;Okay&amp;#x27;}}\n        name       = 123\n        self       = &amp;lt;app.services.torncity.processors.MembersProcessor object at 0x10ffc0b00&amp;gt;\n        transformed_data = []\n\n------------------------------ Captured log call -------------------------------\nERROR    root:base.py:438 {&amp;#x27;event&amp;#x27;: &amp;#x27;endpoint_error&amp;#x27;, &amp;#x27;endpoint&amp;#x27;: &amp;#x27;members&amp;#x27;, &amp;#x27;error&amp;#x27;: &amp;quot;Error processing member invalid: Invalid type for name field, expected str, got &amp;lt;class &amp;#x27;int&amp;#x27;&amp;gt;&amp;quot;, &amp;#x27;timestamp&amp;#x27;: &amp;#x27;2025-03-18T19:29:59.593394&amp;#x27;}\n\n&#34;}], &#34;unit/services/integration/test_data_pipeline.py::TestDataPipelineIntegration::test_concurrent_processing&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/integration/test_data_pipeline.py::TestDataPipelineIntegration::test_concurrent_processing&#34;, &#34;duration&#34;: &#34;5 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/integration/test_data_pipeline.py::TestDataPipelineIntegration::test_concurrent_processing&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;5 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/integration/test_data_pipeline.py::TestDataPipelineIntegration::test_schema_evolution_handling&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/integration/test_data_pipeline.py::TestDataPipelineIntegration::test_schema_evolution_handling&#34;, &#34;duration&#34;: &#34;3 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/integration/test_data_pipeline.py::TestDataPipelineIntegration::test_schema_evolution_handling&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;3 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/integration/test_data_pipeline.py::TestDataPipelineIntegration::test_data_type_consistency&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/integration/test_data_pipeline.py::TestDataPipelineIntegration::test_data_type_consistency&#34;, &#34;duration&#34;: &#34;3 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/integration/test_data_pipeline.py::TestDataPipelineIntegration::test_data_type_consistency&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;3 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/integration/test_data_pipeline.py::TestDataPipelineIntegration::test_error_recovery_and_partial_success&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/integration/test_data_pipeline.py::TestDataPipelineIntegration::test_error_recovery_and_partial_success&#34;, &#34;duration&#34;: &#34;4 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/integration/test_data_pipeline.py::TestDataPipelineIntegration::test_error_recovery_and_partial_success&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;4 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/integration/test_data_pipeline.py::TestDataPipelineIntegration::test_end_to_end_data_pipeline&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Failed&#34;, &#34;testId&#34;: &#34;unit/services/integration/test_data_pipeline.py::TestDataPipelineIntegration::test_end_to_end_data_pipeline&#34;, &#34;duration&#34;: &#34;173 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Failed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/integration/test_data_pipeline.py::TestDataPipelineIntegration::test_end_to_end_data_pipeline&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;173 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;app/services/torncity/client.py:318: in make_request\n    return self._make_request_internal(endpoint, api_key)\n        api_key    = &amp;#x27;test_api_key&amp;#x27;\n        endpoint   = &amp;#x27;user&amp;#x27;\n        selection  = &amp;#x27;default&amp;#x27;\n        self       = &amp;lt;app.services.torncity.client.TornClient object at 0x10fde5f10&amp;gt;\napp/services/torncity/client.py:287: in _make_request_internal\n    raise TornAPIRateLimitError(f&amp;quot;Rate limit exceeded for key {api_key}&amp;quot;)\nE   app.services.torncity.exceptions.TornAPIRateLimitError: Rate limit exceeded for key test_api_key\n        api_key    = &amp;#x27;test_api_key&amp;#x27;\n        data       = {&amp;#x27;error&amp;#x27;: {&amp;#x27;code&amp;#x27;: 2, &amp;#x27;error&amp;#x27;: &amp;#x27;Incorrect key&amp;#x27;}}\n        endpoint   = &amp;#x27;user&amp;#x27;\n        error_code = 2\n        error_msg  = &amp;#x27;Incorrect key&amp;#x27;\n        response   = &amp;lt;Response [200]&amp;gt;\n        self       = &amp;lt;app.services.torncity.client.TornClient object at 0x10fde5f10&amp;gt;\n        timeout    = None\n        url        = &amp;#x27;https://api.torn.com/user?key=test_api_key&amp;#x27;\n\nDuring handling of the above exception, another exception occurred:\ntests/unit/services/integration/test_data_pipeline.py:116: in test_end_to_end_data_pipeline\n    result = processor.run()\n        mock_bigquery_client = &amp;lt;MagicMock name=&amp;#x27;Client&amp;#x27; id=&amp;#x27;4562229232&amp;#x27;&amp;gt;\n        mock_torn_response = {&amp;#x27;data&amp;#x27;: {&amp;#x27;members&amp;#x27;: {&amp;#x27;12345&amp;#x27;: {&amp;#x27;faction&amp;#x27;: {&amp;#x27;days_in_faction&amp;#x27;: 100,\n                                            &amp;#x27;faction_id&amp;#x27;: 17991,\n                                            &amp;#x27;position&amp;#x27;: &amp;#x27;Member&amp;#x27;},\n                                &amp;#x27;last_action&amp;#x27;: {&amp;#x27;status&amp;#x27;: &amp;#x27;Online&amp;#x27;,\n                                                &amp;#x27;timestamp&amp;#x27;: 1710766800},\n                                &amp;#x27;level&amp;#x27;: 10,\n                                &amp;#x27;life&amp;#x27;: {&amp;#x27;current&amp;#x27;: 100, &amp;#x27;maximum&amp;#x27;: 100},\n                                &amp;#x27;name&amp;#x27;: &amp;#x27;TestUser&amp;#x27;,\n                                &amp;#x27;status&amp;#x27;: {&amp;#x27;description&amp;#x27;: &amp;#x27;Online&amp;#x27;,\n                                           &amp;#x27;state&amp;#x27;: &amp;#x27;Okay&amp;#x27;},\n                                &amp;#x27;timestamp&amp;#x27;: 1710766800}}}}\n        processor  = &amp;lt;app.services.torncity.processors.MembersProcessor object at 0x10fe45650&amp;gt;\n        sample_config = {&amp;#x27;api_key&amp;#x27;: &amp;#x27;test_api_key&amp;#x27;,\n &amp;#x27;credentials_path&amp;#x27;: &amp;#x27;test_credentials.json&amp;#x27;,\n &amp;#x27;dataset&amp;#x27;: &amp;#x27;test_dataset&amp;#x27;,\n &amp;#x27;dataset_id&amp;#x27;: &amp;#x27;test_dataset&amp;#x27;,\n &amp;#x27;endpoint&amp;#x27;: &amp;#x27;user&amp;#x27;,\n &amp;#x27;gcp_credentials_file&amp;#x27;: &amp;#x27;test_credentials.json&amp;#x27;,\n &amp;#x27;gcp_project_id&amp;#x27;: &amp;#x27;test-project&amp;#x27;,\n &amp;#x27;project_id&amp;#x27;: &amp;#x27;test-project&amp;#x27;,\n &amp;#x27;selection&amp;#x27;: &amp;#x27;default&amp;#x27;,\n &amp;#x27;storage_mode&amp;#x27;: &amp;#x27;append&amp;#x27;,\n &amp;#x27;table_id&amp;#x27;: &amp;#x27;test_table&amp;#x27;}\n        self       = &amp;lt;test_data_pipeline.TestDataPipelineIntegration object at 0x10fb5bed0&amp;gt;\napp/services/torncity/base.py:184: in run\n    data = self.fetch_torn_data()\n        self       = &amp;lt;app.services.torncity.processors.MembersProcessor object at 0x10fe45650&amp;gt;\napp/services/torncity/base.py:140: in fetch_torn_data\n    return self.torn_client.make_request(\n        self       = &amp;lt;app.services.torncity.processors.MembersProcessor object at 0x10fe45650&amp;gt;\napp/services/torncity/client.py:320: in make_request\n    raise TornAPIRateLimitError(f&amp;quot;Rate limit exceeded for key {selection}&amp;quot;)\nE   app.services.torncity.exceptions.TornAPIRateLimitError: Rate limit exceeded for key default\n        api_key    = &amp;#x27;test_api_key&amp;#x27;\n        endpoint   = &amp;#x27;user&amp;#x27;\n        selection  = &amp;#x27;default&amp;#x27;\n        self       = &amp;lt;app.services.torncity.client.TornClient object at 0x10fde5f10&amp;gt;\n\n------------------------------ Captured log call -------------------------------\nERROR    app.services.torncity.base:base.py:145 Failed to fetch data from Torn API: Rate limit exceeded for key default\nERROR    app.services.torncity.base:base.py:188 Error running processor: Rate limit exceeded for key default\n\n&#34;}], &#34;unit/core/test_scheduler.py::test_imports&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/core/test_scheduler.py::test_imports&#34;, &#34;duration&#34;: &#34;1 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/core/test_scheduler.py::test_imports&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;1 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/core/test_scheduler.py::TestScheduler::test_placeholder&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/core/test_scheduler.py::TestScheduler::test_placeholder&#34;, &#34;duration&#34;: &#34;1 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/core/test_scheduler.py::TestScheduler::test_placeholder&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;1 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/google/bigquery/test_client.py::test_write_data_with_retry_success&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/google/bigquery/test_client.py::test_write_data_with_retry_success&#34;, &#34;duration&#34;: &#34;2 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/google/bigquery/test_client.py::test_write_data_with_retry_success&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;2 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/google/bigquery/test_client.py::test_validate_data_types_success&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/google/bigquery/test_client.py::test_validate_data_types_success&#34;, &#34;duration&#34;: &#34;2 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/google/bigquery/test_client.py::test_validate_data_types_success&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;2 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/google/bigquery/test_client.py::test_write_data_success&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/google/bigquery/test_client.py::test_write_data_success&#34;, &#34;duration&#34;: &#34;2 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/google/bigquery/test_client.py::test_write_data_success&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;2 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/google/bigquery/test_client.py::test_table_exists_success&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/google/bigquery/test_client.py::test_table_exists_success&#34;, &#34;duration&#34;: &#34;1 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/google/bigquery/test_client.py::test_table_exists_success&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;1 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/google/bigquery/test_client.py::test_create_table&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/google/bigquery/test_client.py::test_create_table&#34;, &#34;duration&#34;: &#34;1 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/google/bigquery/test_client.py::test_create_table&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;1 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/google/bigquery/test_client.py::test_init_failure&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/google/bigquery/test_client.py::test_init_failure&#34;, &#34;duration&#34;: &#34;2 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/google/bigquery/test_client.py::test_init_failure&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;2 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/google/bigquery/test_client.py::test_write_data_invalid_disposition&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/google/bigquery/test_client.py::test_write_data_invalid_disposition&#34;, &#34;duration&#34;: &#34;2 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/google/bigquery/test_client.py::test_write_data_invalid_disposition&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;2 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/google/bigquery/test_client.py::test_validate_data_types_required_null&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/google/bigquery/test_client.py::test_validate_data_types_required_null&#34;, &#34;duration&#34;: &#34;2 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/google/bigquery/test_client.py::test_validate_data_types_required_null&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;2 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/google/bigquery/test_client.py::test_get_table_schema_success&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/google/bigquery/test_client.py::test_get_table_schema_success&#34;, &#34;duration&#34;: &#34;2 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/google/bigquery/test_client.py::test_get_table_schema_success&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;2 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/google/bigquery/test_client.py::test_delete_table_success&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/google/bigquery/test_client.py::test_delete_table_success&#34;, &#34;duration&#34;: &#34;1 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/google/bigquery/test_client.py::test_delete_table_success&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;1 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/google/bigquery/test_client.py::test_get_table_schema_not_found&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/google/bigquery/test_client.py::test_get_table_schema_not_found&#34;, &#34;duration&#34;: &#34;2 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/google/bigquery/test_client.py::test_get_table_schema_not_found&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;2 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/google/bigquery/test_client.py::test_validate_schema_compatibility_type_mismatch&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/google/bigquery/test_client.py::test_validate_schema_compatibility_type_mismatch&#34;, &#34;duration&#34;: &#34;3 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/google/bigquery/test_client.py::test_validate_schema_compatibility_type_mismatch&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;3 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/google/bigquery/test_client.py::test_table_exists_not_found&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/google/bigquery/test_client.py::test_table_exists_not_found&#34;, &#34;duration&#34;: &#34;1 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/google/bigquery/test_client.py::test_table_exists_not_found&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;1 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/google/bigquery/test_client.py::test_write_data_empty&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/google/bigquery/test_client.py::test_write_data_empty&#34;, &#34;duration&#34;: &#34;2 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/google/bigquery/test_client.py::test_write_data_empty&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;2 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/google/bigquery/test_client.py::test_write_data_with_retry_failure&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/google/bigquery/test_client.py::test_write_data_with_retry_failure&#34;, &#34;duration&#34;: &#34;00:00:02&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/google/bigquery/test_client.py::test_write_data_with_retry_failure&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;00:00:02&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/google/bigquery/test_client.py::test_validate_data_types_invalid_type&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/google/bigquery/test_client.py::test_validate_data_types_invalid_type&#34;, &#34;duration&#34;: &#34;2 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/google/bigquery/test_client.py::test_validate_data_types_invalid_type&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;2 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/google/bigquery/test_client.py::test_validate_schema_compatibility_required_field_missing&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/google/bigquery/test_client.py::test_validate_schema_compatibility_required_field_missing&#34;, &#34;duration&#34;: &#34;2 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/google/bigquery/test_client.py::test_validate_schema_compatibility_required_field_missing&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;2 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/google/bigquery/test_client.py::test_delete_table_failure&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/google/bigquery/test_client.py::test_delete_table_failure&#34;, &#34;duration&#34;: &#34;2 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/google/bigquery/test_client.py::test_delete_table_failure&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;2 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/google/bigquery/test_client.py::test_validate_schema_compatibility_success&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/google/bigquery/test_client.py::test_validate_schema_compatibility_success&#34;, &#34;duration&#34;: &#34;2 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/google/bigquery/test_client.py::test_validate_schema_compatibility_success&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;2 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/google/bigquery/test_client.py::test_table_exists_auth_error&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/google/bigquery/test_client.py::test_table_exists_auth_error&#34;, &#34;duration&#34;: &#34;2 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/google/bigquery/test_client.py::test_table_exists_auth_error&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;2 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/google/bigquery/test_client.py::test_write_data_in_batches&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/google/bigquery/test_client.py::test_write_data_in_batches&#34;, &#34;duration&#34;: &#34;4 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/google/bigquery/test_client.py::test_write_data_in_batches&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;4 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/torncity/endpoints/test_members.py::TestMembersProcessor::test_init&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/torncity/endpoints/test_members.py::TestMembersProcessor::test_init&#34;, &#34;duration&#34;: &#34;2 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/torncity/endpoints/test_members.py::TestMembersProcessor::test_init&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;2 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/torncity/endpoints/test_members.py::TestMembersProcessor::test_process_data_missing_fields&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/torncity/endpoints/test_members.py::TestMembersProcessor::test_process_data_missing_fields&#34;, &#34;duration&#34;: &#34;3 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/torncity/endpoints/test_members.py::TestMembersProcessor::test_process_data_missing_fields&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;3 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/torncity/endpoints/test_members.py::TestMembersProcessor::test_process_data_empty&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/torncity/endpoints/test_members.py::TestMembersProcessor::test_process_data_empty&#34;, &#34;duration&#34;: &#34;3 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/torncity/endpoints/test_members.py::TestMembersProcessor::test_process_data_empty&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;3 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/torncity/endpoints/test_members.py::TestMembersProcessor::test_process_data_valid&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/torncity/endpoints/test_members.py::TestMembersProcessor::test_process_data_valid&#34;, &#34;duration&#34;: &#34;3 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/torncity/endpoints/test_members.py::TestMembersProcessor::test_process_data_valid&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;3 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/torncity/endpoints/test_members.py::TestMembersProcessor::test_process_data_invalid_types&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/torncity/endpoints/test_members.py::TestMembersProcessor::test_process_data_invalid_types&#34;, &#34;duration&#34;: &#34;3 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/torncity/endpoints/test_members.py::TestMembersProcessor::test_process_data_invalid_types&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;3 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;------------------------------ Captured log call -------------------------------\nERROR    root:base.py:438 {&amp;#x27;event&amp;#x27;: &amp;#x27;endpoint_error&amp;#x27;, &amp;#x27;endpoint&amp;#x27;: &amp;#x27;members&amp;#x27;, &amp;#x27;error&amp;#x27;: &amp;quot;Error processing member 1: Invalid type for name field, expected str, got &amp;lt;class &amp;#x27;int&amp;#x27;&amp;gt;&amp;quot;, &amp;#x27;timestamp&amp;#x27;: &amp;#x27;2025-03-18T19:30:01.910717&amp;#x27;}\nERROR    root:base.py:438 {&amp;#x27;event&amp;#x27;: &amp;#x27;endpoint_error&amp;#x27;, &amp;#x27;endpoint&amp;#x27;: &amp;#x27;members&amp;#x27;, &amp;#x27;error&amp;#x27;: &amp;quot;Error processing member data: Error processing member 1: Invalid type for name field, expected str, got &amp;lt;class &amp;#x27;int&amp;#x27;&amp;gt;&amp;quot;, &amp;#x27;timestamp&amp;#x27;: &amp;#x27;2025-03-18T19:30:01.910879&amp;#x27;}\n\n&#34;}], &#34;unit/services/torncity/endpoints/test_members.py::TestMembersProcessor::test_run_end_to_end&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Failed&#34;, &#34;testId&#34;: &#34;unit/services/torncity/endpoints/test_members.py::TestMembersProcessor::test_run_end_to_end&#34;, &#34;duration&#34;: &#34;165 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Failed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/torncity/endpoints/test_members.py::TestMembersProcessor::test_run_end_to_end&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;165 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;app/services/torncity/client.py:318: in make_request\n    return self._make_request_internal(endpoint, api_key)\n        api_key    = &amp;#x27;test_key_1&amp;#x27;\n        endpoint   = &amp;#x27;user&amp;#x27;\n        selection  = &amp;#x27;default&amp;#x27;\n        self       = &amp;lt;app.services.torncity.client.TornClient object at 0x10fff5f70&amp;gt;\napp/services/torncity/client.py:287: in _make_request_internal\n    raise TornAPIRateLimitError(f&amp;quot;Rate limit exceeded for key {api_key}&amp;quot;)\nE   app.services.torncity.exceptions.TornAPIRateLimitError: Rate limit exceeded for key test_key_1\n        api_key    = &amp;#x27;test_key_1&amp;#x27;\n        data       = {&amp;#x27;error&amp;#x27;: {&amp;#x27;code&amp;#x27;: 2, &amp;#x27;error&amp;#x27;: &amp;#x27;Incorrect key&amp;#x27;}}\n        endpoint   = &amp;#x27;user&amp;#x27;\n        error_code = 2\n        error_msg  = &amp;#x27;Incorrect key&amp;#x27;\n        response   = &amp;lt;Response [200]&amp;gt;\n        self       = &amp;lt;app.services.torncity.client.TornClient object at 0x10fff5f70&amp;gt;\n        timeout    = None\n        url        = &amp;#x27;https://api.torn.com/user?key=test_key_1&amp;#x27;\n\nDuring handling of the above exception, another exception occurred:\ntests/unit/services/torncity/endpoints/test_members.py:286: in test_run_end_to_end\n    result = processor.run()\n        mock_data  = {&amp;#x27;data&amp;#x27;: {&amp;#x27;1&amp;#x27;: {&amp;#x27;last_action&amp;#x27;: {&amp;#x27;status&amp;#x27;: &amp;#x27;Online&amp;#x27;, &amp;#x27;timestamp&amp;#x27;: 1710766800},\n                &amp;#x27;level&amp;#x27;: 10,\n                &amp;#x27;member_id&amp;#x27;: 1,\n                &amp;#x27;name&amp;#x27;: &amp;#x27;TestUser&amp;#x27;,\n                &amp;#x27;status&amp;#x27;: {&amp;#x27;state&amp;#x27;: &amp;#x27;Okay&amp;#x27;},\n                &amp;#x27;timestamp&amp;#x27;: 1710766800}}}\n        processor  = &amp;lt;app.services.torncity.endpoints.members.MembersEndpointProcessor object at 0x1180784d0&amp;gt;\n        self       = &amp;lt;test_members.TestMembersProcessor object at 0x10fc2cc00&amp;gt;\napp/services/torncity/base.py:184: in run\n    data = self.fetch_torn_data()\n        self       = &amp;lt;app.services.torncity.endpoints.members.MembersEndpointProcessor object at 0x1180784d0&amp;gt;\napp/services/torncity/base.py:140: in fetch_torn_data\n    return self.torn_client.make_request(\n        self       = &amp;lt;app.services.torncity.endpoints.members.MembersEndpointProcessor object at 0x1180784d0&amp;gt;\napp/services/torncity/client.py:320: in make_request\n    raise TornAPIRateLimitError(f&amp;quot;Rate limit exceeded for key {selection}&amp;quot;)\nE   app.services.torncity.exceptions.TornAPIRateLimitError: Rate limit exceeded for key default\n        api_key    = &amp;#x27;test_key_1&amp;#x27;\n        endpoint   = &amp;#x27;user&amp;#x27;\n        selection  = &amp;#x27;default&amp;#x27;\n        self       = &amp;lt;app.services.torncity.client.TornClient object at 0x10fff5f70&amp;gt;\n\n------------------------------ Captured log call -------------------------------\nERROR    app.services.torncity.base:base.py:145 Failed to fetch data from Torn API: Rate limit exceeded for key default\nERROR    app.services.torncity.base:base.py:188 Error running processor: Rate limit exceeded for key default\n\n&#34;}], &#34;unit/services/torncity/test_members_pull.py::TestMembersPull::test_members_data_pull&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/torncity/test_members_pull.py::TestMembersPull::test_members_data_pull&#34;, &#34;duration&#34;: &#34;7 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/torncity/test_members_pull.py::TestMembersPull::test_members_data_pull&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;7 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/torncity/test_members_pull.py::TestMembersPull::test_empty_members_response&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/torncity/test_members_pull.py::TestMembersPull::test_empty_members_response&#34;, &#34;duration&#34;: &#34;6 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/torncity/test_members_pull.py::TestMembersPull::test_empty_members_response&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;6 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/torncity/test_members_pull.py::TestMembersPull::test_empty_records_list&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/torncity/test_members_pull.py::TestMembersPull::test_empty_records_list&#34;, &#34;duration&#34;: &#34;6 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/torncity/test_members_pull.py::TestMembersPull::test_empty_records_list&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;6 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/torncity/test_members_pull.py::TestMembersPull::test_members_bigquery_integration&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/torncity/test_members_pull.py::TestMembersPull::test_members_bigquery_integration&#34;, &#34;duration&#34;: &#34;5 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/torncity/test_members_pull.py::TestMembersPull::test_members_bigquery_integration&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;5 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/torncity/test_members_pull.py::TestMembersPull::test_empty_dataframe_after_processing&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/torncity/test_members_pull.py::TestMembersPull::test_empty_dataframe_after_processing&#34;, &#34;duration&#34;: &#34;6 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/torncity/test_members_pull.py::TestMembersPull::test_empty_dataframe_after_processing&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;6 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/torncity/test_members_pull.py::TestMembersPull::test_transform_data_exception&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/torncity/test_members_pull.py::TestMembersPull::test_transform_data_exception&#34;, &#34;duration&#34;: &#34;6 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/torncity/test_members_pull.py::TestMembersPull::test_transform_data_exception&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;6 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/torncity/test_members_pull.py::TestMembersPull::test_timestamp_conversion_error&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/torncity/test_members_pull.py::TestMembersPull::test_timestamp_conversion_error&#34;, &#34;duration&#34;: &#34;9 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/torncity/test_members_pull.py::TestMembersPull::test_timestamp_conversion_error&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;9 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/torncity/test_members_pull.py::TestMembersPull::test_invalid_members_data&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/torncity/test_members_pull.py::TestMembersPull::test_invalid_members_data&#34;, &#34;duration&#34;: &#34;6 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/torncity/test_members_pull.py::TestMembersPull::test_invalid_members_data&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;6 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/torncity/test_members_pull.py::TestMembersPull::test_members_data_validation&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/torncity/test_members_pull.py::TestMembersPull::test_members_data_validation&#34;, &#34;duration&#34;: &#34;10 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/torncity/test_members_pull.py::TestMembersPull::test_members_data_validation&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;10 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/torncity/test_members_pull.py::TestMembersPull::test_empty_valid_members_data&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/torncity/test_members_pull.py::TestMembersPull::test_empty_valid_members_data&#34;, &#34;duration&#34;: &#34;7 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/torncity/test_members_pull.py::TestMembersPull::test_empty_valid_members_data&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;7 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/torncity/test_members_pull.py::TestMembersPull::test_members_error_handling&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/torncity/test_members_pull.py::TestMembersPull::test_members_error_handling&#34;, &#34;duration&#34;: &#34;6 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/torncity/test_members_pull.py::TestMembersPull::test_members_error_handling&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;6 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/torncity/test_members_pull.py::TestMembersPull::test_numeric_conversion_error&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Failed&#34;, &#34;testId&#34;: &#34;unit/services/torncity/test_members_pull.py::TestMembersPull::test_numeric_conversion_error&#34;, &#34;duration&#34;: &#34;6 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Failed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/torncity/test_members_pull.py::TestMembersPull::test_numeric_conversion_error&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;6 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;tests/unit/services/torncity/test_members_pull.py:680: in test_numeric_conversion_error\n    assert &amp;quot;Error processing member&amp;quot; in str(exc_info.value)\nE   AssertionError: assert &amp;#x27;Error processing member&amp;#x27; in &amp;#x27;Invalid numeric value for level field for member 123: not_a_number&amp;#x27;\nE    +  where &amp;#x27;Invalid numeric value for level field for member 123: not_a_number&amp;#x27; = str(DataValidationError(&amp;#x27;Invalid numeric value for level field for member 123: not_a_number&amp;#x27;))\nE    +    where DataValidationError(&amp;#x27;Invalid numeric value for level field for member 123: not_a_number&amp;#x27;) = &amp;lt;ExceptionInfo DataValidationError(&amp;#x27;Invalid numeric value for level field for member 123: not_a_number&amp;#x27;) tblen=2&amp;gt;.value\n        exc_info   = &amp;lt;ExceptionInfo DataValidationError(&amp;#x27;Invalid numeric value for level field for member 123: not_a_number&amp;#x27;) tblen=2&amp;gt;\n        members_processor = &amp;lt;test_members_pull.TestMembersEndpointProcessor object at 0x10fd565d0&amp;gt;\n        mock_log_error = &amp;lt;Mock id=&amp;#x27;4699920032&amp;#x27;&amp;gt;\n        mock_response = {&amp;#x27;data&amp;#x27;: {&amp;#x27;members&amp;#x27;: {&amp;#x27;123&amp;#x27;: {&amp;#x27;faction&amp;#x27;: {&amp;#x27;faction_id&amp;#x27;: &amp;#x27;17991&amp;#x27;},\n                              &amp;#x27;last_action&amp;#x27;: {&amp;#x27;relative&amp;#x27;: &amp;#x27;1 hour ago&amp;#x27;,\n                                              &amp;#x27;timestamp&amp;#x27;: &amp;#x27;not_a_timestamp&amp;#x27;},\n                              &amp;#x27;level&amp;#x27;: &amp;#x27;not_a_number&amp;#x27;,\n                              &amp;#x27;name&amp;#x27;: &amp;#x27;Test User&amp;#x27;,\n                              &amp;#x27;status&amp;#x27;: {&amp;#x27;description&amp;#x27;: &amp;#x27;Online&amp;#x27;,\n                                         &amp;#x27;state&amp;#x27;: &amp;#x27;online&amp;#x27;,\n                                         &amp;#x27;until&amp;#x27;: &amp;#x27;invalid&amp;#x27;}}}},\n &amp;#x27;fetched_at&amp;#x27;: &amp;#x27;2024-03-16T09:32:31.281852&amp;#x27;}\n        self       = &amp;lt;test_members_pull.TestMembersPull object at 0x10fcfb770&amp;gt;\n&#34;}], &#34;unit/services/torncity/test_members_pull.py::TestMembersPull::test_members_data_update&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/torncity/test_members_pull.py::TestMembersPull::test_members_data_update&#34;, &#34;duration&#34;: &#34;6 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/torncity/test_members_pull.py::TestMembersPull::test_members_data_update&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;6 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;------------------------------ Captured log call -------------------------------\nWARNING  root:base.py:434 Failed to record metrics: &amp;#x27;RepeatedComposite&amp;#x27; object has no attribute &amp;#x27;add&amp;#x27;\n\n&#34;}], &#34;unit/services/torncity/test_crimes_pull.py::TestCrimesPull::test_old_field_name_mapping&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/torncity/test_crimes_pull.py::TestCrimesPull::test_old_field_name_mapping&#34;, &#34;duration&#34;: &#34;13 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/torncity/test_crimes_pull.py::TestCrimesPull::test_old_field_name_mapping&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;13 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/torncity/test_crimes_pull.py::TestCrimesPull::test_rewards_data_processing&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/torncity/test_crimes_pull.py::TestCrimesPull::test_rewards_data_processing&#34;, &#34;duration&#34;: &#34;11 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/torncity/test_crimes_pull.py::TestCrimesPull::test_rewards_data_processing&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;11 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/torncity/test_crimes_pull.py::TestCrimesPull::test_participants_data_processing&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/torncity/test_crimes_pull.py::TestCrimesPull::test_participants_data_processing&#34;, &#34;duration&#34;: &#34;10 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/torncity/test_crimes_pull.py::TestCrimesPull::test_participants_data_processing&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;10 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/torncity/test_crimes_pull.py::TestCrimesPull::test_invalid_participant_types&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/torncity/test_crimes_pull.py::TestCrimesPull::test_invalid_participant_types&#34;, &#34;duration&#34;: &#34;11 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/torncity/test_crimes_pull.py::TestCrimesPull::test_invalid_participant_types&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;11 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/torncity/test_crimes_pull.py::TestCrimesPull::test_empty_records_list&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/torncity/test_crimes_pull.py::TestCrimesPull::test_empty_records_list&#34;, &#34;duration&#34;: &#34;7 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/torncity/test_crimes_pull.py::TestCrimesPull::test_empty_records_list&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;7 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;------------------------------ Captured log call -------------------------------\nERROR    root:base.py:438 {&amp;#x27;event&amp;#x27;: &amp;#x27;endpoint_error&amp;#x27;, &amp;#x27;endpoint&amp;#x27;: &amp;#x27;crimes&amp;#x27;, &amp;#x27;error&amp;#x27;: &amp;#x27;No crimes data found in API response&amp;#x27;, &amp;#x27;timestamp&amp;#x27;: &amp;#x27;2025-03-18T19:30:02.269457&amp;#x27;}\n\n&#34;}], &#34;unit/services/torncity/test_crimes_pull.py::TestCrimesPull::test_mixed_participant_data&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/torncity/test_crimes_pull.py::TestCrimesPull::test_mixed_participant_data&#34;, &#34;duration&#34;: &#34;12 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/torncity/test_crimes_pull.py::TestCrimesPull::test_mixed_participant_data&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;12 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/torncity/test_crimes_pull.py::TestCrimesPull::test_crimes_bigquery_integration&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Failed&#34;, &#34;testId&#34;: &#34;unit/services/torncity/test_crimes_pull.py::TestCrimesPull::test_crimes_bigquery_integration&#34;, &#34;duration&#34;: &#34;16 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Failed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/torncity/test_crimes_pull.py::TestCrimesPull::test_crimes_bigquery_integration&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;16 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;tests/unit/services/torncity/test_crimes_pull.py:756: in test_crimes_bigquery_integration\n    assert result is True, &amp;quot;Processing should succeed&amp;quot;\nE   AssertionError: Processing should succeed\nE   assert False is True\n        crimes_processor = &amp;lt;test_crimes_pull.TestCrimesEndpointProcessor object at 0x10fd8ce20&amp;gt;\n        data       = {&amp;#x27;crimes&amp;#x27;: {&amp;#x27;123&amp;#x27;: {&amp;#x27;created_at&amp;#x27;: 1742344202,\n                    &amp;#x27;difficulty&amp;#x27;: &amp;#x27;medium&amp;#x27;,\n                    &amp;#x27;executed_at&amp;#x27;: 1742344202,\n                    &amp;#x27;expired_at&amp;#x27;: 1742344202,\n                    &amp;#x27;id&amp;#x27;: 123,\n                    &amp;#x27;name&amp;#x27;: &amp;#x27;Test Crime&amp;#x27;,\n                    &amp;#x27;participants&amp;#x27;: [{&amp;#x27;id&amp;#x27;: 456, &amp;#x27;name&amp;#x27;: &amp;#x27;Player1&amp;#x27;},\n                                     {&amp;#x27;id&amp;#x27;: 789, &amp;#x27;name&amp;#x27;: &amp;#x27;Player2&amp;#x27;}],\n                    &amp;#x27;planning_at&amp;#x27;: 1742344202,\n                    &amp;#x27;ready_at&amp;#x27;: 1742344202,\n                    &amp;#x27;rewards&amp;#x27;: {&amp;#x27;items&amp;#x27;: [{&amp;#x27;id&amp;#x27;: 1, &amp;#x27;quantity&amp;#x27;: 2},\n                                          {&amp;#x27;id&amp;#x27;: 2, &amp;#x27;quantity&amp;#x27;: 1}],\n                                &amp;#x27;money&amp;#x27;: 1000,\n                                &amp;#x27;respect&amp;#x27;: 10},\n                    &amp;#x27;status&amp;#x27;: &amp;#x27;completed&amp;#x27;}},\n &amp;#x27;fetched_at&amp;#x27;: &amp;#x27;2024-03-17T00:00:00&amp;#x27;,\n &amp;#x27;timestamp&amp;#x27;: 1710633600}\n        mock_bigquery_client = &amp;lt;MagicMock id=&amp;#x27;4700149408&amp;#x27;&amp;gt;\n        mock_credentials = &amp;lt;MagicMock spec=&amp;#x27;Credentials&amp;#x27; id=&amp;#x27;4700149072&amp;#x27;&amp;gt;\n        mock_monitoring_client = &amp;lt;MagicMock spec=&amp;#x27;MetricServiceClient&amp;#x27; id=&amp;#x27;4700148400&amp;#x27;&amp;gt;\n        mock_table = &amp;lt;Mock name=&amp;#x27;mock.get_table()&amp;#x27; id=&amp;#x27;4700149744&amp;#x27;&amp;gt;\n        result     = False\n        self       = &amp;lt;test_crimes_pull.TestCrimesPull testMethod=test_crimes_bigquery_integration&amp;gt;\n\n------------------------------ Captured log call -------------------------------\nERROR    root:base.py:438 {&amp;#x27;event&amp;#x27;: &amp;#x27;endpoint_error&amp;#x27;, &amp;#x27;endpoint&amp;#x27;: &amp;#x27;crimes&amp;#x27;, &amp;#x27;error&amp;#x27;: &amp;#x27;The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().&amp;#x27;, &amp;#x27;timestamp&amp;#x27;: &amp;#x27;2025-03-18T19:30:02.298943&amp;#x27;}\n\n&#34;}], &#34;unit/services/torncity/test_crimes_pull.py::TestCrimesPull::test_convert_numerics_method&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/torncity/test_crimes_pull.py::TestCrimesPull::test_convert_numerics_method&#34;, &#34;duration&#34;: &#34;8 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/torncity/test_crimes_pull.py::TestCrimesPull::test_convert_numerics_method&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;8 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/torncity/test_crimes_pull.py::TestCrimesPull::test_invalid_rewards_types&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Failed&#34;, &#34;testId&#34;: &#34;unit/services/torncity/test_crimes_pull.py::TestCrimesPull::test_invalid_rewards_types&#34;, &#34;duration&#34;: &#34;13 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Failed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/torncity/test_crimes_pull.py::TestCrimesPull::test_invalid_rewards_types&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;13 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;tests/unit/services/torncity/test_crimes_pull.py:995: in test_invalid_rewards_types\n    assert df.loc[df[&amp;#x27;id&amp;#x27;] == 3, &amp;#x27;reward_item_count&amp;#x27;].iloc[0] == 1\nE   assert np.int64(2) == 1\n        crimes_processor = &amp;lt;test_crimes_pull.TestCrimesEndpointProcessor object at 0x10fe46750&amp;gt;\n        data       = {&amp;#x27;crimes&amp;#x27;: {&amp;#x27;1&amp;#x27;: {&amp;#x27;id&amp;#x27;: 1, &amp;#x27;name&amp;#x27;: &amp;#x27;Test Crime&amp;#x27;, &amp;#x27;rewards&amp;#x27;: &amp;#x27;not_a_dict&amp;#x27;},\n            &amp;#x27;2&amp;#x27;: {&amp;#x27;id&amp;#x27;: 2,\n                  &amp;#x27;name&amp;#x27;: &amp;#x27;Test Crime 2&amp;#x27;,\n                  &amp;#x27;rewards&amp;#x27;: {&amp;#x27;items&amp;#x27;: &amp;#x27;not_a_list&amp;#x27;,\n                              &amp;#x27;money&amp;#x27;: &amp;#x27;not_a_number&amp;#x27;,\n                              &amp;#x27;respect&amp;#x27;: None}},\n            &amp;#x27;3&amp;#x27;: {&amp;#x27;id&amp;#x27;: 3,\n                  &amp;#x27;name&amp;#x27;: &amp;#x27;Test Crime 3&amp;#x27;,\n                  &amp;#x27;rewards&amp;#x27;: {&amp;#x27;items&amp;#x27;: [&amp;#x27;not_a_dict&amp;#x27;,\n                                        {&amp;#x27;wrong_field&amp;#x27;: 123},\n                                        {&amp;#x27;id&amp;#x27;: &amp;#x27;not_a_number&amp;#x27;, &amp;#x27;quantity&amp;#x27;: 2},\n                                        {&amp;#x27;id&amp;#x27;: 123, &amp;#x27;quantity&amp;#x27;: &amp;#x27;not_a_number&amp;#x27;},\n                                        {&amp;#x27;id&amp;#x27;: 456, &amp;#x27;quantity&amp;#x27;: 3}],\n                              &amp;#x27;money&amp;#x27;: 1000000,\n                              &amp;#x27;respect&amp;#x27;: 100}}},\n &amp;#x27;fetched_at&amp;#x27;: &amp;#x27;2024-03-17T00:00:00&amp;#x27;,\n &amp;#x27;timestamp&amp;#x27;: 1710633600}\n        df         =   server_timestamp created_at planning_at  ... reward_item_ids reward_item_quantities fetched_at\n0       2024-03-17        NaT         NaT  ...                                        2024-03-17\n1       2024-03-17        NaT         NaT  ...                                        2024-03-17\n2       2024-03-17        NaT         NaT  ...         123,456                    0,3 2024-03-17\n\n[3 rows x 19 columns]\n        self       = &amp;lt;test_crimes_pull.TestCrimesPull testMethod=test_invalid_rewards_types&amp;gt;\n&#34;}], &#34;unit/services/torncity/test_crimes_pull.py::TestCrimesPull::test_server_timestamp_handling&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Failed&#34;, &#34;testId&#34;: &#34;unit/services/torncity/test_crimes_pull.py::TestCrimesPull::test_server_timestamp_handling&#34;, &#34;duration&#34;: &#34;24 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Failed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/torncity/test_crimes_pull.py::TestCrimesPull::test_server_timestamp_handling&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;24 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;tests/unit/services/torncity/test_crimes_pull.py:871: in test_server_timestamp_handling\n    assert not df.empty\nE   assert not True\nE    +  where True = Empty DataFrame\\nColumns: []\\nIndex: [].empty\n        crimes_processor = &amp;lt;test_crimes_pull.TestCrimesEndpointProcessor object at 0x10fd56d50&amp;gt;\n        data       = {&amp;#x27;crimes&amp;#x27;: {&amp;#x27;1&amp;#x27;: {&amp;#x27;id&amp;#x27;: 1, &amp;#x27;name&amp;#x27;: &amp;#x27;Test Crime&amp;#x27;}},\n &amp;#x27;fetched_at&amp;#x27;: &amp;#x27;2024-03-17T00:00:00&amp;#x27;,\n &amp;#x27;timestamp&amp;#x27;: &amp;#x27;invalid&amp;#x27;}\n        df         = Empty DataFrame\nColumns: []\nIndex: []\n        expected_ts = Timestamp(&amp;#x27;2025-03-18 19:30:02&amp;#x27;)\n        input_ts   = &amp;#x27;invalid&amp;#x27;\n        self       = &amp;lt;test_crimes_pull.TestCrimesPull testMethod=test_server_timestamp_handling&amp;gt;\n        test_cases = [(1710633600, Timestamp(&amp;#x27;2024-03-17 00:00:00&amp;#x27;)),\n (&amp;#x27;2024-03-17T00:00:00&amp;#x27;, Timestamp(&amp;#x27;2024-03-17 00:00:00&amp;#x27;)),\n (None, Timestamp(&amp;#x27;2025-03-18 19:30:02&amp;#x27;)),\n (&amp;#x27;invalid&amp;#x27;, Timestamp(&amp;#x27;2025-03-18 19:30:02&amp;#x27;))]\n\n------------------------------ Captured log call -------------------------------\nERROR    root:base.py:438 {&amp;#x27;event&amp;#x27;: &amp;#x27;endpoint_error&amp;#x27;, &amp;#x27;endpoint&amp;#x27;: &amp;#x27;crimes&amp;#x27;, &amp;#x27;error&amp;#x27;: &amp;#x27;Error transforming crimes data: Unknown datetime string format, unable to parse: invalid, at position 0&amp;#x27;, &amp;#x27;timestamp&amp;#x27;: &amp;#x27;2025-03-18T19:30:02.396477&amp;#x27;}\n\n&#34;}], &#34;unit/services/torncity/test_crimes_pull.py::TestCrimesPull::test_mixed_rewards_data&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Passed&#34;, &#34;testId&#34;: &#34;unit/services/torncity/test_crimes_pull.py::TestCrimesPull::test_mixed_rewards_data&#34;, &#34;duration&#34;: &#34;12 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Passed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/torncity/test_crimes_pull.py::TestCrimesPull::test_mixed_rewards_data&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;12 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;No log output captured.&#34;}], &#34;unit/services/torncity/test_crimes_pull.py::TestCrimesPull::test_timestamp_formats&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Failed&#34;, &#34;testId&#34;: &#34;unit/services/torncity/test_crimes_pull.py::TestCrimesPull::test_timestamp_formats&#34;, &#34;duration&#34;: &#34;12 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Failed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/torncity/test_crimes_pull.py::TestCrimesPull::test_timestamp_formats&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;12 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;tests/unit/services/torncity/test_crimes_pull.py:1066: in test_timestamp_formats\n    assert pd.notna(df[&amp;#x27;ready_at&amp;#x27;].iloc[0])\nE   assert False\nE    +  where False = &amp;lt;function notna at 0x10b76d120&amp;gt;(NaT)\nE    +    where &amp;lt;function notna at 0x10b76d120&amp;gt; = pd.notna\n        crimes_processor = &amp;lt;test_crimes_pull.TestCrimesEndpointProcessor object at 0x10fd844b0&amp;gt;\n        data       = {&amp;#x27;crimes&amp;#x27;: {&amp;#x27;1&amp;#x27;: {&amp;#x27;created_at&amp;#x27;: 1710633600,\n                  &amp;#x27;difficulty&amp;#x27;: &amp;#x27;medium&amp;#x27;,\n                  &amp;#x27;executed_at&amp;#x27;: &amp;#x27;invalid_date&amp;#x27;,\n                  &amp;#x27;expired_at&amp;#x27;: 1710720000,\n                  &amp;#x27;id&amp;#x27;: 1,\n                  &amp;#x27;name&amp;#x27;: &amp;#x27;Test Crime&amp;#x27;,\n                  &amp;#x27;planning_at&amp;#x27;: None,\n                  &amp;#x27;ready_at&amp;#x27;: &amp;#x27;2024-03-17T00:00:00&amp;#x27;,\n                  &amp;#x27;status&amp;#x27;: &amp;#x27;completed&amp;#x27;}},\n &amp;#x27;fetched_at&amp;#x27;: &amp;#x27;2024-03-17T00:00:00&amp;#x27;,\n &amp;#x27;timestamp&amp;#x27;: 1710633600}\n        df         =   server_timestamp created_at planning_at  ... reward_item_ids reward_item_quantities fetched_at\n0       2024-03-17 2024-03-17         NaT  ...                                        2024-03-17\n\n[1 rows x 19 columns]\n        self       = &amp;lt;test_crimes_pull.TestCrimesPull testMethod=test_timestamp_formats&amp;gt;\n&#34;}], &#34;unit/services/torncity/test_crimes_pull.py::TestCrimesPull::test_column_type_conversion&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Failed&#34;, &#34;testId&#34;: &#34;unit/services/torncity/test_crimes_pull.py::TestCrimesPull::test_column_type_conversion&#34;, &#34;duration&#34;: &#34;11 ms&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Failed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;unit/services/torncity/test_crimes_pull.py::TestCrimesPull::test_column_type_conversion&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;11 ms&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;tests/unit/services/torncity/test_crimes_pull.py:1121: in test_column_type_conversion\n    assert df[&amp;#x27;id&amp;#x27;].iloc[0] == 0\nE   assert np.int64(1) == 0\n        crimes_processor = &amp;lt;test_crimes_pull.TestCrimesEndpointProcessor object at 0x10fd84c90&amp;gt;\n        data       = {&amp;#x27;crimes&amp;#x27;: {&amp;#x27;1&amp;#x27;: {&amp;#x27;difficulty&amp;#x27;: None,\n                  &amp;#x27;id&amp;#x27;: None,\n                  &amp;#x27;name&amp;#x27;: None,\n                  &amp;#x27;participant_count&amp;#x27;: &amp;#x27;5&amp;#x27;,\n                  &amp;#x27;reward_item_count&amp;#x27;: None,\n                  &amp;#x27;reward_money&amp;#x27;: 1000.5,\n                  &amp;#x27;reward_respect&amp;#x27;: &amp;#x27;100&amp;#x27;,\n                  &amp;#x27;status&amp;#x27;: None}},\n &amp;#x27;fetched_at&amp;#x27;: &amp;#x27;2024-03-17T00:00:00&amp;#x27;,\n &amp;#x27;timestamp&amp;#x27;: 1710633600}\n        df         =   server_timestamp created_at planning_at  ... reward_item_ids reward_item_quantities fetched_at\n0       2024-03-17        NaT         NaT  ...                                        2024-03-17\n\n[1 rows x 19 columns]\n        self       = &amp;lt;test_crimes_pull.TestCrimesPull testMethod=test_column_type_conversion&amp;gt;\n&#34;}]}, &#34;renderCollapsed&#34;: [&#34;passed&#34;], &#34;initialSort&#34;: &#34;result&#34;, &#34;title&#34;: &#34;report.html&#34;}"></div>
+    <script>
+      (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
+const { getCollapsedCategory, setCollapsedIds } = require('./storage.js')
+
+class DataManager {
+    setManager(data) {
+        const collapsedCategories = [...getCollapsedCategory(data.renderCollapsed)]
+        const collapsedIds = []
+        const tests = Object.values(data.tests).flat().map((test, index) => {
+            const collapsed = collapsedCategories.includes(test.result.toLowerCase())
+            const id = `test_${index}`
+            if (collapsed) {
+                collapsedIds.push(id)
+            }
+            return {
+                ...test,
+                id,
+                collapsed,
+            }
+        })
+        const dataBlob = { ...data, tests }
+        this.data = { ...dataBlob }
+        this.renderData = { ...dataBlob }
+        setCollapsedIds(collapsedIds)
+    }
+
+    get allData() {
+        return { ...this.data }
+    }
+
+    resetRender() {
+        this.renderData = { ...this.data }
+    }
+
+    setRender(data) {
+        this.renderData.tests = [...data]
+    }
+
+    toggleCollapsedItem(id) {
+        this.renderData.tests = this.renderData.tests.map((test) =>
+            test.id === id ? { ...test, collapsed: !test.collapsed } : test,
+        )
+    }
+
+    set allCollapsed(collapsed) {
+        this.renderData = { ...this.renderData, tests: [...this.renderData.tests.map((test) => (
+            { ...test, collapsed }
+        ))] }
+    }
+
+    get testSubset() {
+        return [...this.renderData.tests]
+    }
+
+    get environment() {
+        return this.renderData.environment
+    }
+
+    get initialSort() {
+        return this.data.initialSort
+    }
+}
+
+module.exports = {
+    manager: new DataManager(),
+}
+
+},{"./storage.js":8}],2:[function(require,module,exports){
+const mediaViewer = require('./mediaviewer.js')
+const templateEnvRow = document.getElementById('template_environment_row')
+const templateResult = document.getElementById('template_results-table__tbody')
+
+function htmlToElements(html) {
+    const temp = document.createElement('template')
+    temp.innerHTML = html
+    return temp.content.childNodes
+}
+
+const find = (selector, elem) => {
+    if (!elem) {
+        elem = document
+    }
+    return elem.querySelector(selector)
+}
+
+const findAll = (selector, elem) => {
+    if (!elem) {
+        elem = document
+    }
+    return [...elem.querySelectorAll(selector)]
+}
+
+const dom = {
+    getStaticRow: (key, value) => {
+        const envRow = templateEnvRow.content.cloneNode(true)
+        const isObj = typeof value === 'object' && value !== null
+        const values = isObj ? Object.keys(value).map((k) => `${k}: ${value[k]}`) : null
+
+        const valuesElement = htmlToElements(
+            values ? `<ul>${values.map((val) => `<li>${val}</li>`).join('')}<ul>` : `<div>${value}</div>`)[0]
+        const td = findAll('td', envRow)
+        td[0].textContent = key
+        td[1].appendChild(valuesElement)
+
+        return envRow
+    },
+    getResultTBody: ({ testId, id, log, extras, resultsTableRow, tableHtml, result, collapsed }) => {
+        const resultBody = templateResult.content.cloneNode(true)
+        resultBody.querySelector('tbody').classList.add(result.toLowerCase())
+        resultBody.querySelector('tbody').id = testId
+        resultBody.querySelector('.collapsible').dataset.id = id
+
+        resultsTableRow.forEach((html) => {
+            const t = document.createElement('template')
+            t.innerHTML = html
+            resultBody.querySelector('.collapsible').appendChild(t.content)
+        })
+
+        if (log) {
+            // Wrap lines starting with "E" with span.error to color those lines red
+            const wrappedLog = log.replace(/^E.*$/gm, (match) => `<span class="error">${match}</span>`)
+            resultBody.querySelector('.log').innerHTML = wrappedLog
+        } else {
+            resultBody.querySelector('.log').remove()
+        }
+
+        if (collapsed) {
+            resultBody.querySelector('.collapsible > td')?.classList.add('collapsed')
+            resultBody.querySelector('.extras-row').classList.add('hidden')
+        } else {
+            resultBody.querySelector('.collapsible > td')?.classList.remove('collapsed')
+        }
+
+        const media = []
+        extras?.forEach(({ name, format_type, content }) => {
+            if (['image', 'video'].includes(format_type)) {
+                media.push({ path: content, name, format_type })
+            }
+
+            if (format_type === 'html') {
+                resultBody.querySelector('.extraHTML').insertAdjacentHTML('beforeend', `<div>${content}</div>`)
+            }
+        })
+        mediaViewer.setup(resultBody, media)
+
+        // Add custom html from the pytest_html_results_table_html hook
+        tableHtml?.forEach((item) => {
+            resultBody.querySelector('td[class="extra"]').insertAdjacentHTML('beforeend', item)
+        })
+
+        return resultBody
+    },
+}
+
+module.exports = {
+    dom,
+    htmlToElements,
+    find,
+    findAll,
+}
+
+},{"./mediaviewer.js":6}],3:[function(require,module,exports){
+const { manager } = require('./datamanager.js')
+const { doSort } = require('./sort.js')
+const storageModule = require('./storage.js')
+
+const getFilteredSubSet = (filter) =>
+    manager.allData.tests.filter(({ result }) => filter.includes(result.toLowerCase()))
+
+const doInitFilter = () => {
+    const currentFilter = storageModule.getVisible()
+    const filteredSubset = getFilteredSubSet(currentFilter)
+    manager.setRender(filteredSubset)
+}
+
+const doFilter = (type, show) => {
+    if (show) {
+        storageModule.showCategory(type)
+    } else {
+        storageModule.hideCategory(type)
+    }
+
+    const currentFilter = storageModule.getVisible()
+    const filteredSubset = getFilteredSubSet(currentFilter)
+    manager.setRender(filteredSubset)
+
+    const sortColumn = storageModule.getSort()
+    doSort(sortColumn, true)
+}
+
+module.exports = {
+    doFilter,
+    doInitFilter,
+}
+
+},{"./datamanager.js":1,"./sort.js":7,"./storage.js":8}],4:[function(require,module,exports){
+const { redraw, bindEvents, renderStatic } = require('./main.js')
+const { doInitFilter } = require('./filter.js')
+const { doInitSort } = require('./sort.js')
+const { manager } = require('./datamanager.js')
+const data = JSON.parse(document.getElementById('data-container').dataset.jsonblob)
+
+function init() {
+    manager.setManager(data)
+    doInitFilter()
+    doInitSort()
+    renderStatic()
+    redraw()
+    bindEvents()
+}
+
+init()
+
+},{"./datamanager.js":1,"./filter.js":3,"./main.js":5,"./sort.js":7}],5:[function(require,module,exports){
+const { dom, find, findAll } = require('./dom.js')
+const { manager } = require('./datamanager.js')
+const { doSort } = require('./sort.js')
+const { doFilter } = require('./filter.js')
+const {
+    getVisible,
+    getCollapsedIds,
+    setCollapsedIds,
+    getSort,
+    getSortDirection,
+    possibleFilters,
+} = require('./storage.js')
+
+const removeChildren = (node) => {
+    while (node.firstChild) {
+        node.removeChild(node.firstChild)
+    }
+}
+
+const renderStatic = () => {
+    const renderEnvironmentTable = () => {
+        const environment = manager.environment
+        const rows = Object.keys(environment).map((key) => dom.getStaticRow(key, environment[key]))
+        const table = document.getElementById('environment')
+        removeChildren(table)
+        rows.forEach((row) => table.appendChild(row))
+    }
+    renderEnvironmentTable()
+}
+
+const addItemToggleListener = (elem) => {
+    elem.addEventListener('click', ({ target }) => {
+        const id = target.parentElement.dataset.id
+        manager.toggleCollapsedItem(id)
+
+        const collapsedIds = getCollapsedIds()
+        if (collapsedIds.includes(id)) {
+            const updated = collapsedIds.filter((item) => item !== id)
+            setCollapsedIds(updated)
+        } else {
+            collapsedIds.push(id)
+            setCollapsedIds(collapsedIds)
+        }
+        redraw()
+    })
+}
+
+const renderContent = (tests) => {
+    const sortAttr = getSort(manager.initialSort)
+    const sortAsc = JSON.parse(getSortDirection())
+    const rows = tests.map(dom.getResultTBody)
+    const table = document.getElementById('results-table')
+    const tableHeader = document.getElementById('results-table-head')
+
+    const newTable = document.createElement('table')
+    newTable.id = 'results-table'
+
+    // remove all sorting classes and set the relevant
+    findAll('.sortable', tableHeader).forEach((elem) => elem.classList.remove('asc', 'desc'))
+    tableHeader.querySelector(`.sortable[data-column-type="${sortAttr}"]`)?.classList.add(sortAsc ? 'desc' : 'asc')
+    newTable.appendChild(tableHeader)
+
+    if (!rows.length) {
+        const emptyTable = document.getElementById('template_results-table__body--empty').content.cloneNode(true)
+        newTable.appendChild(emptyTable)
+    } else {
+        rows.forEach((row) => {
+            if (!!row) {
+                findAll('.collapsible td:not(.col-links', row).forEach(addItemToggleListener)
+                find('.logexpander', row).addEventListener('click',
+                    (evt) => evt.target.parentNode.classList.toggle('expanded'),
+                )
+                newTable.appendChild(row)
+            }
+        })
+    }
+
+    table.replaceWith(newTable)
+}
+
+const renderDerived = () => {
+    const currentFilter = getVisible()
+    possibleFilters.forEach((result) => {
+        const input = document.querySelector(`input[data-test-result="${result}"]`)
+        input.checked = currentFilter.includes(result)
+    })
+}
+
+const bindEvents = () => {
+    const filterColumn = (evt) => {
+        const { target: element } = evt
+        const { testResult } = element.dataset
+
+        doFilter(testResult, element.checked)
+        const collapsedIds = getCollapsedIds()
+        const updated = manager.renderData.tests.map((test) => {
+            return {
+                ...test,
+                collapsed: collapsedIds.includes(test.id),
+            }
+        })
+        manager.setRender(updated)
+        redraw()
+    }
+
+    const header = document.getElementById('environment-header')
+    header.addEventListener('click', () => {
+        const table = document.getElementById('environment')
+        table.classList.toggle('hidden')
+        header.classList.toggle('collapsed')
+    })
+
+    findAll('input[name="filter_checkbox"]').forEach((elem) => {
+        elem.addEventListener('click', filterColumn)
+    })
+
+    findAll('.sortable').forEach((elem) => {
+        elem.addEventListener('click', (evt) => {
+            const { target: element } = evt
+            const { columnType } = element.dataset
+            doSort(columnType)
+            redraw()
+        })
+    })
+
+    document.getElementById('show_all_details').addEventListener('click', () => {
+        manager.allCollapsed = false
+        setCollapsedIds([])
+        redraw()
+    })
+    document.getElementById('hide_all_details').addEventListener('click', () => {
+        manager.allCollapsed = true
+        const allIds = manager.renderData.tests.map((test) => test.id)
+        setCollapsedIds(allIds)
+        redraw()
+    })
+}
+
+const redraw = () => {
+    const { testSubset } = manager
+
+    renderContent(testSubset)
+    renderDerived()
+}
+
+module.exports = {
+    redraw,
+    bindEvents,
+    renderStatic,
+}
+
+},{"./datamanager.js":1,"./dom.js":2,"./filter.js":3,"./sort.js":7,"./storage.js":8}],6:[function(require,module,exports){
+class MediaViewer {
+    constructor(assets) {
+        this.assets = assets
+        this.index = 0
+    }
+
+    nextActive() {
+        this.index = this.index === this.assets.length - 1 ? 0 : this.index + 1
+        return [this.activeFile, this.index]
+    }
+
+    prevActive() {
+        this.index = this.index === 0 ? this.assets.length - 1 : this.index -1
+        return [this.activeFile, this.index]
+    }
+
+    get currentIndex() {
+        return this.index
+    }
+
+    get activeFile() {
+        return this.assets[this.index]
+    }
+}
+
+
+const setup = (resultBody, assets) => {
+    if (!assets.length) {
+        resultBody.querySelector('.media').classList.add('hidden')
+        return
+    }
+
+    const mediaViewer = new MediaViewer(assets)
+    const container = resultBody.querySelector('.media-container')
+    const leftArrow = resultBody.querySelector('.media-container__nav--left')
+    const rightArrow = resultBody.querySelector('.media-container__nav--right')
+    const mediaName = resultBody.querySelector('.media__name')
+    const counter = resultBody.querySelector('.media__counter')
+    const imageEl = resultBody.querySelector('img')
+    const sourceEl = resultBody.querySelector('source')
+    const videoEl = resultBody.querySelector('video')
+
+    const setImg = (media, index) => {
+        if (media?.format_type === 'image') {
+            imageEl.src = media.path
+
+            imageEl.classList.remove('hidden')
+            videoEl.classList.add('hidden')
+        } else if (media?.format_type === 'video') {
+            sourceEl.src = media.path
+
+            videoEl.classList.remove('hidden')
+            imageEl.classList.add('hidden')
+        }
+
+        mediaName.innerText = media?.name
+        counter.innerText = `${index + 1} / ${assets.length}`
+    }
+    setImg(mediaViewer.activeFile, mediaViewer.currentIndex)
+
+    const moveLeft = () => {
+        const [media, index] = mediaViewer.prevActive()
+        setImg(media, index)
+    }
+    const doRight = () => {
+        const [media, index] = mediaViewer.nextActive()
+        setImg(media, index)
+    }
+    const openImg = () => {
+        window.open(mediaViewer.activeFile.path, '_blank')
+    }
+    if (assets.length === 1) {
+        container.classList.add('media-container--fullscreen')
+    } else {
+        leftArrow.addEventListener('click', moveLeft)
+        rightArrow.addEventListener('click', doRight)
+    }
+    imageEl.addEventListener('click', openImg)
+}
+
+module.exports = {
+    setup,
+}
+
+},{}],7:[function(require,module,exports){
+const { manager } = require('./datamanager.js')
+const storageModule = require('./storage.js')
+
+const genericSort = (list, key, ascending, customOrder) => {
+    let sorted
+    if (customOrder) {
+        sorted = list.sort((a, b) => {
+            const aValue = a.result.toLowerCase()
+            const bValue = b.result.toLowerCase()
+
+            const aIndex = customOrder.findIndex((item) => item.toLowerCase() === aValue)
+            const bIndex = customOrder.findIndex((item) => item.toLowerCase() === bValue)
+
+            // Compare the indices to determine the sort order
+            return aIndex - bIndex
+        })
+    } else {
+        sorted = list.sort((a, b) => a[key] === b[key] ? 0 : a[key] > b[key] ? 1 : -1)
+    }
+
+    if (ascending) {
+        sorted.reverse()
+    }
+    return sorted
+}
+
+const durationSort = (list, ascending) => {
+    const parseDuration = (duration) => {
+        if (duration.includes(':')) {
+            // If it's in the format "HH:mm:ss"
+            const [hours, minutes, seconds] = duration.split(':').map(Number)
+            return (hours * 3600 + minutes * 60 + seconds) * 1000
+        } else {
+            // If it's in the format "nnn ms"
+            return parseInt(duration)
+        }
+    }
+    const sorted = list.sort((a, b) => parseDuration(a['duration']) - parseDuration(b['duration']))
+    if (ascending) {
+        sorted.reverse()
+    }
+    return sorted
+}
+
+const doInitSort = () => {
+    const type = storageModule.getSort(manager.initialSort)
+    const ascending = storageModule.getSortDirection()
+    const list = manager.testSubset
+    const initialOrder = ['Error', 'Failed', 'Rerun', 'XFailed', 'XPassed', 'Skipped', 'Passed']
+
+    storageModule.setSort(type)
+    storageModule.setSortDirection(ascending)
+
+    if (type?.toLowerCase() === 'original') {
+        manager.setRender(list)
+    } else {
+        let sortedList
+        switch (type) {
+        case 'duration':
+            sortedList = durationSort(list, ascending)
+            break
+        case 'result':
+            sortedList = genericSort(list, type, ascending, initialOrder)
+            break
+        default:
+            sortedList = genericSort(list, type, ascending)
+            break
+        }
+        manager.setRender(sortedList)
+    }
+}
+
+const doSort = (type, skipDirection) => {
+    const newSortType = storageModule.getSort(manager.initialSort) !== type
+    const currentAsc = storageModule.getSortDirection()
+    let ascending
+    if (skipDirection) {
+        ascending = currentAsc
+    } else {
+        ascending = newSortType ? false : !currentAsc
+    }
+    storageModule.setSort(type)
+    storageModule.setSortDirection(ascending)
+
+    const list = manager.testSubset
+    const sortedList = type === 'duration' ? durationSort(list, ascending) : genericSort(list, type, ascending)
+    manager.setRender(sortedList)
+}
+
+module.exports = {
+    doInitSort,
+    doSort,
+}
+
+},{"./datamanager.js":1,"./storage.js":8}],8:[function(require,module,exports){
+const possibleFilters = [
+    'passed',
+    'skipped',
+    'failed',
+    'error',
+    'xfailed',
+    'xpassed',
+    'rerun',
+]
+
+const getVisible = () => {
+    const url = new URL(window.location.href)
+    const settings = new URLSearchParams(url.search).get('visible')
+    const lower = (item) => {
+        const lowerItem = item.toLowerCase()
+        if (possibleFilters.includes(lowerItem)) {
+            return lowerItem
+        }
+        return null
+    }
+    return settings === null ?
+        possibleFilters :
+        [...new Set(settings?.split(',').map(lower).filter((item) => item))]
+}
+
+const hideCategory = (categoryToHide) => {
+    const url = new URL(window.location.href)
+    const visibleParams = new URLSearchParams(url.search).get('visible')
+    const currentVisible = visibleParams ? visibleParams.split(',') : [...possibleFilters]
+    const settings = [...new Set(currentVisible)].filter((f) => f !== categoryToHide).join(',')
+
+    url.searchParams.set('visible', settings)
+    window.history.pushState({}, null, unescape(url.href))
+}
+
+const showCategory = (categoryToShow) => {
+    if (typeof window === 'undefined') {
+        return
+    }
+    const url = new URL(window.location.href)
+    const currentVisible = new URLSearchParams(url.search).get('visible')?.split(',').filter(Boolean) ||
+        [...possibleFilters]
+    const settings = [...new Set([categoryToShow, ...currentVisible])]
+    const noFilter = possibleFilters.length === settings.length || !settings.length
+
+    noFilter ? url.searchParams.delete('visible') : url.searchParams.set('visible', settings.join(','))
+    window.history.pushState({}, null, unescape(url.href))
+}
+
+const getSort = (initialSort) => {
+    const url = new URL(window.location.href)
+    let sort = new URLSearchParams(url.search).get('sort')
+    if (!sort) {
+        sort = initialSort || 'result'
+    }
+    return sort
+}
+
+const setSort = (type) => {
+    const url = new URL(window.location.href)
+    url.searchParams.set('sort', type)
+    window.history.pushState({}, null, unescape(url.href))
+}
+
+const getCollapsedCategory = (renderCollapsed) => {
+    let categories
+    if (typeof window !== 'undefined') {
+        const url = new URL(window.location.href)
+        const collapsedItems = new URLSearchParams(url.search).get('collapsed')
+        switch (true) {
+        case !renderCollapsed && collapsedItems === null:
+            categories = ['passed']
+            break
+        case collapsedItems?.length === 0 || /^["']{2}$/.test(collapsedItems):
+            categories = []
+            break
+        case /^all$/.test(collapsedItems) || collapsedItems === null && /^all$/.test(renderCollapsed):
+            categories = [...possibleFilters]
+            break
+        default:
+            categories = collapsedItems?.split(',').map((item) => item.toLowerCase()) || renderCollapsed
+            break
+        }
+    } else {
+        categories = []
+    }
+    return categories
+}
+
+const getSortDirection = () => JSON.parse(sessionStorage.getItem('sortAsc')) || false
+const setSortDirection = (ascending) => sessionStorage.setItem('sortAsc', ascending)
+
+const getCollapsedIds = () => JSON.parse(sessionStorage.getItem('collapsedIds')) || []
+const setCollapsedIds = (list) => sessionStorage.setItem('collapsedIds', JSON.stringify(list))
+
+module.exports = {
+    getVisible,
+    hideCategory,
+    showCategory,
+    getCollapsedIds,
+    setCollapsedIds,
+    getSort,
+    setSort,
+    getSortDirection,
+    setSortDirection,
+    getCollapsedCategory,
+    possibleFilters,
+}
+
+},{}]},{},[4]);
+    </script>
+  </footer>
+</html>

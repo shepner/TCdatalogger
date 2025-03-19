@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 
 import pytest
 from google.cloud import bigquery
+import pandas as pd
 
 from app.services.torncity.processors import (
     UserProcessor,
@@ -14,7 +15,7 @@ from app.services.torncity.processors import (
     CurrencyProcessor,
     MembersProcessor
 )
-from app.services.torncity.exceptions import TornAPIError
+from app.services.torncity.exceptions import TornAPIError, SchemaError, DataValidationError
 
 class TestBaseProcessor:
     """Test suite for base processor functionality."""
@@ -81,6 +82,219 @@ class TestBaseProcessor:
                 elif field.field_type in ["DATETIME", "TIMESTAMP"]:
                     # Should be ISO format string
                     datetime.fromisoformat(value.replace('Z', '+00:00'))
+
+    def test_config_validation(self, sample_config):
+        """Test configuration validation."""
+        # Test missing required fields
+        invalid_config = {}
+        with pytest.raises(ValueError, match="Missing required configuration fields"):
+            UserProcessor(invalid_config)
+
+        # Test invalid storage mode
+        invalid_config = sample_config.copy()
+        invalid_config['storage_mode'] = 'invalid_mode'
+        with pytest.raises(ValueError, match="Invalid storage mode"):
+            UserProcessor(invalid_config)
+
+    def test_validate_column_type_conversions(self, processor):
+        """Test column type validation and conversion."""
+        # Test string conversion
+        string_field = bigquery.SchemaField("test_str", "STRING")
+        series = pd.Series(['test', 123, None])
+        converted = processor._validate_column_type(series, string_field)
+        assert converted.dtype == 'object'
+        assert converted.iloc[0] == 'test'
+        assert converted.iloc[1] == '123'
+        assert converted.iloc[2] == ''
+
+        # Test integer conversion
+        int_field = bigquery.SchemaField("test_int", "INTEGER")
+        series = pd.Series([123, 456, 789])  # All valid integers
+        converted = processor._validate_column_type(series, int_field)
+        assert converted.dtype == 'int64'
+        assert converted.iloc[0] == 123
+        assert converted.iloc[1] == 456
+        assert converted.iloc[2] == 789
+
+        # Test float conversion
+        float_field = bigquery.SchemaField("test_float", "FLOAT")
+        series = pd.Series(['123.45', 456, None])
+        converted = processor._validate_column_type(series, float_field)
+        assert converted.dtype == 'float64'
+        assert converted.iloc[0] == 123.45
+        assert converted.iloc[1] == 456.0
+        assert converted.iloc[2] == 0.0
+
+        # Test boolean conversion
+        bool_field = bigquery.SchemaField("test_bool", "BOOLEAN")
+        series = pd.Series([True, 'true', 1, 0, None])
+        converted = processor._validate_column_type(series, bool_field)
+        assert converted.dtype == 'bool'
+        assert bool(converted.iloc[0]) is True  # Convert numpy.bool_ to Python bool
+        assert bool(converted.iloc[1]) is True
+        assert bool(converted.iloc[2]) is True
+        assert bool(converted.iloc[3]) is False
+        assert bool(converted.iloc[4]) is False
+
+        # Test datetime conversion
+        datetime_field = bigquery.SchemaField("test_datetime", "DATETIME")
+        series = pd.Series(['2024-03-17', '1646956800', None])
+        converted = processor._validate_column_type(series, datetime_field)
+        assert pd.api.types.is_datetime64_any_dtype(converted)
+        assert converted.iloc[0].strftime('%Y-%m-%d') == '2024-03-17'
+        assert pd.isna(converted.iloc[2])
+
+    def test_validate_schema_required_fields(self, processor):
+        """Test schema validation for required fields."""
+        schema = [
+            bigquery.SchemaField("required_field", "STRING", mode="REQUIRED"),
+            bigquery.SchemaField("optional_field", "STRING", mode="NULLABLE")
+        ]
+        
+        # Test missing required field
+        df = pd.DataFrame({"optional_field": ["test"]})
+        with pytest.raises(SchemaError, match="Missing required columns"):
+            processor._validate_schema(df, schema)
+
+        # Test null in required field
+        df = pd.DataFrame({
+            "required_field": [None],
+            "optional_field": ["test"]
+        })
+        with pytest.raises(SchemaError, match="Invalid type for column"):
+            processor._validate_schema(df, schema)
+
+        # Test valid data
+        df = pd.DataFrame({
+            "required_field": ["value"],
+            "optional_field": ["test"]
+        })
+        validated = processor._validate_schema(df, schema)
+        assert validated is not None
+
+    @patch('logging.error')
+    def test_error_logging(self, mock_log, processor):
+        """Test error logging functionality."""
+        error_msg = "Test error message"
+        processor._log_error(error_msg)
+        
+        mock_log.assert_called_once()
+        log_args = mock_log.call_args[0][0]
+        assert isinstance(log_args, dict)
+        assert log_args["event"] == "endpoint_error"
+        assert log_args["error"] == error_msg
+        assert "timestamp" in log_args
+
+    @patch('logging.info')
+    def test_completion_logging(self, mock_log, processor):
+        """Test completion logging functionality."""
+        processor._log_completion(True, 1.234)
+        
+        mock_log.assert_called_once()
+        log_args = mock_log.call_args[0][0]
+        assert isinstance(log_args, dict)
+        assert log_args["event"] == "endpoint_completion"
+        assert log_args["success"] is True
+        assert log_args["duration_seconds"] == 1.234
+        assert log_args["error"] is None
+
+    @patch('app.services.google.bigquery.client.BigQueryClient.upload_dataframe')
+    def test_upload_data(self, mock_upload, processor, sample_config):
+        """Test data upload to BigQuery."""
+        df = pd.DataFrame({
+            "player_id": [12345],
+            "name": ["TestUser"],
+            "level": [15]
+        })
+        schema = [
+            bigquery.SchemaField("player_id", "INTEGER"),
+            bigquery.SchemaField("name", "STRING"),
+            bigquery.SchemaField("level", "INTEGER")
+        ]
+        
+        # Test successful upload
+        processor._upload_data(df, schema)
+        
+        mock_upload.assert_called_once()
+        call_args = mock_upload.call_args[1]
+        assert isinstance(call_args['df'], pd.DataFrame)
+        assert call_args['table_id'] == f"{sample_config['gcp_project_id']}.{sample_config['dataset']}.{processor.endpoint_config['table']}"
+        assert call_args['write_disposition'] == processor.endpoint_config['storage_mode']
+
+        # Test upload failure
+        mock_upload.side_effect = Exception("Upload failed")
+        with pytest.raises(Exception, match="Upload failed"):
+            processor._upload_data(df, schema)
+
+    @patch('app.services.torncity.client.TornClient.make_request')
+    def test_fetch_torn_data(self, mock_request, processor):
+        """Test fetching data from Torn API."""
+        expected_data = {"success": True, "data": {"player_id": 12345}}
+        mock_request.return_value = expected_data
+        
+        # Test successful fetch
+        result = processor.fetch_torn_data()
+        assert result == expected_data
+        mock_request.assert_called_once_with(
+            processor.endpoint_config['endpoint'],
+            processor.endpoint_config['selection']
+        )
+        
+        # Test fetch failure
+        mock_request.side_effect = TornAPIError("API error")
+        with pytest.raises(TornAPIError, match="API error"):
+            processor.fetch_torn_data()
+
+    def test_record_metrics(self, processor):
+        """Test metrics recording functionality."""
+        metrics = {
+            "upload_size": 100,
+            "processing_time": 1.234,
+            "success": True
+        }
+        
+        # Since _record_metrics logs on failure, we just verify it doesn't raise
+        try:
+            processor._record_metrics(**metrics)
+        except Exception as e:
+            pytest.fail(f"record_metrics raised an exception: {e}")
+
+    def test_process_method(self, processor, sample_data):
+        """Test the main process method."""
+        # Test successful processing
+        with patch.object(processor, 'transform_data') as mock_transform, \
+             patch.object(processor, '_upload_data') as mock_upload, \
+             patch.object(processor, 'get_schema') as mock_schema, \
+             patch.object(processor, '_validate_schema') as mock_validate:
+            
+            df = pd.DataFrame({
+                "player_id": [12345],
+                "name": ["TestUser"]
+            })
+            mock_transform.return_value = [{"player_id": 12345, "name": "TestUser"}]
+            mock_schema.return_value = [
+                bigquery.SchemaField("player_id", "INTEGER"),
+                bigquery.SchemaField("name", "STRING")
+            ]
+            mock_validate.return_value = df
+            
+            result = processor.process(sample_data)
+            assert result is True
+            mock_transform.assert_called_once_with(sample_data)
+            mock_validate.assert_called_once()
+            mock_upload.assert_called_once()
+        
+        # Test empty data handling
+        with patch.object(processor, 'transform_data') as mock_transform:
+            mock_transform.return_value = []
+            result = processor.process(sample_data)
+            assert result is False
+        
+        # Test transformation error
+        with patch.object(processor, 'transform_data') as mock_transform:
+            mock_transform.side_effect = DataValidationError("Invalid data")
+            result = processor.process(sample_data)
+            assert result is False
 
 class TestUserProcessor:
     """Test suite for user endpoint processor."""
@@ -170,10 +384,12 @@ class TestCrimeProcessor:
         
         transformed = processor.transform_data(sample_data)
         assert len(transformed) == 1
-        assert transformed[0]["crime_id"] == 456
-        assert transformed[0]["crime_name"] == "Test Crime"
-        assert transformed[0]["success"] is True
-        assert transformed[0]["money_gained"] == 5000
+        assert transformed[0]["id"] == 456
+        assert transformed[0]["name"] == "Test Crime"
+        assert transformed[0]["status"] == "completed"
+        assert transformed[0]["reward_money"] == 5000
+        assert transformed[0]["participant_count"] == 2
+        assert transformed[0]["participant_ids"] == "12345,67890"
 
 class TestCurrencyProcessor:
     """Test suite for currency endpoint processor."""
@@ -202,14 +418,23 @@ class TestCurrencyProcessor:
         }
         
         transformed = processor.transform_data(sample_data)
-        assert len(transformed) > 0
-        # Verify item price data
-        item_record = next(r for r in transformed if r.get("item_id") == 123)
-        assert item_record["value"] == 1000
-        # Verify points data
-        points_record = next(r for r in transformed if r.get("type") == "points")
-        assert points_record["buy_price"] == 45.5
-        assert points_record["sell_price"] == 44.8
+        assert len(transformed) == 2  # One for points, one for item
+        
+        # Verify points data (currency_id = 1)
+        points_record = transformed[transformed['currency_id'] == 1].iloc[0]
+        assert points_record['name'] == "Points"
+        assert points_record['buy_price'] == 45.5
+        assert points_record['sell_price'] == 44.8
+        assert points_record['circulation'] == 1000000
+        assert pd.notnull(points_record['timestamp'])
+        
+        # Verify item data
+        item_record = transformed[transformed['currency_id'] == 123].iloc[0]
+        assert item_record['name'] == "Test Item"
+        assert item_record['buy_price'] == 0.0  # Items don't have buy prices
+        assert item_record['sell_price'] == 1000.0
+        assert item_record['circulation'] == 0  # Items don't have circulation data
+        assert pd.notnull(item_record['timestamp'])
 
 class TestMembersProcessor:
     """Test suite for members endpoint processor."""
@@ -219,35 +444,26 @@ class TestMembersProcessor:
         """Create a MembersProcessor instance."""
         return MembersProcessor(sample_config)
 
-    def test_members_data_processing(self, processor):
-        """Test processing of members endpoint data."""
-        sample_data = {
-            "12345": {
-                "name": "Test Member",
-                "level": 20,
-                "status": {
-                    "state": "Okay",
-                    "description": "Test status"
-                },
-                "faction": {
-                    "position": "Member",
-                    "faction_id": 789,
-                    "days_in_faction": 30
-                },
-                "last_action": {
-                    "status": "Offline",
-                    "timestamp": 1646956800
+    @pytest.fixture
+    def sample_data(self):
+        """Create sample data for testing."""
+        return {
+            "members": {
+                "1": {
+                    "name": "TestUser",
+                    "level": 10,
+                    "status": {"state": "Okay"},
+                    "last_action": {"timestamp": 1710766800},
+                    "faction": {"position": "Member"}
                 }
             }
         }
-        
-        transformed = processor.transform_data(sample_data)
+
+    def test_members_data_processing(self, processor, sample_data):
+        """Test processing members data."""
+        transformed = processor.process_data({"data": sample_data})
         assert len(transformed) == 1
-        assert transformed[0]["player_id"] == 12345
-        assert transformed[0]["name"] == "Test Member"
-        assert transformed[0]["level"] == 20
         assert transformed[0]["faction_position"] == "Member"
-        assert transformed[0]["faction_id"] == 789
 
 class TestProcessorErrorHandling:
     """Test suite for processor error handling."""

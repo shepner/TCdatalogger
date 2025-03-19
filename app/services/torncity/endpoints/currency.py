@@ -3,24 +3,155 @@
 import logging
 import re
 from datetime import datetime
-from typing import Dict
+from typing import Dict, List, Any
 
 import pandas as pd
+from google.cloud import bigquery
 
-from app.services.torncity.base import BaseEndpointProcessor
+from app.services.torncity.base import BaseEndpointProcessor, DataValidationError
 
 class CurrencyEndpointProcessor(BaseEndpointProcessor):
-    """Process data from the /v2/faction/currency endpoint.
-    
-    This processor handles faction currency data including:
-    - Points balance
-    - Money balance
-    - Transaction history
-    - Balance changes
-    """
-    
-    def transform_data(self, data: Dict) -> pd.DataFrame:
+    """Processor for Torn City currency endpoint."""
+
+    def __init__(self, config: Dict[str, Any], endpoint_config: Dict[str, Any] = None):
+        """Initialize the currency processor.
+
+        Args:
+            config: Configuration dictionary containing API and storage settings.
+            endpoint_config: Optional endpoint-specific configuration.
+        """
+        super().__init__(config)
+        
+        # Default endpoint config for base currency endpoint
+        default_config = {
+            'name': 'currency',
+            'url': 'https://api.torn.com/torn/{API_KEY}?selections=currency',
+            'table': f"{config.get('dataset', 'torn')}.currency",
+            'api_key': config.get('tc_api_key', 'default'),
+            'storage_mode': config.get('storage_mode', 'append'),
+            'frequency': 'PT1H'
+        }
+        
+        # Update with endpoint-specific config if provided
+        if endpoint_config:
+            default_config.update(endpoint_config)
+        
+        self.endpoint_config.update(default_config)
+        
+        # Determine if this is a faction currency endpoint
+        self.is_faction_endpoint = 'faction' in self.endpoint_config.get('endpoint', '')
+
+    def get_schema(self) -> List[bigquery.SchemaField]:
+        """Get the BigQuery schema for currency data.
+
+        Returns:
+            List of BigQuery SchemaField objects defining the table schema.
+        """
+        if self.is_faction_endpoint:
+            return [
+                bigquery.SchemaField('server_timestamp', 'TIMESTAMP', mode='REQUIRED'),
+                bigquery.SchemaField('faction_id', 'INTEGER', mode='REQUIRED'),
+                bigquery.SchemaField('points_balance', 'INTEGER', mode='REQUIRED'),
+                bigquery.SchemaField('money_balance', 'INTEGER', mode='REQUIRED'),
+                bigquery.SchemaField('points_accumulated', 'INTEGER', mode='NULLABLE'),
+                bigquery.SchemaField('points_total', 'INTEGER', mode='NULLABLE'),
+                bigquery.SchemaField('money_accumulated', 'INTEGER', mode='NULLABLE'),
+                bigquery.SchemaField('money_total', 'INTEGER', mode='NULLABLE'),
+                bigquery.SchemaField('fetched_at', 'TIMESTAMP', mode='NULLABLE')
+            ]
+        else:
+            return [
+                bigquery.SchemaField('server_timestamp', 'TIMESTAMP', mode='REQUIRED'),
+                bigquery.SchemaField('currency_id', 'INTEGER', mode='REQUIRED'),
+                bigquery.SchemaField('name', 'STRING', mode='REQUIRED'),
+                bigquery.SchemaField('buy_price', 'FLOAT', mode='NULLABLE'),
+                bigquery.SchemaField('sell_price', 'FLOAT', mode='NULLABLE'),
+                bigquery.SchemaField('circulation', 'INTEGER', mode='NULLABLE')
+            ]
+
+    def transform_data(self, data: Dict[str, Any]) -> pd.DataFrame:
         """Transform currency data into a normalized DataFrame.
+        
+        Args:
+            data: Raw API response containing currency data
+            
+        Returns:
+            pd.DataFrame: Normalized currency data
+        """
+        try:
+            if self.is_faction_endpoint:
+                return self._transform_faction_currency(data)
+            else:
+                return self._transform_base_currency(data)
+                
+        except Exception as e:
+            self._log_error(f"Error transforming currency data: {str(e)}")
+            return pd.DataFrame()
+
+    def _transform_base_currency(self, data: Dict[str, Any]) -> pd.DataFrame:
+        """Transform base currency endpoint data.
+        
+        Args:
+            data: Raw API response containing currency data
+            
+        Returns:
+            pd.DataFrame: Normalized currency data
+        """
+        if not data or not isinstance(data, dict):
+            self._log_error("Invalid or empty currency data")
+            return pd.DataFrame()
+
+        records = []
+        
+        # Process points data if available
+        points_data = data.get('points', {})
+        if points_data:
+            try:
+                records.append({
+                    'currency_id': 1,  # Points are always ID 1
+                    'name': 'Points',
+                    'buy_price': float(points_data.get('buy', 0.0)),
+                    'sell_price': float(points_data.get('sell', 0.0)),
+                    'circulation': int(points_data.get('total', 0)),
+                    'timestamp': self._format_timestamp(points_data.get('timestamp')) or self._get_current_timestamp()
+                })
+            except (ValueError, TypeError) as e:
+                self._log_error(f"Invalid points data: {str(e)}")
+
+        # Process items data if available
+        items_data = data.get('items', {})
+        for item_id, item_data in items_data.items():
+            try:
+                if not item_data.get('name'):
+                    continue
+
+                records.append({
+                    'currency_id': int(item_id),
+                    'name': str(item_data.get('name', '')),
+                    'buy_price': 0.0,  # Items don't have buy prices
+                    'sell_price': float(item_data.get('value', 0.0)),
+                    'circulation': 0,  # Items don't have circulation data
+                    'timestamp': self._format_timestamp(item_data.get('timestamp')) or self._get_current_timestamp()
+                })
+            except (ValueError, TypeError) as e:
+                self._log_error(f"Invalid item data for {item_id}: {str(e)}")
+
+        if not records:
+            self._log_error("No valid currency data found in API response")
+            return pd.DataFrame()
+
+        df = pd.DataFrame(records)
+        
+        # Round numeric values to 2 decimal places
+        numeric_cols = ['buy_price', 'sell_price']
+        for col in numeric_cols:
+            if col in df.columns:
+                df[col] = df[col].round(2)
+        
+        return df
+
+    def _transform_faction_currency(self, data: Dict[str, Any]) -> pd.DataFrame:
+        """Transform faction currency endpoint data.
         
         Args:
             data: Raw API response containing currency data
@@ -37,7 +168,7 @@ class CurrencyEndpointProcessor(BaseEndpointProcessor):
             
             # Extract faction ID from endpoint name
             faction_id = None
-            match = re.search(r'v2_faction_(\d+)_currency', self.name)
+            match = re.search(r'v2_faction_(\d+)_currency', self.endpoint_config.get('name', ''))
             if match:
                 faction_id = int(match.group(1))
             
@@ -81,4 +212,67 @@ class CurrencyEndpointProcessor(BaseEndpointProcessor):
             
         except Exception as e:
             self._log_error(f"Error transforming currency data: {str(e)}")
-            return pd.DataFrame() 
+            return pd.DataFrame()
+
+    def convert_timestamps(self, df: pd.DataFrame, exclude_cols: list[str] = None) -> pd.DataFrame:
+        """Convert timestamp columns to datetime.
+        
+        Args:
+            df: DataFrame to process
+            exclude_cols: Columns to exclude from conversion
+            
+        Returns:
+            pd.DataFrame: DataFrame with converted timestamps
+        """
+        if exclude_cols is None:
+            exclude_cols = []
+            
+        timestamp_cols = [
+            col for col in df.columns 
+            if "timestamp" in col.lower() and col not in exclude_cols
+        ]
+        
+        for col in timestamp_cols:
+            df[col] = pd.to_datetime(df[col], unit='s')
+            
+        if "fetched_at" in df.columns and "fetched_at" not in exclude_cols:
+            df["fetched_at"] = pd.to_datetime(df["fetched_at"])
+            
+        return df
+
+    def convert_numerics(self, df: pd.DataFrame, exclude_cols: list[str] = None) -> pd.DataFrame:
+        """Convert numeric columns to appropriate types.
+        
+        Args:
+            df: DataFrame to process
+            exclude_cols: Columns to exclude from conversion
+            
+        Returns:
+            pd.DataFrame: DataFrame with converted numeric types
+        """
+        if exclude_cols is None:
+            exclude_cols = []
+            
+        numeric_cols = [
+            col for col in df.columns 
+            if any(t in col.lower() for t in ["id", "balance", "accumulated", "total"])
+            and col not in exclude_cols
+        ]
+        
+        for col in numeric_cols:
+            df[col] = pd.to_numeric(df[col], errors='coerce')
+            
+        return df
+
+    def process_data(self, data: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Process the currency data.
+        
+        Args:
+            data: Raw data from the API response
+            
+        Returns:
+            List[Dict[str, Any]]: List of processed data records
+        """
+        transformed_data = self.transform_data(data)
+        self.validate_schema(transformed_data)
+        return transformed_data 

@@ -5,15 +5,15 @@ from unittest.mock import Mock, patch
 import pytest
 from google.cloud import bigquery
 
-from app.services.torncity.endpoints.items import ItemsProcessor
+from app.services.torncity.endpoints.items import ItemsEndpointProcessor
 
 class TestItemsProcessor:
-    """Test suite for ItemsProcessor."""
+    """Test suite for ItemsEndpointProcessor."""
 
     @pytest.fixture
     def processor(self, sample_config, mock_api_keys):
-        """Create an ItemsProcessor instance for testing."""
-        return ItemsProcessor(sample_config)
+        """Create a ItemsEndpointProcessor instance for testing."""
+        return ItemsEndpointProcessor(sample_config)
 
     @pytest.fixture
     def sample_items_data(self):

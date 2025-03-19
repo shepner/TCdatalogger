@@ -176,6 +176,55 @@ class EnvSetup:
         
         return subprocess.run(cmd, env=env, **kwargs)
 
+    def cleanup_pycache(self) -> None:
+        """Clean up __pycache__ directories."""
+        logger.info("Cleaning up __pycache__ directories...")
+        try:
+            # Find all __pycache__ directories
+            pycache_dirs = list(self.base_dir.rglob("__pycache__"))
+            
+            # Remove each directory
+            for cache_dir in pycache_dirs:
+                if cache_dir.is_dir():
+                    shutil.rmtree(cache_dir)
+                    logger.info("Removed: %s", cache_dir)
+            
+            # Also remove any .pyc files
+            pyc_files = list(self.base_dir.rglob("*.pyc"))
+            for pyc_file in pyc_files:
+                pyc_file.unlink()
+                logger.info("Removed: %s", pyc_file)
+                
+        except Exception as e:
+            logger.warning("Error cleaning up __pycache__: %s", str(e))
+
+    def setup(self) -> None:
+        """Run complete setup process."""
+        try:
+            # Clean up __pycache__ directories first
+            self.cleanup_pycache()
+            
+            # Make script executable
+            self.make_self_executable()
+            
+            # Ensure directory structure
+            self.ensure_directory_structure()
+            
+            # Ensure requirements file
+            self.ensure_requirements_file()
+            
+            # Create and configure virtual environment
+            self.create_venv()
+            
+            # Install dependencies
+            self.install_dependencies()
+            
+            logger.info("Setup completed successfully")
+            
+        except Exception as e:
+            logger.error("Setup failed: %s", str(e))
+            raise
+
     def run_tests(self, test_path: Optional[str] = None) -> None:
         """Run tests using pytest."""
         if test_path is None:
@@ -183,6 +232,9 @@ class EnvSetup:
         
         logger.info("Running tests from %s", test_path)
         try:
+            # Clean up __pycache__ before running tests
+            self.cleanup_pycache()
+            
             # Get the pytest executable from the virtual environment
             pytest_path = self.venv_dir / "bin" / "pytest"
             if sys.platform == "win32":
@@ -231,30 +283,6 @@ class EnvSetup:
         sys.path.insert(0, venv_path)
         
         logger.info("Virtual environment activated: %s", venv_path)
-
-    def setup(self) -> None:
-        """Run complete setup process."""
-        try:
-            # Make script executable
-            self.make_self_executable()
-            
-            # Ensure directory structure
-            self.ensure_directory_structure()
-            
-            # Ensure requirements file
-            self.ensure_requirements_file()
-            
-            # Create and configure virtual environment
-            self.create_venv()
-            
-            # Install dependencies
-            self.install_dependencies()
-            
-            logger.info("Setup completed successfully")
-            
-        except Exception as e:
-            logger.error("Setup failed: %s", str(e))
-            raise
 
 def main():
     """Main setup function."""

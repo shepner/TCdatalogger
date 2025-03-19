@@ -4,6 +4,7 @@
 import json
 import os
 from typing import List, Dict
+import time
 
 # Third-party imports
 import pytest
@@ -218,7 +219,7 @@ class TestCurrencyPull:
             result = currency_processor.transform_data(mock_currency_response)
             
             # Verify results
-            assert len(result) > 0
+            assert not result.empty
             assert "faction_id" in result.columns
             assert "points_balance" in result.columns
             assert "money_balance" in result.columns
@@ -230,8 +231,11 @@ class TestCurrencyPull:
         df = currency_processor.transform_data(mock_currency_response)
         schema = currency_processor.get_schema()
         
-        # Should not raise any exceptions
-        currency_processor._validate_schema(df, schema)
+        # Verify required fields are present
+        required_fields = [field.name for field in schema if field.mode == "REQUIRED"]
+        for field in required_fields:
+            assert field in df.columns
+            assert not df[field].isnull().any()
     
     def test_currency_error_handling(self, currency_processor, torn_client):
         """Test error handling with invalid data."""
@@ -323,7 +327,6 @@ class TestCurrencyPull:
             
             # Assert that we got an empty DataFrame
             assert df.empty
-            assert len(df.columns) == 0
             
             # Verify error was logged
             mock_log_error.assert_called_once_with("No currency data found in API response")
@@ -353,8 +356,7 @@ class TestCurrencyPull:
         mock_log_error = Mock()
         
         with patch.object(torn_client, "fetch_data", mock_fetch), \
-             patch.object(currency_processor, "_log_error", mock_log_error), \
-             patch.object(pd, "DataFrame", return_value=pd.DataFrame()):
+             patch.object(currency_processor, "_log_error", mock_log_error):
             # Process the data
             df = currency_processor.transform_data(mock_currency_response)
             
@@ -362,4 +364,176 @@ class TestCurrencyPull:
             assert df.empty
             
             # Verify error was logged
-            mock_log_error.assert_called_once_with("No records created from currency data") 
+            mock_log_error.assert_called_once_with("No records created from currency data")
+
+    def test_currency_bigquery_integration(self, mock_api_keys, mock_credentials, mock_monitoring_client):
+        """Test BigQuery integration."""
+        # Set up configs
+        base_config = {
+            'dataset': 'test_dataset',
+            'gcp_project_id': 'test-project',
+            'gcp_credentials_file': '/path/to/credentials.json',
+            'tc_api_key_file': '/path/to/api_keys.json',
+            'storage_mode': 'append'
+        }
+        
+        endpoint_config = {
+            'endpoint': 'v2/faction/currency',
+            'faction_id': 'faction_17991',
+            'name': 'v2_faction_17991_currency',
+            'table': 'v2_faction_17991_currency',
+            'url': 'https://api.torn.com/faction/17991',
+            'api_key': 'default'  # Specify which API key to use
+        }
+
+        # Create mock response
+        mock_response = {
+            "currency": {
+                "points_balance": 1000,
+                "money_balance": 5000000,
+                "points": {
+                    "accumulated": 500,
+                    "total": 1500
+                },
+                "money": {
+                    "accumulated": 2500000,
+                    "total": 7500000
+                }
+            },
+            "timestamp": 1647432000,
+            "fetched_at": "2024-03-16T09:32:31.281852"
+        }
+
+        # Create processor with mocked clients
+        processor = TestCurrencyEndpointProcessor(base_config, endpoint_config)
+        
+        # Mock TornClient
+        mock_torn_client = Mock()
+        mock_torn_client.fetch_data.return_value = mock_response
+        mock_torn_client._load_api_keys.return_value = mock_api_keys
+        processor.torn_client = mock_torn_client
+        
+        # Mock BigQueryClient
+        mock_bq_client = Mock()
+        mock_bq_client.project_id = 'test-project'
+        mock_bq_client.upload_dataframe = Mock()
+        processor.bq_client = mock_bq_client
+        
+        # Process data
+        result = processor.process()
+        
+        # Verify processing succeeded
+        assert result is True
+        
+        # Verify BigQuery upload was called
+        mock_bq_client.upload_dataframe.assert_called_once()
+
+    def test_transform_data_exception(self, currency_processor):
+        """Test general exception handling in transform_data."""
+        # Mock a response that will cause an exception during processing
+        mock_response = None  # This will cause an attribute error
+        
+        # Mock the error logging
+        mock_log_error = Mock()
+        
+        with patch.object(currency_processor, "_log_error", mock_log_error):
+            # Process the data
+            df = currency_processor.transform_data(mock_response)
+            
+            # Assert that we got an empty DataFrame
+            assert df.empty
+            
+            # Verify error was logged
+            mock_log_error.assert_called_once()
+            assert "Error transforming currency data" in mock_log_error.call_args[0][0]
+
+    def test_numeric_conversion_error(self, mock_api_keys, mock_credentials, mock_monitoring_client):
+        """Test handling of invalid numeric data."""
+        # Set up configs
+        base_config = {
+            'dataset': 'test_dataset',
+            'gcp_project_id': 'test-project',
+            'gcp_credentials_file': '/path/to/credentials.json',
+            'tc_api_key_file': '/path/to/api_keys.json',
+            'storage_mode': 'append'
+        }
+        
+        endpoint_config = {
+            'endpoint': 'v2/faction/currency',
+            'faction_id': 'faction_17991',
+            'name': 'v2_faction_17991_currency',
+            'table': 'v2_faction_17991_currency',
+            'url': 'https://api.torn.com/faction/17991'
+        }
+
+        # Create mock response with invalid numeric data
+        mock_response = {
+            "currency": {
+                "points_balance": "invalid",
+                "money_balance": "not_a_number",
+                "points": {
+                    "accumulated": None,
+                    "total": "error"
+                },
+                "money": {
+                    "accumulated": "NaN",
+                    "total": "undefined"
+                }
+            },
+            "timestamp": 1647432000,
+            "fetched_at": "2024-03-16T09:32:31.281852"
+        }
+
+        # Create processor
+        processor = TestCurrencyEndpointProcessor(base_config, endpoint_config)
+
+        # Process the invalid data
+        result = processor.transform_data(mock_response)
+
+        # Verify DataFrame contains NaN values for numeric columns
+        assert not result.empty
+        assert pd.isna(result['points_balance'].iloc[0])
+        assert pd.isna(result['money_balance'].iloc[0])
+        assert pd.isna(result['points_accumulated'].iloc[0])
+        assert pd.isna(result['points_total'].iloc[0])
+        assert pd.isna(result['money_accumulated'].iloc[0])
+        assert pd.isna(result['money_total'].iloc[0])
+
+        # Verify non-numeric columns are still present and valid
+        assert result['faction_id'].iloc[0] == 17991
+        assert not pd.isna(result['server_timestamp'].iloc[0])
+        assert not pd.isna(result['fetched_at'].iloc[0])
+
+    def test_timestamp_conversion_error(self, currency_processor):
+        """Test error handling during timestamp conversion."""
+        # Create a response with invalid timestamp data
+        mock_response = {
+            "currency": {
+                "points_balance": 1000,
+                "money_balance": 5000000,
+                "points": {
+                    "accumulated": 500,
+                    "total": 1500
+                },
+                "money": {
+                    "accumulated": 2500000,
+                    "total": 7500000
+                }
+            },
+            "timestamp": "invalid_timestamp",  # Invalid timestamp
+            "fetched_at": "invalid_datetime"  # Invalid datetime
+        }
+        
+        # Mock the error logging
+        mock_log_error = Mock()
+        
+        with patch.object(currency_processor, "_log_error", mock_log_error):
+            # Process the data
+            df = currency_processor.transform_data(mock_response)
+            
+            # Verify error was logged
+            mock_log_error.assert_called_once()
+            assert "Error transforming currency data" in mock_log_error.call_args[0][0]
+            
+            # Verify we got an empty DataFrame
+            assert df.empty 

@@ -205,12 +205,102 @@ TCdatalogger/
         - Row 2: crime_id=123, name="Crime A", money=1000, item_id=2, quantity=1
      ```
 
-2. **Data Normalization Benefits**
-   - Maintains proper data normalization
-   - Preserves relationships between entities
-   - Allows for efficient querying of nested data
-   - Eliminates need for complex JSON parsing in queries
-   - Supports proper indexing and filtering
+2. **Table Schemas**
+
+   a. Members Table (`torn.members`):
+   ```
+   Schema for v2_faction_*_members:
+    - server_timestamp: datetime - server time
+    - id: integer - Player's unique identifier
+    - name: string - Player's name
+    - level: integer - Player's level
+    - days_in_faction: integer - Days spent in faction
+    - revive_setting: string
+    - position: string - Position in faction
+    - is_revivable: boolean
+    - is_on_wall: boolean
+    - is_in_oc: boolean
+    - has_early_discharge: boolean
+    - last_action_status: string
+    - last_action_timestamp: datetime - Timestamp of last action
+    - last_action_relative: string
+    - status_description: string - Detailed status description
+    - status_details: string
+    - status_state: string
+    - status_until: string
+    - life_current: integer - Current life points
+    - life_maximum: integer - Maximum life points
+   ```
+
+   b. Currency Table (`torn.currency`):
+   ```
+   - server_timestamp: TIMESTAMP (REQUIRED) - server time
+   - currency_id: INTEGER (REQUIRED) - Currency identifier
+   - name: STRING (REQUIRED) - Currency name
+   - buy_price: FLOAT - Current buy price
+   - sell_price: FLOAT - Current sell price
+   - circulation: INTEGER - Amount in circulation
+   
+   ```
+
+   c. Faction Currency Table (`torn.faction_currency`):
+   ```
+   - server_timestamp: TIMESTAMP (REQUIRED) - server time
+   - faction_id: INTEGER (REQUIRED) - Faction identifier
+   - points_balance: INTEGER (REQUIRED) - Current points balance
+   - money_balance: INTEGER (REQUIRED) - Current money balance
+   - points_accumulated: INTEGER - Total points accumulated
+   - points_total: INTEGER - Total points
+   - money_accumulated: INTEGER - Total money accumulated
+   - money_total: INTEGER - Total money
+
+   - fetched_at: TIMESTAMP - Data fetch timestamp
+   ```
+
+   d. Items Table (`torn.items`):
+   ```
+   - server_timestamp: TIMESTAMP (REQUIRED) - server time
+   - item_id: INTEGER (REQUIRED) - Item identifier
+   - name: STRING (REQUIRED) - Item name
+   - description: STRING - Item description
+   - type: STRING - Item type
+   - buy_price: INTEGER - Market buy price
+   - sell_price: INTEGER - Market sell price
+   - market_value: INTEGER - Current market value
+   - circulation: INTEGER - Amount in circulation
+   ```
+
+   e. Crimes Table (`torn.crimes`):
+   ```
+   - server_timestamp: TIMESTAMP (REQUIRED) - server time
+   - crime_id: INTEGER (REQUIRED) - Crime identifier
+   - crime_name: STRING (REQUIRED) - Name of the crime
+   - participants: INTEGER - Number of participants
+   - success: BOOLEAN - Whether crime was successful
+   - money_gained: INTEGER - Money gained from crime
+   - respect_gained: FLOAT - Respect gained from crime
+   ```
+
+   f. Basic Faction Table (`torn.basic`):
+   ```
+   - server_timestamp: TIMESTAMP (REQUIRED) - server time
+   - faction_id: INTEGER - Faction identifier
+   - name: STRING - Faction name
+   - tag: STRING - Faction tag
+   - leader_id: INTEGER - Leader's player ID
+   - co_leader_id: INTEGER - Co-leader's player ID
+   - age: INTEGER - Faction age in days
+   - best_chain: INTEGER - Best chain achieved
+   - total_respect: INTEGER - Total respect earned
+   - capacity: INTEGER - Member capacity
+   - territory_count: INTEGER - Number of territories
+   - territory_respect: INTEGER - Respect from territories
+   - raid_won: INTEGER - Number of raids won
+   - raid_lost: INTEGER - Number of raids lost
+   - peace_expiry: TIMESTAMP - Peace treaty expiry
+   - peace_faction_id: INTEGER - Peace treaty faction ID
+   - fetched_at: TIMESTAMP - Data fetch timestamp
+   ```
 
 3. **Storage Modes**
    - Supported modes:
@@ -285,7 +375,34 @@ TCdatalogger/
 
 ## Development Guidelines
 
-1. **Code Style**
+1. **Development Environment Setup**
+   - Use `setup.py` script for all development environment management:
+     ```bash
+     # Complete environment setup
+     python3 scripts/setup.py setup
+
+     # Run tests with coverage
+     python3 scripts/setup.py test
+
+     # Run tests for specific path
+     python3 scripts/setup.py test tests/unit/specific_test.py
+
+     # Activate virtual environment
+     python3 scripts/setup.py activate
+
+     # Run specific command in virtual environment
+     python3 scripts/setup.py run your_command
+     ```
+   - Features provided by setup.py:
+     - Virtual environment creation and activation
+     - Dependency installation and management
+     - Test environment configuration
+     - Directory structure verification
+     - Automated test execution with coverage
+     - Cache cleanup and maintenance
+     - Consistent environment across team members
+
+2. **Code Style**
    - Follow PEP 8 guidelines
    - Use type hints for all functions
    - Document all public interfaces with docstrings
@@ -294,7 +411,8 @@ TCdatalogger/
    - Document complex logic
    - Follow language-specific conventions
 
-2. **Testing Requirements**
+3. **Testing Requirements**
+   - All test-related files must be contained within `/tests` directory
    - Unit tests for all business logic
    - Integration tests for service interactions
    - Mocked external services in tests
@@ -318,7 +436,47 @@ TCdatalogger/
      - Multi-endpoint concurrent testing
      - Resource utilization monitoring
 
-3. **Performance Considerations**
+4. **Test Organization**
+   ```
+   tests/
+   ├── unit/                  # Unit tests
+   │   ├── services/         # Service-specific tests
+   │   ├── models/          # Model tests
+   │   └── utils/           # Utility function tests
+   ├── integration/          # Integration tests
+   │   ├── api/            # API integration tests
+   │   └── database/       # Database integration tests
+   ├── fixtures/            # Test fixtures and mock data
+   │   ├── responses/      # Mock API responses
+   │   └── data/          # Test datasets
+   ├── performance/         # Performance test suites
+   ├── coverage/            # Coverage reports and artifacts
+   │   ├── html/          # HTML coverage reports
+   │   └── xml/           # XML coverage reports
+   └── conftest.py         # Shared test configurations
+   ```
+
+5. **Test Artifacts**
+   - All test artifacts must be contained within `/tests`:
+     - Coverage reports (HTML, XML)
+     - Test logs
+     - Performance test results
+     - Test databases
+     - Mock data files
+   - Artifact organization:
+     - Coverage reports in `/tests/coverage`
+     - Test logs in `/tests/logs`
+     - Performance results in `/tests/performance/results`
+   - Artifact cleanup:
+     - Regular cleanup of old reports
+     - Version control exclusion
+     - Automated cleanup during test runs
+   - CI/CD considerations:
+     - Artifact retention policies
+     - Build-specific artifact directories
+     - Automated cleanup workflows
+
+4. **Performance Considerations**
    - Batch operations where possible
    - Implement appropriate caching
    - Monitor memory usage
@@ -327,7 +485,7 @@ TCdatalogger/
    - Use connection pooling
    - Implement rate limiting
 
-4. **Security Practices**
+5. **Security Practices**
    - Regular dependency updates
    - Secure credential handling
    - Input validation and sanitization
@@ -489,4 +647,404 @@ When contributing to this project:
 3. **Quality Assurance**
    - Test coverage requirements
    - Performance impact consideration
-   - Security review process 
+   - Security review process
+
+## Data Validation
+
+1. **Input Validation**
+   - Validate all API responses
+   - Check required fields
+   - Verify data types
+   - Handle missing values
+   - Validate relationships
+   - Example validation:
+     ```python
+     def validate_data(data: Dict) -> None:
+         """Validate API response data."""
+         if not isinstance(data, dict):
+             raise ValueError("Data must be a dictionary")
+             
+         # Check required fields
+         required_fields = ['player_id', 'name', 'level']
+         missing_fields = [f for f in required_fields if f not in data]
+         if missing_fields:
+             raise ValueError(f"Missing required fields: {', '.join(missing_fields)}")
+             
+         # Validate types
+         if not isinstance(data['player_id'], int):
+             raise ValueError("player_id must be an integer")
+         if not isinstance(data['name'], str):
+             raise ValueError("name must be a string")
+         if not isinstance(data['level'], int):
+             raise ValueError("level must be an integer")
+     ```
+
+2. **Schema Validation**
+   - Validate against BigQuery schema
+   - Check field types
+   - Verify field modes (REQUIRED/NULLABLE)
+   - Handle schema evolution
+   - Example schema validation:
+     ```python
+     def validate_schema(self, df: pd.DataFrame) -> None:
+         """Validate DataFrame against BigQuery schema."""
+         schema = self.get_schema()
+         schema_fields = {field.name: field for field in schema}
+         
+         # Check required fields
+         for field in schema:
+             if field.mode == 'REQUIRED' and field.name not in df.columns:
+                 raise ValueError(f"Missing required field: {field.name}")
+         
+         # Validate types
+         for col in df.columns:
+             if col in schema_fields:
+                 field = schema_fields[col]
+                 if not self._is_valid_type(df[col], field.field_type):
+                     raise ValueError(f"Invalid type for {col}: expected {field.field_type}")
+     ```
+
+3. **Data Quality Checks**
+   - Check value ranges
+   - Validate relationships
+   - Detect anomalies
+   - Monitor data quality metrics
+   - Example quality check:
+     ```python
+     def check_data_quality(df: pd.DataFrame) -> Dict[str, float]:
+         """Check data quality metrics."""
+         metrics = {
+             'total_rows': len(df),
+             'null_percentage': df.isnull().mean().mean() * 100,
+             'duplicate_rows': df.duplicated().sum(),
+             'numeric_columns': len(df.select_dtypes(include=['number']).columns),
+             'string_columns': len(df.select_dtypes(include=['object']).columns)
+         }
+         
+         # Log quality metrics
+         for metric, value in metrics.items():
+             logging.info(f"Data quality metric - {metric}: {value}")
+             
+         return metrics
+     ```
+
+## Monitoring and Alerting
+
+1. **Application Metrics**
+   - Request success/failure rates
+   - Processing times
+   - Data volume metrics
+   - Error counts and types
+   - Resource utilization
+   - Example metrics collection:
+     ```python
+     def collect_metrics(self) -> Dict[str, float]:
+         """Collect application metrics."""
+         metrics = {
+             'requests_total': self.request_counter,
+             'requests_failed': self.error_counter,
+             'processing_time_avg': self.processing_times.mean(),
+             'data_volume_mb': self.data_volume / (1024 * 1024),
+             'memory_usage_mb': self.get_memory_usage() / (1024 * 1024)
+         }
+         return metrics
+     ```
+
+2. **Alerting Rules**
+   - Error rate thresholds
+   - Processing time limits
+   - Data quality alerts
+   - Resource usage warnings
+   - Example alert configuration:
+     ```python
+     ALERT_RULES = {
+         'error_rate': {
+             'threshold': 0.05,  # 5% error rate
+             'window': '1h',
+             'action': 'notify_team'
+         },
+         'processing_time': {
+             'threshold': 300,  # 5 minutes
+             'window': '15m',
+             'action': 'notify_team'
+         },
+         'data_quality': {
+             'null_threshold': 0.10,  # 10% nulls
+             'duplicate_threshold': 0.05,  # 5% duplicates
+             'action': 'notify_data_team'
+         }
+     }
+     ```
+
+3. **Logging Strategy**
+   - Structured logging
+   - Log levels by severity
+   - Context inclusion
+   - Performance impact
+   - Example logging setup:
+     ```python
+     def setup_logging(self):
+         """Configure application logging."""
+         logging.basicConfig(
+             format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+             level=logging.INFO,
+             handlers=[
+                 logging.StreamHandler(),
+                 logging.FileHandler('app.log')
+             ]
+         )
+         
+         # Add custom context
+         logger = logging.getLogger(__name__)
+         logger.addFilter(ContextFilter())
+     ```
+
+## Deployment and Operations
+
+1. **Deployment Process**
+   - Version control workflow
+   - Testing requirements
+   - Deployment validation
+   - Rollback procedures
+   - Example deployment script:
+     ```bash
+     #!/bin/bash
+     
+     # Deployment script
+     VERSION=$(git describe --tags)
+     
+     # Run tests
+     python -m pytest tests/
+     
+     # Build container
+     docker build -t tcdatalogger:${VERSION} .
+     
+     # Push to registry
+     docker push tcdatalogger:${VERSION}
+     
+     # Deploy to environment
+     kubectl apply -f k8s/
+     
+     # Monitor deployment
+     kubectl rollout status deployment/tcdatalogger
+     ```
+
+2. **Monitoring Setup**
+   - Resource monitoring
+   - Application metrics
+   - Log aggregation
+   - Alert configuration
+   - Example monitoring configuration:
+     ```yaml
+     monitoring:
+       resources:
+         cpu_threshold: 80%
+         memory_threshold: 85%
+         disk_threshold: 90%
+       metrics:
+         collection_interval: 60s
+         retention_period: 30d
+       logging:
+         level: INFO
+         retention: 90d
+       alerts:
+         channels:
+           - email
+           - slack
+         rules:
+           - name: high_error_rate
+             condition: error_rate > 0.05
+             duration: 5m
+           - name: slow_processing
+             condition: processing_time > 300s
+             duration: 15m
+     ```
+
+3. **Backup Strategy**
+   - Data backup schedule
+   - Retention policy
+   - Recovery testing
+   - Backup validation
+   - Example backup configuration:
+     ```yaml
+     backup:
+       schedule: "0 2 * * *"  # Daily at 2 AM
+       retention:
+         daily: 7
+         weekly: 4
+         monthly: 3
+       validation:
+         frequency: daily
+         checks:
+           - backup_size
+           - data_integrity
+           - restore_test
+       storage:
+         type: gcs
+         bucket: tcdatalogger-backups
+         path: /backups/${YYYY}/${MM}/${DD}
+     ```
+
+4. **Scaling Strategy**
+   - Resource requirements
+   - Scaling triggers
+   - Load balancing
+   - Performance monitoring
+   - Example scaling configuration:
+     ```yaml
+     scaling:
+       resources:
+         requests:
+           cpu: 100m
+           memory: 256Mi
+         limits:
+           cpu: 500m
+           memory: 1Gi
+       horizontal:
+         min_replicas: 2
+         max_replicas: 10
+         metrics:
+           - type: Resource
+             resource:
+               name: cpu
+               target_average_utilization: 70
+       vertical:
+         enabled: true
+         update_mode: Auto
+         min_change_percent: 10
+     ```
+
+## Security Considerations
+
+1. **API Key Management**
+   - Secure storage
+   - Key rotation
+   - Access monitoring
+   - Usage tracking
+   - Example key management:
+     ```python
+     def manage_api_keys(self):
+         """Manage API keys securely."""
+         # Load keys from secure storage
+         keys = self.load_keys_from_vault()
+         
+         # Monitor usage
+         for key in keys:
+             usage = self.track_key_usage(key)
+             if usage > USAGE_THRESHOLD:
+                 self.rotate_key(key)
+         
+         # Validate keys
+         self.validate_keys(keys)
+     ```
+
+2. **Data Security**
+   - Encryption at rest
+   - Secure transmission
+   - Access controls
+   - Audit logging
+   - Example security configuration:
+     ```yaml
+     security:
+       encryption:
+         at_rest: true
+         in_transit: true
+         key_rotation: 90d
+       access_control:
+         authentication: oauth2
+         authorization: rbac
+       audit:
+         enabled: true
+         retention: 365d
+         events:
+           - data_access
+           - configuration_change
+           - authentication
+     ```
+
+3. **Compliance**
+   - Data retention
+   - Privacy requirements
+   - Audit requirements
+   - Reporting needs
+   - Example compliance checks:
+     ```python
+     def check_compliance(self):
+         """Verify compliance requirements."""
+         checks = [
+             self.verify_data_retention(),
+             self.check_privacy_requirements(),
+             self.validate_audit_logs(),
+             self.generate_compliance_report()
+         ]
+         return all(checks)
+     ```
+
+## Future Enhancements
+
+1. **Planned Features**
+   - Additional API endpoints
+   - Enhanced monitoring
+   - Automated testing
+   - Performance optimizations
+   - Example roadmap:
+     ```yaml
+     roadmap:
+       short_term:
+         - Add new Torn City endpoints
+         - Implement real-time monitoring
+         - Enhance error handling
+       medium_term:
+         - Add data analysis features
+         - Implement machine learning
+         - Enhance scalability
+       long_term:
+         - Full automation
+         - Advanced analytics
+         - Predictive features
+     ```
+
+2. **Technical Debt**
+   - Code refactoring
+   - Documentation updates
+   - Test coverage
+   - Performance improvements
+   - Example tracking:
+     ```yaml
+     technical_debt:
+       code:
+         - Refactor error handling
+         - Improve type hints
+         - Update docstrings
+       tests:
+         - Increase coverage
+         - Add integration tests
+         - Improve test data
+       documentation:
+         - Update API docs
+         - Add examples
+         - Improve setup guide
+     ```
+
+3. **Research Areas**
+   - New technologies
+   - Better algorithms
+   - Performance techniques
+   - Integration options
+   - Example research topics:
+     ```yaml
+     research:
+       technologies:
+         - Serverless architecture
+         - Event streaming
+         - Real-time processing
+       algorithms:
+         - Efficient data processing
+         - Better error detection
+         - Anomaly detection
+       integrations:
+         - Additional APIs
+         - New data sources
+         - Analysis tools
+     ``` 
+
