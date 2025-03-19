@@ -7,9 +7,10 @@ This module provides the base functionality for interacting with Google Cloud se
 """
 
 import os
-from typing import Dict, Optional
+from typing import Dict, Any, Optional
 from google.oauth2 import service_account
 from google.auth.credentials import Credentials
+import json
 
 
 class BaseGoogleClient:
@@ -23,44 +24,54 @@ class BaseGoogleClient:
     All Google service clients should inherit from this class.
     """
     
-    def __init__(self, config: Dict):
-        """Initialize the base client.
-        
+    def __init__(self, project_id: str, credentials: Optional[Dict[str, Any]] = None):
+        """Initialize the base Google Cloud client.
+
         Args:
-            config: Application configuration containing Google credentials
+            project_id: Google Cloud project ID
+            credentials: Optional credentials dictionary or path to credentials file
         """
-        self.config = config
-        self.project_id = config.get('gcp_project_id') or os.getenv('GCP_PROJECT_ID')
-        if not self.project_id:
-            raise ValueError("GCP project ID not found in config or environment")
-            
-        self.credentials = self._get_credentials()
+        self.project_id = project_id
+        self.credentials = self._load_credentials(credentials)
         
-    def _get_credentials(self) -> Credentials:
-        """Get Google Cloud credentials.
-        
+    def _load_credentials(self, credentials: Optional[Dict[str, Any]]) -> Optional[service_account.Credentials]:
+        """Load Google Cloud credentials.
+
+        Args:
+            credentials: Credentials dictionary or path to credentials file
+
         Returns:
-            Credentials: Google Cloud credentials
-            
+            Credentials object or None if using default credentials
+
         Raises:
-            ValueError: If credentials file is not found or invalid
+            ValueError: If credentials are invalid
         """
-        credentials_file = self.config.get('gcp_credentials_file')
-        if not credentials_file:
-            raise ValueError("Google Cloud credentials file not specified")
-            
-        if not os.path.exists(credentials_file):
-            raise ValueError(f"Credentials file not found: {credentials_file}")
-            
-        try:
-            credentials = service_account.Credentials.from_service_account_file(
-                credentials_file,
-                scopes=['https://www.googleapis.com/auth/cloud-platform']
-            )
-            return credentials
-        except Exception as e:
-            raise ValueError(f"Failed to load credentials: {str(e)}")
-            
+        if not credentials:
+            # Try to load from environment variable
+            creds_path = os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
+            if creds_path and os.path.exists(creds_path):
+                try:
+                    return service_account.Credentials.from_service_account_file(creds_path)
+                except Exception as e:
+                    raise ValueError(f"Failed to load credentials from {creds_path}: {str(e)}")
+            return None
+
+        if isinstance(credentials, dict):
+            try:
+                return service_account.Credentials.from_service_account_info(credentials)
+            except Exception as e:
+                raise ValueError(f"Invalid credentials dictionary: {str(e)}")
+
+        if isinstance(credentials, str) and os.path.exists(credentials):
+            try:
+                with open(credentials, 'r') as f:
+                    creds_dict = json.load(f)
+                return service_account.Credentials.from_service_account_info(creds_dict)
+            except Exception as e:
+                raise ValueError(f"Failed to load credentials from {credentials}: {str(e)}")
+
+        raise ValueError("Invalid credentials format. Must be a dictionary, path to file, or None")
+        
     def validate_config(self, required_fields: Optional[list] = None) -> None:
         """Validate service configuration.
         

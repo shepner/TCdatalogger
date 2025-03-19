@@ -3,9 +3,8 @@
 from typing import Dict, List, Any, Optional
 import pandas as pd
 from google.cloud import bigquery
-from google.cloud.bigquery import SchemaField
-import time
 import logging
+from datetime import datetime, timezone
 
 from ..base import BaseEndpointProcessor, DataValidationError
 
@@ -17,19 +16,18 @@ class MembersEndpointProcessor(BaseEndpointProcessor):
 
         Args:
             config: Configuration dictionary containing API and storage settings.
-            endpoint_config: Optional endpoint-specific configuration. If not provided,
-                           will be constructed from the main config.
+            endpoint_config: Optional endpoint-specific configuration.
         """
+        super().__init__(config)
         if endpoint_config is None:
             endpoint_config = {
                 'name': 'members',
-                'url': 'https://api.torn.com/faction/{API_KEY}?selections=basic',
+                'url': 'https://api.torn.com/faction/?selections=basic&key={key}',
                 'table': f"{config.get('dataset', 'torn')}.members",
                 'api_key': config.get('tc_api_key', 'default'),
                 'storage_mode': config.get('storage_mode', 'append'),
                 'frequency': 'PT15M'
             }
-        super().__init__(config)
         self.endpoint_config.update(endpoint_config)
 
     def get_schema(self) -> List[bigquery.SchemaField]:
@@ -57,153 +55,175 @@ class MembersEndpointProcessor(BaseEndpointProcessor):
             bigquery.SchemaField("life_maximum", "INTEGER", mode="NULLABLE")
         ]
 
-    def transform_data(self, data: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Transform the raw data into the required format."""
+    def validate_required_fields(self, member_data: Dict[str, Any], member_id: str) -> bool:
+        """Validate required fields are present and of correct type.
+
+        Args:
+            member_data: Raw member data
+            member_id: Member ID for error reporting
+
+        Returns:
+            bool: True if validation passes, False otherwise
+        """
+        required_fields = {
+            'name': str,
+            'level': int
+        }
+
+        for field, field_type in required_fields.items():
+            value = member_data.get(field)
+            if value is None:
+                logging.error(f"Missing required field '{field}' for member {member_id}")
+                return False
+            try:
+                if not isinstance(value, field_type):
+                    field_type(value)  # Try to convert
+            except (ValueError, TypeError):
+                logging.error(f"Invalid type for field '{field}' for member {member_id}. Expected {field_type.__name__}")
+                return False
+        return True
+
+    def transform_data(self, data: Dict[str, Any]) -> pd.DataFrame:
+        """Transform the raw data into the required format.
+
+        Args:
+            data: Raw API response data containing member information
+
+        Returns:
+            DataFrame containing transformed member data
+
+        Raises:
+            DataValidationError: If data validation fails
+        """
         if not data:
-            return []
+            return pd.DataFrame()
             
-        # Extract members data from the nested structure
-        members_data = data.get("data", {}).get("members", {})
+        # Extract members data directly from response
+        members_data = data.get("members", {})
         if not members_data:
-            return []
+            return pd.DataFrame()
             
         transformed_data = []
+        server_timestamp = datetime.now(timezone.utc)
         
         for member_id, member_data in members_data.items():
             try:
-                # Validate required fields and types
-                name = member_data.get("name")
-                level = member_data.get("level")
+                # Validate required fields
+                if not self.validate_required_fields(member_data, member_id):
+                    continue
                 
-                if name is None or level is None:
-                    error_msg = f"Error processing member {member_id}: Missing required field"
-                    self._log_error(error_msg)
-                    raise DataValidationError(error_msg)
+                # Extract and validate nested data
+                status_data = member_data.get("status", {}) if isinstance(member_data.get("status"), dict) else {}
+                life_data = member_data.get("life", {}) if isinstance(member_data.get("life"), dict) else {}
+                last_action_data = member_data.get("last_action", {}) if isinstance(member_data.get("last_action"), dict) else {}
+                faction_data = member_data.get("faction", {}) if isinstance(member_data.get("faction"), dict) else {}
                 
-                # Convert name to string if it's not already
-                name = str(name) if name is not None else None
-                
-                # Type validation
-                if not isinstance(name, str):
-                    error_msg = f"Error processing member {member_id}: Invalid type for name field, expected str, got {type(name)}"
-                    self._log_error(error_msg)
-                    raise DataValidationError(error_msg)
-                
-                # Convert level to int if it's a string
-                try:
-                    level = int(level) if isinstance(level, str) else level
-                except (ValueError, TypeError):
-                    error_msg = f"Error processing member {member_id}: Invalid numeric value for level field: {level}"
-                    self._log_error(error_msg)
-                    raise DataValidationError(error_msg)
-                
-                if not isinstance(level, int):
-                    error_msg = f"Error processing member {member_id}: Invalid type for level field, expected int, got {type(level)}"
-                    self._log_error(error_msg)
-                    raise DataValidationError(error_msg)
-                
-                # Extract status data
-                status_data = member_data.get("status", {})
-                if not isinstance(status_data, dict):
-                    status_data = {}
-                
-                # Extract life data
-                life_data = member_data.get("life", {})
-                if not isinstance(life_data, dict):
-                    life_data = {}
-                life_current = life_data.get("current")
-                life_maximum = life_data.get("maximum")
-                
-                # Extract faction data
-                faction_data = member_data.get("faction", {})
-                if not isinstance(faction_data, dict):
-                    faction_data = {}
-                faction_id = faction_data.get("faction_id")
-                faction_position = faction_data.get("position")
-                days_in_faction = faction_data.get("days_in_faction")
-                
-                # Extract last action data
-                last_action_data = member_data.get("last_action", {})
-                if not isinstance(last_action_data, dict):
-                    last_action_data = {}
-                last_action = last_action_data.get("status")
-                last_action_timestamp = last_action_data.get("timestamp")
-                
-                # Validate timestamp
-                if last_action_timestamp is not None:
+                # Convert timestamps
+                last_action_timestamp = None
+                if last_action_ts := last_action_data.get("timestamp"):
                     try:
-                        if isinstance(last_action_timestamp, str):
-                            pd.to_datetime(last_action_timestamp)
-                        elif not isinstance(last_action_timestamp, (int, float)):
-                            error_msg = f"Error processing member {member_id}: Invalid timestamp format: {last_action_timestamp}"
-                            self._log_error(error_msg)
-                            raise DataValidationError(error_msg)
+                        last_action_timestamp = datetime.fromtimestamp(int(last_action_ts), timezone.utc)
                     except (ValueError, TypeError):
-                        error_msg = f"Error processing member {member_id}: Invalid timestamp format: {last_action_timestamp}"
-                        self._log_error(error_msg)
-                        raise DataValidationError(error_msg)
+                        logging.warning(f"Invalid last_action_timestamp for member {member_id}: {last_action_ts}")
                 
-                # Use last_action_timestamp as the record timestamp if available, otherwise use member timestamp
-                timestamp = last_action_timestamp if last_action_timestamp else member_data.get("timestamp")
-                
-                # Validate timestamp
-                if timestamp is not None:
-                    try:
-                        if isinstance(timestamp, str):
-                            pd.to_datetime(timestamp)
-                        elif not isinstance(timestamp, (int, float)):
-                            error_msg = f"Error processing member {member_id}: Invalid timestamp format: {timestamp}"
-                            self._log_error(error_msg)
-                            raise DataValidationError(error_msg)
-                    except (ValueError, TypeError):
-                        error_msg = f"Error processing member {member_id}: Invalid timestamp format: {timestamp}"
-                        self._log_error(error_msg)
-                        raise DataValidationError(error_msg)
-                
-                # Create transformed member data
+                # Create transformed member data matching schema exactly
                 transformed_member = {
-                    "member_id": int(member_id),
-                    "player_id": int(member_id),  # In Torn, member_id is the same as player_id
-                    "name": name,
-                    "level": level,
-                    "status": status_data.get("state"),
-                    "status_description": status_data.get("description"),
-                    "last_action": last_action,
+                    "server_timestamp": server_timestamp,
+                    "id": int(member_id),
+                    "name": str(member_data["name"]),
+                    "level": int(member_data["level"]),
+                    "days_in_faction": int(faction_data["days_in_faction"]) if faction_data.get("days_in_faction") else None,
+                    "revive_setting": str(member_data["revive_setting"]) if member_data.get("revive_setting") else None,
+                    "position": str(faction_data["position"]) if faction_data.get("position") else None,
+                    "is_revivable": bool(member_data.get("is_revivable")),
+                    "is_on_wall": bool(member_data.get("is_on_wall")),
+                    "is_in_oc": bool(member_data.get("is_in_oc")),
+                    "has_early_discharge": bool(member_data.get("has_early_discharge")),
+                    "last_action_status": str(last_action_data["status"]) if last_action_data.get("status") else None,
                     "last_action_timestamp": last_action_timestamp,
-                    "faction_id": faction_id,
-                    "faction_position": faction_position,
-                    "life_current": life_current,
-                    "life_maximum": life_maximum,
-                    "days_in_faction": int(days_in_faction) if days_in_faction is not None else None,
-                    "timestamp": timestamp
+                    "last_action_relative": str(last_action_data["relative"]) if last_action_data.get("relative") else None,
+                    "status_description": str(status_data["description"]) if status_data.get("description") else None,
+                    "status_details": str(status_data["details"]) if status_data.get("details") else None,
+                    "status_state": str(status_data["state"]) if status_data.get("state") else None,
+                    "status_until": str(status_data["until"]) if status_data.get("until") else None,
+                    "life_current": int(life_data["current"]) if life_data.get("current") else None,
+                    "life_maximum": int(life_data["maximum"]) if life_data.get("maximum") else None
                 }
                 
                 transformed_data.append(transformed_member)
-            except (ValueError, TypeError) as e:
-                error_msg = f"Error processing member {member_id}: {str(e)}"
-                self._log_error(error_msg)
-                raise DataValidationError(error_msg)
                 
-        return transformed_data
+            except Exception as e:
+                logging.error(f"Error processing member {member_id}: {str(e)}")
+                continue
+                
+        # Create DataFrame with schema-defined column order
+        schema_fields = self.get_schema()
+        columns = [field.name for field in schema_fields]
+        df = pd.DataFrame(transformed_data, columns=columns)
+        
+        # Fill numeric fields with 0 instead of None
+        numeric_columns = ['days_in_faction', 'level', 'life_current', 'life_maximum']
+        for col in numeric_columns:
+            if col in df.columns:
+                df[col] = df[col].fillna(0)
+        
+        # Explicitly set data types
+        dtype_mapping = {
+            'server_timestamp': 'datetime64[ns, UTC]',
+            'id': 'int64',
+            'name': 'object',
+            'level': 'int64',
+            'days_in_faction': 'int64',
+            'revive_setting': 'object',
+            'position': 'object',
+            'is_revivable': 'bool',
+            'is_on_wall': 'bool',
+            'is_in_oc': 'bool',
+            'has_early_discharge': 'bool',
+            'last_action_status': 'object',
+            'last_action_timestamp': 'datetime64[ns, UTC]',
+            'last_action_relative': 'object',
+            'status_description': 'object',
+            'status_details': 'object',
+            'status_state': 'object',
+            'status_until': 'object',
+            'life_current': 'int64',
+            'life_maximum': 'int64'
+        }
+        
+        for col, dtype in dtype_mapping.items():
+            if col in df.columns:
+                try:
+                    if dtype.startswith('datetime64'):
+                        df[col] = pd.to_datetime(df[col], utc=True)
+                    else:
+                        df[col] = df[col].astype(dtype)
+                except Exception as e:
+                    logging.warning(f"Failed to convert column {col} to {dtype}: {str(e)}")
+        
+        return df if not df.empty else pd.DataFrame(columns=columns)
 
-    def process_data(self, data: Dict[str, Any]) -> List[Dict[str, Any]]:
+    def process_data(self, data: Dict[str, Any]) -> pd.DataFrame:
         """Process the raw API response data.
 
         Args:
             data: Raw API response data
 
         Returns:
-            List[Dict[str, Any]]: List of processed member records
+            DataFrame: DataFrame containing processed member records
 
         Raises:
             DataValidationError: If data validation fails
         """
         try:
             if not data:
-                return []
+                return pd.DataFrame()
             
-            return self.transform_data(data)
+            df = self.transform_data(data)
+            if df.empty:
+                logging.warning("No valid member data found in API response")
+            return df
             
         except Exception as e:
             self._log_error(f"Error processing member data: {str(e)}")
-            raise
+            raise DataValidationError(f"Failed to process member data: {str(e)}")

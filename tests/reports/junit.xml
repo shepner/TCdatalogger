@@ -1,406 +1,138 @@
-<?xml version="1.0" encoding="utf-8"?><testsuites><testsuite name="pytest" errors="0" failures="10" skipped="0" tests="136" time="15.664" timestamp="2025-03-19T06:34:56.668457" hostname="WS01.local"><testcase classname="unit.services.torncity.test_processors.TestItemsProcessor" name="test_items_data_processing" time="0.006" /><testcase classname="unit.services.torncity.test_processors.TestMembersProcessor" name="test_members_data_processing" time="0.002" /><testcase classname="unit.services.torncity.test_processors.TestProcessorErrorHandling" name="test_invalid_data_types" time="0.002" /><testcase classname="unit.services.torncity.test_processors.TestProcessorErrorHandling" name="test_invalid_timestamp" time="0.002" /><testcase classname="unit.services.torncity.test_processors.TestProcessorErrorHandling" name="test_nested_data_handling" time="0.002" /><testcase classname="unit.services.torncity.test_processors.TestProcessorErrorHandling" name="test_missing_required_fields" time="0.002" /><testcase classname="unit.services.torncity.test_processors.TestProcessorErrorHandling" name="test_empty_response_handling" time="0.002" /><testcase classname="unit.services.torncity.test_processors.TestBaseProcessor" name="test_completion_logging" time="0.002" /><testcase classname="unit.services.torncity.test_processors.TestBaseProcessor" name="test_config_validation" time="0.003" /><testcase classname="unit.services.torncity.test_processors.TestBaseProcessor" name="test_fetch_torn_data" time="0.003" /><testcase classname="unit.services.torncity.test_processors.TestBaseProcessor" name="test_error_logging" time="0.002" /><testcase classname="unit.services.torncity.test_processors.TestBaseProcessor" name="test_validate_column_type_conversions" time="0.009" /><testcase classname="unit.services.torncity.test_processors.TestBaseProcessor" name="test_upload_data" time="0.004" /><testcase classname="unit.services.torncity.test_processors.TestBaseProcessor" name="test_validate_schema_required_fields" time="0.004" /><testcase classname="unit.services.torncity.test_processors.TestBaseProcessor" name="test_process_method" time="0.003" /><testcase classname="unit.services.torncity.test_processors.TestBaseProcessor" name="test_schema_validation" time="0.002" /><testcase classname="unit.services.torncity.test_processors.TestBaseProcessor" name="test_data_transformation" time="0.002" /><testcase classname="unit.services.torncity.test_processors.TestBaseProcessor" name="test_record_metrics" time="0.002" /><testcase classname="unit.services.torncity.test_processors.TestCrimeProcessor" name="test_crime_data_processing" time="0.002" /><testcase classname="unit.services.torncity.test_processors.TestCurrencyProcessor" name="test_currency_data_processing" time="0.003" /><testcase classname="unit.services.torncity.test_processors.TestUserProcessor" name="test_user_data_processing" time="0.002" /><testcase classname="unit.services.torncity.test_base.TestBaseProcessor" name="test_run_processor" time="0.004" /><testcase classname="unit.services.torncity.test_base.TestBaseProcessor" name="test_init_with_invalid_config" time="0.001" /><testcase classname="unit.services.torncity.test_base.TestBaseProcessor" name="test_storage_mode_validation" time="0.002" /><testcase classname="unit.services.torncity.test_base.TestBaseProcessor" name="test_process_data" time="0.003" /><testcase classname="unit.services.torncity.test_base.TestBaseProcessor" name="test_fetch_torn_data" time="0.002" /><testcase classname="unit.services.torncity.test_base.TestBaseProcessor" name="test_error_handling" time="0.002" /><testcase classname="unit.services.torncity.test_base.TestBaseProcessor" name="test_write_to_bigquery" time="0.004" /><testcase classname="unit.services.torncity.test_base.TestBaseProcessor" name="test_init_with_valid_config" time="0.003" /><testcase classname="unit.services.torncity.test_base.TestBaseProcessor" name="test_init_with_invalid_storage_mode" time="0.002" /><testcase classname="unit.services.torncity.test_base.TestBaseProcessor" name="test_validate_config" time="0.002" /><testcase classname="unit.services.google.bigquery.test_schema.TestBigQuerySchemaManagement" name="test_schema_field_name_validation" time="0.003" /><testcase classname="unit.services.google.bigquery.test_schema.TestBigQuerySchemaManagement" name="test_schema_evolution" time="0.002" /><testcase classname="unit.services.google.bigquery.test_schema.TestBigQuerySchemaManagement" name="test_schema_type_validation" time="0.005" /><testcase classname="unit.services.google.bigquery.test_schema.TestBigQuerySchemaManagement" name="test_schema_mode_validation" time="0.002" /><testcase classname="unit.services.google.bigquery.test_schema.TestBigQuerySchemaManagement" name="test_validate_schema_compatibility" time="0.003" /><testcase classname="unit.services.google.bigquery.test_schema.TestBigQuerySchemaManagement" name="test_create_table_with_schema" time="0.004" /><testcase classname="unit.services.google.bigquery.test_schema.TestBigQuerySchemaManagement" name="test_update_table_schema" time="0.003" /><testcase classname="unit.services.google.bigquery.test_schema.TestBigQuerySchemaManagement" name="test_get_table_schema" time="0.003" /><testcase classname="unit.services.google.bigquery.test_schema.TestBigQuerySchemaManagement" name="test_schema_description_validation" time="0.002" /><testcase classname="unit.core.test_common.TestPolling" name="test_wait_for_next_poll" time="0.001" /><testcase classname="unit.core.test_common.TestDurationParsing" name="test_valid_durations[PT1S-expected7]" time="0.001" /><testcase classname="unit.core.test_common.TestDurationParsing" name="test_valid_durations[PT1H30M-expected3]" time="0.001" /><testcase classname="unit.core.test_common.TestDurationParsing" name="test_valid_durations[PT15M-expected0]" time="0.001" /><testcase classname="unit.core.test_common.TestDurationParsing" name="test_invalid_durations[P1H]" time="0.001" /><testcase classname="unit.core.test_common.TestDurationParsing" name="test_valid_durations[PT1H-expected1]" time="0.001" /><testcase classname="unit.core.test_common.TestDurationParsing" name="test_invalid_durations[15M]" time="0.001" /><testcase classname="unit.core.test_common.TestDurationParsing" name="test_invalid_durations[PT]" time="0.001" /><testcase classname="unit.core.test_common.TestDurationParsing" name="test_valid_durations[P1DT12H-expected4]" time="0.001" /><testcase classname="unit.core.test_common.TestDurationParsing" name="test_invalid_durations[P]" time="0.001" /><testcase classname="unit.core.test_common.TestDurationParsing" name="test_invalid_durations[None]" time="0.001" /><testcase classname="unit.core.test_common.TestDurationParsing" name="test_valid_durations[P1D-expected2]" time="0.001" /><testcase classname="unit.core.test_common.TestDurationParsing" name="test_invalid_durations[PTM]" time="0.001" /><testcase classname="unit.core.test_common.TestDurationParsing" name="test_invalid_durations[P0D]" time="0.001" /><testcase classname="unit.core.test_common.TestDurationParsing" name="test_invalid_durations[]" time="0.001" /><testcase classname="unit.core.test_common.TestDurationParsing" name="test_invalid_durations[PT1X]" time="0.001" /><testcase classname="unit.core.test_common.TestDurationParsing" name="test_valid_durations[P1M-expected6]" time="0.001" /><testcase classname="unit.core.test_common.TestDurationParsing" name="test_valid_durations[P1Y-expected5]" time="0.001" /><testcase classname="unit.core.test_common.TestConfigManagement" name="test_find_config_directory" time="0.002" /><testcase classname="unit.core.test_common.TestConfigManagement" name="test_load_config" time="0.002" /><testcase classname="unit.core.test_common.TestCommonUtilities" name="test_placeholder" time="0.001" /><testcase classname="unit.core.test_common" name="test_imports" time="0.001" /><testcase classname="unit.core.test_common" name="test_setup_logging" time="0.001" /><testcase classname="unit.services.torncity.test_torn_client" name="test_make_request" time="0.001" /><testcase classname="unit.services.torncity.test_torn_client" name="test_init_with_nonexistent_file" time="0.001" /><testcase classname="unit.services.torncity.test_torn_client" name="test_timeout_handling" time="3.010" /><testcase classname="unit.services.torncity.test_torn_client" name="test_init_with_api_keys_file" time="0.003" /><testcase classname="unit.services.torncity.test_torn_client" name="test_init_with_malformed_api_keys_file" time="0.003" /><testcase classname="unit.services.torncity.test_torn_client" name="test_init_with_api_key" time="0.001" /><testcase classname="unit.services.torncity.test_torn_client" name="test_concurrent_requests" time="1.007" /><testcase classname="unit.services.torncity.test_torn_client" name="test_rate_limit_handling" time="7.018"><failure message="app.services.torncity.exceptions.TornAPIError: API request failed: Rate limit exceeded for key test_key">app/services/torncity/client.py:334: in make_request
-    return self._make_request_internal(endpoint, api_key)
-        api_key    = 'test_key'
-        endpoint   = 'test_endpoint'
-        selection  = 'default'
-        self       = &lt;app.services.torncity.client.TornClient object at 0x1279b0210&gt;
-app/services/torncity/client.py:308: in _make_request_internal
-    raise TornAPIRateLimitError(f"Rate limit exceeded for key {api_key}")
-E   app.services.torncity.exceptions.TornAPIRateLimitError: Rate limit exceeded for key test_key
-        api_key    = 'test_key'
-        attempt    = 2
-        data       = {'error': {'code': 5, 'error': 'Too many requests'}}
-        endpoint   = 'test_endpoint'
-        error_code = 5
-        error_msg  = 'Too many requests'
-        response   = &lt;MagicMock id='4959554592'&gt;
-        self       = &lt;app.services.torncity.client.TornClient object at 0x1279b0210&gt;
-        timeout    = None
-        url        = 'https://api.torn.com/test_endpoint?key=test_key'
+<?xml version="1.0" encoding="utf-8"?><testsuites><testsuite name="pytest" errors="7" failures="3" skipped="0" tests="114" time="10.657" timestamp="2025-03-19T09:36:29.303679" hostname="WS01.local"><testcase classname="unit.services.torncity.test_processors.TestItemsProcessor" name="test_items_data_processing" time="0.003" /><testcase classname="unit.services.torncity.test_processors.TestMembersProcessor" name="test_members_data_processing" time="0.004" /><testcase classname="unit.services.torncity.test_processors.TestProcessorErrorHandling" name="test_invalid_data_types" time="0.001" /><testcase classname="unit.services.torncity.test_processors.TestProcessorErrorHandling" name="test_invalid_timestamp" time="0.001" /><testcase classname="unit.services.torncity.test_processors.TestProcessorErrorHandling" name="test_nested_data_handling" time="0.001" /><testcase classname="unit.services.torncity.test_processors.TestProcessorErrorHandling" name="test_missing_required_fields" time="0.001" /><testcase classname="unit.services.torncity.test_processors.TestProcessorErrorHandling" name="test_empty_response_handling" time="0.001" /><testcase classname="unit.services.torncity.test_processors.TestBaseProcessor" name="test_completion_logging" time="0.003" /><testcase classname="unit.services.torncity.test_processors.TestBaseProcessor" name="test_config_validation" time="0.002" /><testcase classname="unit.services.torncity.test_processors.TestBaseProcessor" name="test_fetch_torn_data" time="0.002" /><testcase classname="unit.services.torncity.test_processors.TestBaseProcessor" name="test_error_logging" time="0.002" /><testcase classname="unit.services.torncity.test_processors.TestBaseProcessor" name="test_validate_column_type_conversions" time="0.007" /><testcase classname="unit.services.torncity.test_processors.TestBaseProcessor" name="test_upload_data" time="0.003" /><testcase classname="unit.services.torncity.test_processors.TestBaseProcessor" name="test_validate_schema_required_fields" time="0.003" /><testcase classname="unit.services.torncity.test_processors.TestBaseProcessor" name="test_process_method" time="0.003" /><testcase classname="unit.services.torncity.test_processors.TestBaseProcessor" name="test_schema_validation" time="0.001" /><testcase classname="unit.services.torncity.test_processors.TestBaseProcessor" name="test_data_transformation" time="0.001" /><testcase classname="unit.services.torncity.test_processors.TestBaseProcessor" name="test_record_metrics" time="0.001" /><testcase classname="unit.services.torncity.test_processors.TestCrimeProcessor" name="test_crime_data_processing" time="0.002" /><testcase classname="unit.services.torncity.test_processors.TestCurrencyProcessor" name="test_currency_data_processing" time="0.002" /><testcase classname="unit.services.torncity.test_processors.TestUserProcessor" name="test_user_data_processing" time="0.001" /><testcase classname="unit.services.torncity.test_base.TestBaseProcessor" name="test_run_processor" time="0.002" /><testcase classname="unit.services.torncity.test_base.TestBaseProcessor" name="test_init_with_invalid_config" time="0.001" /><testcase classname="unit.services.torncity.test_base.TestBaseProcessor" name="test_storage_mode_validation" time="0.001" /><testcase classname="unit.services.torncity.test_base.TestBaseProcessor" name="test_process_data" time="0.002" /><testcase classname="unit.services.torncity.test_base.TestBaseProcessor" name="test_fetch_torn_data" time="0.001" /><testcase classname="unit.services.torncity.test_base.TestBaseProcessor" name="test_error_handling" time="0.001" /><testcase classname="unit.services.torncity.test_base.TestBaseProcessor" name="test_write_to_bigquery" time="0.005" /><testcase classname="unit.services.torncity.test_base.TestBaseProcessor" name="test_init_with_valid_config" time="0.002" /><testcase classname="unit.services.torncity.test_base.TestBaseProcessor" name="test_init_with_invalid_storage_mode" time="0.001" /><testcase classname="unit.services.torncity.test_base.TestBaseProcessor" name="test_validate_config" time="0.001" /><testcase classname="integration.test_system" name="test_members_processor" time="0.004" /><testcase classname="integration.test_system" name="test_bigquery_client" time="0.001" /><testcase classname="integration.test_system" name="test_config_loading" time="0.001" /><testcase classname="integration.test_system" name="test_configuration" time="0.002" /><testcase classname="integration.test_system" name="test_torn_client" time="0.001" /><testcase classname="unit.services.google.bigquery.test_schema.TestBigQuerySchemaManagement" name="test_schema_field_name_validation" time="0.001" /><testcase classname="unit.services.google.bigquery.test_schema.TestBigQuerySchemaManagement" name="test_schema_evolution" time="0.001" /><testcase classname="unit.services.google.bigquery.test_schema.TestBigQuerySchemaManagement" name="test_schema_type_validation" time="0.004" /><testcase classname="unit.services.google.bigquery.test_schema.TestBigQuerySchemaManagement" name="test_schema_mode_validation" time="0.001" /><testcase classname="unit.services.google.bigquery.test_schema.TestBigQuerySchemaManagement" name="test_validate_schema_compatibility" time="0.002" /><testcase classname="unit.services.google.bigquery.test_schema.TestBigQuerySchemaManagement" name="test_create_table_with_schema" time="0.001" /><testcase classname="unit.services.google.bigquery.test_schema.TestBigQuerySchemaManagement" name="test_update_table_schema" time="0.002" /><testcase classname="unit.services.google.bigquery.test_schema.TestBigQuerySchemaManagement" name="test_get_table_schema" time="0.001" /><testcase classname="unit.services.google.bigquery.test_schema.TestBigQuerySchemaManagement" name="test_schema_description_validation" time="0.001" /><testcase classname="unit.core.test_common.TestPolling" name="test_wait_for_next_poll" time="0.001" /><testcase classname="unit.core.test_common.TestDurationParsing" name="test_valid_durations[PT1S-expected7]" time="0.001" /><testcase classname="unit.core.test_common.TestDurationParsing" name="test_valid_durations[PT1H30M-expected3]" time="0.001" /><testcase classname="unit.core.test_common.TestDurationParsing" name="test_valid_durations[PT15M-expected0]" time="0.001" /><testcase classname="unit.core.test_common.TestDurationParsing" name="test_invalid_durations[P1H]" time="0.001" /><testcase classname="unit.core.test_common.TestDurationParsing" name="test_valid_durations[PT1H-expected1]" time="0.001" /><testcase classname="unit.core.test_common.TestDurationParsing" name="test_invalid_durations[15M]" time="0.001" /><testcase classname="unit.core.test_common.TestDurationParsing" name="test_invalid_durations[PT]" time="0.001" /><testcase classname="unit.core.test_common.TestDurationParsing" name="test_valid_durations[P1DT12H-expected4]" time="0.001" /><testcase classname="unit.core.test_common.TestDurationParsing" name="test_invalid_durations[P]" time="0.002" /><testcase classname="unit.core.test_common.TestDurationParsing" name="test_invalid_durations[None]" time="0.001" /><testcase classname="unit.core.test_common.TestDurationParsing" name="test_valid_durations[P1D-expected2]" time="0.001" /><testcase classname="unit.core.test_common.TestDurationParsing" name="test_invalid_durations[PTM]" time="0.001" /><testcase classname="unit.core.test_common.TestDurationParsing" name="test_invalid_durations[P0D]" time="0.001" /><testcase classname="unit.core.test_common.TestDurationParsing" name="test_invalid_durations[]" time="0.001" /><testcase classname="unit.core.test_common.TestDurationParsing" name="test_invalid_durations[PT1X]" time="0.001" /><testcase classname="unit.core.test_common.TestDurationParsing" name="test_valid_durations[P1M-expected6]" time="0.001" /><testcase classname="unit.core.test_common.TestDurationParsing" name="test_valid_durations[P1Y-expected5]" time="0.001" /><testcase classname="unit.core.test_common.TestConfigManagement" name="test_find_config_directory" time="0.003" /><testcase classname="unit.core.test_common.TestConfigManagement" name="test_load_config" time="0.002" /><testcase classname="unit.core.test_common.TestCommonUtilities" name="test_placeholder" time="0.001" /><testcase classname="unit.core.test_common" name="test_imports" time="0.001" /><testcase classname="unit.core.test_common" name="test_setup_logging" time="0.001" /><testcase classname="unit.services.torncity.test_torn_client" name="test_make_request" time="0.002" /><testcase classname="unit.services.torncity.test_torn_client" name="test_init_with_nonexistent_file" time="0.001" /><testcase classname="unit.services.torncity.test_torn_client" name="test_timeout_handling" time="0.001" /><testcase classname="unit.services.torncity.test_torn_client" name="test_init_with_api_keys_file" time="0.001" /><testcase classname="unit.services.torncity.test_torn_client" name="test_init_with_malformed_api_keys_file" time="0.002" /><testcase classname="unit.services.torncity.test_torn_client" name="test_init_with_api_key" time="0.001" /><testcase classname="unit.services.torncity.test_torn_client" name="test_concurrent_requests" time="1.007" /><testcase classname="unit.services.torncity.test_torn_client" name="test_rate_limit_handling" time="0.002" /><testcase classname="unit.services.integration.test_data_pipeline.TestDataPipelineIntegration" name="test_batch_processing" time="0.002"><error message="failed on setup with &quot;file /Users/shepner/src/TornCity/TCdatalogger/tests/unit/services/integration/test_data_pipeline.py, line 160&#10;      def test_batch_processing(self):&#10;file /Users/shepner/src/TornCity/TCdatalogger/tests/unit/services/integration/test_data_pipeline.py, line 80&#10;      @pytest.fixture(autouse=True)&#10;      def setup(self, monkeypatch, mock_bigquery_client, mock_torn_api, mock_fetch, mock_batch_write, mock_write, mock_update_schema):&#10;E       fixture 'mock_fetch' not found&#10;&gt;       available fixtures: _session_event_loop, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, class_mocker, cov, doctest_namespace, event_loop, event_loop_policy, extra, extras, include_metadata_in_junit_xml, members_processor, metadata, mock_api_keys, mock_bigquery_client, mock_credentials, mock_google_auth, mock_monitoring_client, mock_torn_api, mocker, module_mocker, monkeypatch, no_cover, package_mocker, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, sample_bigquery_schema, sample_config, sample_endpoint_config, session_mocker, setup, testrun_uid, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory, torn_client, unit/services/integration/test_data_pipeline.py::&lt;event_loop&gt;, unit/services/integration/test_data_pipeline.py::TestDataPipelineIntegration::&lt;event_loop&gt;, unused_tcp_port, unused_tcp_port_factory, unused_udp_port, unused_udp_port_factory, user_processor, worker_id&#10;&gt;       use 'pytest --fixtures [testpath]' for help on them.&#10;&#10;/Users/shepner/src/TornCity/TCdatalogger/tests/unit/services/integration/test_data_pipeline.py:80&quot;">file /Users/shepner/src/TornCity/TCdatalogger/tests/unit/services/integration/test_data_pipeline.py, line 160
+      def test_batch_processing(self):
+file /Users/shepner/src/TornCity/TCdatalogger/tests/unit/services/integration/test_data_pipeline.py, line 80
+      @pytest.fixture(autouse=True)
+      def setup(self, monkeypatch, mock_bigquery_client, mock_torn_api, mock_fetch, mock_batch_write, mock_write, mock_update_schema):
+E       fixture 'mock_fetch' not found
+&gt;       available fixtures: _session_event_loop, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, class_mocker, cov, doctest_namespace, event_loop, event_loop_policy, extra, extras, include_metadata_in_junit_xml, members_processor, metadata, mock_api_keys, mock_bigquery_client, mock_credentials, mock_google_auth, mock_monitoring_client, mock_torn_api, mocker, module_mocker, monkeypatch, no_cover, package_mocker, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, sample_bigquery_schema, sample_config, sample_endpoint_config, session_mocker, setup, testrun_uid, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory, torn_client, unit/services/integration/test_data_pipeline.py::&lt;event_loop&gt;, unit/services/integration/test_data_pipeline.py::TestDataPipelineIntegration::&lt;event_loop&gt;, unused_tcp_port, unused_tcp_port_factory, unused_udp_port, unused_udp_port_factory, user_processor, worker_id
+&gt;       use 'pytest --fixtures [testpath]' for help on them.
 
-During handling of the above exception, another exception occurred:
-tests/unit/services/torncity/test_torn_client.py:34: in test_rate_limit_handling
-    client.make_request("test_endpoint")
-        client     = &lt;app.services.torncity.client.TornClient object at 0x1279b0210&gt;
-        mock_torn_api = {'normal': &lt;function mock_torn_api.&lt;locals&gt;.mock_get at 0x1279a8860&gt;,
- 'rate_limit': &lt;function mock_torn_api.&lt;locals&gt;.mock_get_rate_limit at 0x1279a8a40&gt;,
- 'timeout': &lt;function mock_torn_api.&lt;locals&gt;.mock_get_timeout at 0x1279a8ae0&gt;}
-        monkeypatch = &lt;_pytest.monkeypatch.MonkeyPatch object at 0x1279b0130&gt;
-app/services/torncity/client.py:342: in make_request
-    raise TornAPIError(f"API request failed: {str(e)}")
-E   app.services.torncity.exceptions.TornAPIError: API request failed: Rate limit exceeded for key test_key
-        api_key    = 'test_key'
-        endpoint   = 'test_endpoint'
-        selection  = 'default'
-        self       = &lt;app.services.torncity.client.TornClient object at 0x1279b0210&gt;</failure></testcase><testcase classname="unit.services.integration.test_data_pipeline.TestDataPipelineIntegration" name="test_retry_and_recovery" time="0.004" /><testcase classname="unit.services.integration.test_data_pipeline.TestDataPipelineIntegration" name="test_batch_processing" time="0.003" /><testcase classname="unit.services.integration.test_data_pipeline.TestDataPipelineIntegration" name="test_data_validation" time="0.004" /><testcase classname="unit.services.integration.test_data_pipeline.TestDataPipelineIntegration" name="test_pipeline_error_handling" time="0.004"><failure message="app.services.torncity.exceptions.DataValidationError: Error processing member invalid: invalid literal for int() with base 10: 'invalid'">app/services/torncity/endpoints/members.py:165: in transform_data
-    "member_id": int(member_id),
-E   ValueError: invalid literal for int() with base 10: 'invalid'
-        data       = {'data': {'members': {'invalid': {'level': '10',
-                                  'name': 123,
-                                  'status': 'Okay'}}}}
-        days_in_faction = None
-        error_msg  = ('Error processing member invalid: invalid literal for int() with base 10: '
- "'invalid'")
-        faction_data = {}
-        faction_id = None
-        faction_position = None
-        last_action = None
-        last_action_data = {}
-        last_action_timestamp = None
-        level      = 10
-        life_current = None
-        life_data  = {}
-        life_maximum = None
-        member_data = {'level': '10', 'name': 123, 'status': 'Okay'}
-        member_id  = 'invalid'
-        members_data = {'invalid': {'level': '10', 'name': 123, 'status': 'Okay'}}
-        name       = '123'
-        self       = &lt;app.services.torncity.processors.MembersProcessor object at 0x127ae9f30&gt;
-        status_data = {}
-        timestamp  = None
-        transformed_data = []
+/Users/shepner/src/TornCity/TCdatalogger/tests/unit/services/integration/test_data_pipeline.py:80</error></testcase><testcase classname="unit.services.integration.test_data_pipeline.TestDataPipelineIntegration" name="test_data_validation" time="0.002"><error message="failed on setup with &quot;file /Users/shepner/src/TornCity/TCdatalogger/tests/unit/services/integration/test_data_pipeline.py, line 123&#10;      def test_data_validation(self):&#10;file /Users/shepner/src/TornCity/TCdatalogger/tests/unit/services/integration/test_data_pipeline.py, line 80&#10;      @pytest.fixture(autouse=True)&#10;      def setup(self, monkeypatch, mock_bigquery_client, mock_torn_api, mock_fetch, mock_batch_write, mock_write, mock_update_schema):&#10;E       fixture 'mock_fetch' not found&#10;&gt;       available fixtures: _session_event_loop, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, class_mocker, cov, doctest_namespace, event_loop, event_loop_policy, extra, extras, include_metadata_in_junit_xml, members_processor, metadata, mock_api_keys, mock_bigquery_client, mock_credentials, mock_google_auth, mock_monitoring_client, mock_torn_api, mocker, module_mocker, monkeypatch, no_cover, package_mocker, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, sample_bigquery_schema, sample_config, sample_endpoint_config, session_mocker, setup, testrun_uid, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory, torn_client, unit/services/integration/test_data_pipeline.py::&lt;event_loop&gt;, unit/services/integration/test_data_pipeline.py::TestDataPipelineIntegration::&lt;event_loop&gt;, unused_tcp_port, unused_tcp_port_factory, unused_udp_port, unused_udp_port_factory, user_processor, worker_id&#10;&gt;       use 'pytest --fixtures [testpath]' for help on them.&#10;&#10;/Users/shepner/src/TornCity/TCdatalogger/tests/unit/services/integration/test_data_pipeline.py:80&quot;">file /Users/shepner/src/TornCity/TCdatalogger/tests/unit/services/integration/test_data_pipeline.py, line 123
+      def test_data_validation(self):
+file /Users/shepner/src/TornCity/TCdatalogger/tests/unit/services/integration/test_data_pipeline.py, line 80
+      @pytest.fixture(autouse=True)
+      def setup(self, monkeypatch, mock_bigquery_client, mock_torn_api, mock_fetch, mock_batch_write, mock_write, mock_update_schema):
+E       fixture 'mock_fetch' not found
+&gt;       available fixtures: _session_event_loop, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, class_mocker, cov, doctest_namespace, event_loop, event_loop_policy, extra, extras, include_metadata_in_junit_xml, members_processor, metadata, mock_api_keys, mock_bigquery_client, mock_credentials, mock_google_auth, mock_monitoring_client, mock_torn_api, mocker, module_mocker, monkeypatch, no_cover, package_mocker, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, sample_bigquery_schema, sample_config, sample_endpoint_config, session_mocker, setup, testrun_uid, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory, torn_client, unit/services/integration/test_data_pipeline.py::&lt;event_loop&gt;, unit/services/integration/test_data_pipeline.py::TestDataPipelineIntegration::&lt;event_loop&gt;, unused_tcp_port, unused_tcp_port_factory, unused_udp_port, unused_udp_port_factory, user_processor, worker_id
+&gt;       use 'pytest --fixtures [testpath]' for help on them.
 
-During handling of the above exception, another exception occurred:
-tests/unit/services/integration/test_data_pipeline.py:190: in test_pipeline_error_handling
-    members_processor.transform_data(invalid_data)
-        invalid_data = {'data': {'members': {'invalid': {'level': '10',
-                                  'name': 123,
-                                  'status': 'Okay'}}}}
-        members_processor = &lt;app.services.torncity.processors.MembersProcessor object at 0x127ae9f30&gt;
-        mock_bigquery_client = &lt;MagicMock name='Client' id='4956198896'&gt;
-        mock_fetch = &lt;MagicMock name='fetch_data' id='4954664848'&gt;
-        self       = &lt;test_data_pipeline.TestDataPipelineIntegration object at 0x12740a520&gt;
-        torn_client = &lt;app.services.torncity.client.TornClient object at 0x1279b0210&gt;
-app/services/torncity/endpoints/members.py:185: in transform_data
-    raise DataValidationError(error_msg)
-E   app.services.torncity.exceptions.DataValidationError: Error processing member invalid: invalid literal for int() with base 10: 'invalid'
-        data       = {'data': {'members': {'invalid': {'level': '10',
-                                  'name': 123,
-                                  'status': 'Okay'}}}}
-        days_in_faction = None
-        error_msg  = ('Error processing member invalid: invalid literal for int() with base 10: '
- "'invalid'")
-        faction_data = {}
-        faction_id = None
-        faction_position = None
-        last_action = None
-        last_action_data = {}
-        last_action_timestamp = None
-        level      = 10
-        life_current = None
-        life_data  = {}
-        life_maximum = None
-        member_data = {'level': '10', 'name': 123, 'status': 'Okay'}
-        member_id  = 'invalid'
-        members_data = {'invalid': {'level': '10', 'name': 123, 'status': 'Okay'}}
-        name       = '123'
-        self       = &lt;app.services.torncity.processors.MembersProcessor object at 0x127ae9f30&gt;
-        status_data = {}
-        timestamp  = None
-        transformed_data = []</failure></testcase><testcase classname="unit.services.integration.test_data_pipeline.TestDataPipelineIntegration" name="test_concurrent_processing" time="0.004" /><testcase classname="unit.services.integration.test_data_pipeline.TestDataPipelineIntegration" name="test_schema_evolution_handling" time="0.003" /><testcase classname="unit.services.integration.test_data_pipeline.TestDataPipelineIntegration" name="test_data_type_consistency" time="0.003" /><testcase classname="unit.services.integration.test_data_pipeline.TestDataPipelineIntegration" name="test_error_recovery_and_partial_success" time="0.003" /><testcase classname="unit.services.integration.test_data_pipeline.TestDataPipelineIntegration" name="test_end_to_end_data_pipeline" time="0.238"><failure message="app.services.torncity.exceptions.TornAPIError: API request failed: Invalid API key: Incorrect key">app/services/torncity/client.py:334: in make_request
-    return self._make_request_internal(endpoint, api_key)
-        api_key    = 'test_api_key'
-        endpoint   = 'user'
-        selection  = 'default'
-        self       = &lt;app.services.torncity.client.TornClient object at 0x12797a740&gt;
-app/services/torncity/client.py:295: in _make_request_internal
-    raise TornAPIKeyError(f"Invalid API key: {error_msg}")
-E   app.services.torncity.exceptions.TornAPIKeyError: Invalid API key: Incorrect key
-        api_key    = 'test_api_key'
-        attempt    = 0
-        data       = {'error': {'code': 2, 'error': 'Incorrect key'}}
-        endpoint   = 'user'
-        error_code = 2
-        error_msg  = 'Incorrect key'
-        response   = &lt;Response [200]&gt;
-        self       = &lt;app.services.torncity.client.TornClient object at 0x12797a740&gt;
-        timeout    = None
-        url        = 'https://api.torn.com/user?key=test_api_key'
+/Users/shepner/src/TornCity/TCdatalogger/tests/unit/services/integration/test_data_pipeline.py:80</error></testcase><testcase classname="unit.services.integration.test_data_pipeline.TestDataPipelineIntegration" name="test_pipeline_error_handling" time="0.002"><error message="failed on setup with &quot;file /Users/shepner/src/TornCity/TCdatalogger/tests/unit/services/integration/test_data_pipeline.py, line 143&#10;      def test_pipeline_error_handling(self):&#10;file /Users/shepner/src/TornCity/TCdatalogger/tests/unit/services/integration/test_data_pipeline.py, line 80&#10;      @pytest.fixture(autouse=True)&#10;      def setup(self, monkeypatch, mock_bigquery_client, mock_torn_api, mock_fetch, mock_batch_write, mock_write, mock_update_schema):&#10;E       fixture 'mock_fetch' not found&#10;&gt;       available fixtures: _session_event_loop, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, class_mocker, cov, doctest_namespace, event_loop, event_loop_policy, extra, extras, include_metadata_in_junit_xml, members_processor, metadata, mock_api_keys, mock_bigquery_client, mock_credentials, mock_google_auth, mock_monitoring_client, mock_torn_api, mocker, module_mocker, monkeypatch, no_cover, package_mocker, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, sample_bigquery_schema, sample_config, sample_endpoint_config, session_mocker, setup, testrun_uid, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory, torn_client, unit/services/integration/test_data_pipeline.py::&lt;event_loop&gt;, unit/services/integration/test_data_pipeline.py::TestDataPipelineIntegration::&lt;event_loop&gt;, unused_tcp_port, unused_tcp_port_factory, unused_udp_port, unused_udp_port_factory, user_processor, worker_id&#10;&gt;       use 'pytest --fixtures [testpath]' for help on them.&#10;&#10;/Users/shepner/src/TornCity/TCdatalogger/tests/unit/services/integration/test_data_pipeline.py:80&quot;">file /Users/shepner/src/TornCity/TCdatalogger/tests/unit/services/integration/test_data_pipeline.py, line 143
+      def test_pipeline_error_handling(self):
+file /Users/shepner/src/TornCity/TCdatalogger/tests/unit/services/integration/test_data_pipeline.py, line 80
+      @pytest.fixture(autouse=True)
+      def setup(self, monkeypatch, mock_bigquery_client, mock_torn_api, mock_fetch, mock_batch_write, mock_write, mock_update_schema):
+E       fixture 'mock_fetch' not found
+&gt;       available fixtures: _session_event_loop, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, class_mocker, cov, doctest_namespace, event_loop, event_loop_policy, extra, extras, include_metadata_in_junit_xml, members_processor, metadata, mock_api_keys, mock_bigquery_client, mock_credentials, mock_google_auth, mock_monitoring_client, mock_torn_api, mocker, module_mocker, monkeypatch, no_cover, package_mocker, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, sample_bigquery_schema, sample_config, sample_endpoint_config, session_mocker, setup, testrun_uid, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory, torn_client, unit/services/integration/test_data_pipeline.py::&lt;event_loop&gt;, unit/services/integration/test_data_pipeline.py::TestDataPipelineIntegration::&lt;event_loop&gt;, unused_tcp_port, unused_tcp_port_factory, unused_udp_port, unused_udp_port_factory, user_processor, worker_id
+&gt;       use 'pytest --fixtures [testpath]' for help on them.
 
-During handling of the above exception, another exception occurred:
-tests/unit/services/integration/test_data_pipeline.py:116: in test_end_to_end_data_pipeline
-    result = processor.run()
-        mock_bigquery_client = &lt;MagicMock name='Client' id='4954667872'&gt;
-        mock_torn_response = {'data': {'members': {'12345': {'faction': {'days_in_faction': 100,
-                                            'faction_id': 17991,
-                                            'position': 'Member'},
-                                'last_action': {'status': 'Online',
-                                                'timestamp': 1710766800},
-                                'level': 10,
-                                'life': {'current': 100, 'maximum': 100},
-                                'name': 'TestUser',
-                                'status': {'description': 'Online',
-                                           'state': 'Okay'},
-                                'timestamp': 1710766800}}}}
-        processor  = &lt;app.services.torncity.processors.MembersProcessor object at 0x127959150&gt;
-        sample_config = {'api_key': 'test_api_key',
- 'credentials_path': 'test_credentials.json',
- 'dataset': 'test_dataset',
- 'dataset_id': 'test_dataset',
- 'endpoint': 'user',
- 'gcp_credentials_file': 'test_credentials.json',
- 'gcp_project_id': 'test-project',
- 'project_id': 'test-project',
- 'selection': 'default',
- 'storage_mode': 'append',
- 'table_id': 'test_table'}
-        self       = &lt;test_data_pipeline.TestDataPipelineIntegration object at 0x127370a50&gt;
-app/services/torncity/base.py:184: in run
-    data = self.fetch_torn_data()
-        self       = &lt;app.services.torncity.processors.MembersProcessor object at 0x127959150&gt;
-app/services/torncity/base.py:140: in fetch_torn_data
-    return self.torn_client.make_request(
-        self       = &lt;app.services.torncity.processors.MembersProcessor object at 0x127959150&gt;
-app/services/torncity/client.py:342: in make_request
-    raise TornAPIError(f"API request failed: {str(e)}")
-E   app.services.torncity.exceptions.TornAPIError: API request failed: Invalid API key: Incorrect key
-        api_key    = 'test_api_key'
-        endpoint   = 'user'
-        selection  = 'default'
-        self       = &lt;app.services.torncity.client.TornClient object at 0x12797a740&gt;</failure></testcase><testcase classname="unit.core.test_scheduler" name="test_imports" time="0.001" /><testcase classname="unit.core.test_scheduler.TestScheduler" name="test_placeholder" time="0.001" /><testcase classname="unit.services.google.bigquery.test_client" name="test_write_data_with_retry_success" time="0.002" /><testcase classname="unit.services.google.bigquery.test_client" name="test_validate_data_types_success" time="0.001" /><testcase classname="unit.services.google.bigquery.test_client" name="test_write_data_success" time="0.002" /><testcase classname="unit.services.google.bigquery.test_client" name="test_table_exists_success" time="0.001" /><testcase classname="unit.services.google.bigquery.test_client" name="test_create_table" time="0.001" /><testcase classname="unit.services.google.bigquery.test_client" name="test_init_failure" time="0.002" /><testcase classname="unit.services.google.bigquery.test_client" name="test_write_data_invalid_disposition" time="0.002" /><testcase classname="unit.services.google.bigquery.test_client" name="test_validate_data_types_required_null" time="0.002" /><testcase classname="unit.services.google.bigquery.test_client" name="test_get_table_schema_success" time="0.001" /><testcase classname="unit.services.google.bigquery.test_client" name="test_delete_table_success" time="0.001" /><testcase classname="unit.services.google.bigquery.test_client" name="test_get_table_schema_not_found" time="0.002" /><testcase classname="unit.services.google.bigquery.test_client" name="test_validate_schema_compatibility_type_mismatch" time="0.002" /><testcase classname="unit.services.google.bigquery.test_client" name="test_table_exists_not_found" time="0.001" /><testcase classname="unit.services.google.bigquery.test_client" name="test_write_data_empty" time="0.002" /><testcase classname="unit.services.google.bigquery.test_client" name="test_write_data_with_retry_failure" time="2.008" /><testcase classname="unit.services.google.bigquery.test_client" name="test_validate_data_types_invalid_type" time="0.002" /><testcase classname="unit.services.google.bigquery.test_client" name="test_validate_schema_compatibility_required_field_missing" time="0.002" /><testcase classname="unit.services.google.bigquery.test_client" name="test_delete_table_failure" time="0.002" /><testcase classname="unit.services.google.bigquery.test_client" name="test_validate_schema_compatibility_success" time="0.002" /><testcase classname="unit.services.google.bigquery.test_client" name="test_table_exists_auth_error" time="0.002" /><testcase classname="unit.services.google.bigquery.test_client" name="test_write_data_in_batches" time="0.004" /><testcase classname="unit.services.torncity.endpoints.test_members.TestMembersProcessor" name="test_init" time="0.002" /><testcase classname="unit.services.torncity.endpoints.test_members.TestMembersProcessor" name="test_process_data_missing_fields" time="0.003" /><testcase classname="unit.services.torncity.endpoints.test_members.TestMembersProcessor" name="test_process_data_empty" time="0.003" /><testcase classname="unit.services.torncity.endpoints.test_members.TestMembersProcessor" name="test_process_data_valid" time="0.002" /><testcase classname="unit.services.torncity.endpoints.test_members.TestMembersProcessor" name="test_process_data_invalid_types" time="0.002" /><testcase classname="unit.services.torncity.endpoints.test_members.TestMembersProcessor" name="test_run_end_to_end" time="0.230"><failure message="app.services.torncity.exceptions.TornAPIError: API request failed: Invalid API key: Incorrect key">app/services/torncity/client.py:334: in make_request
-    return self._make_request_internal(endpoint, api_key)
-        api_key    = 'test_key_1'
-        endpoint   = 'user'
-        selection  = 'default'
-        self       = &lt;app.services.torncity.client.TornClient object at 0x1276ad860&gt;
-app/services/torncity/client.py:295: in _make_request_internal
-    raise TornAPIKeyError(f"Invalid API key: {error_msg}")
-E   app.services.torncity.exceptions.TornAPIKeyError: Invalid API key: Incorrect key
-        api_key    = 'test_key_1'
-        attempt    = 0
-        data       = {'error': {'code': 2, 'error': 'Incorrect key'}}
-        endpoint   = 'user'
-        error_code = 2
-        error_msg  = 'Incorrect key'
-        response   = &lt;Response [200]&gt;
-        self       = &lt;app.services.torncity.client.TornClient object at 0x1276ad860&gt;
-        timeout    = None
-        url        = 'https://api.torn.com/user?key=test_key_1'
+/Users/shepner/src/TornCity/TCdatalogger/tests/unit/services/integration/test_data_pipeline.py:80</error></testcase><testcase classname="unit.services.integration.test_data_pipeline.TestDataPipelineIntegration" name="test_concurrent_processing" time="0.002"><error message="failed on setup with &quot;file /Users/shepner/src/TornCity/TCdatalogger/tests/unit/services/integration/test_data_pipeline.py, line 228&#10;      def test_concurrent_processing(self):&#10;file /Users/shepner/src/TornCity/TCdatalogger/tests/unit/services/integration/test_data_pipeline.py, line 80&#10;      @pytest.fixture(autouse=True)&#10;      def setup(self, monkeypatch, mock_bigquery_client, mock_torn_api, mock_fetch, mock_batch_write, mock_write, mock_update_schema):&#10;E       fixture 'mock_fetch' not found&#10;&gt;       available fixtures: _session_event_loop, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, class_mocker, cov, doctest_namespace, event_loop, event_loop_policy, extra, extras, include_metadata_in_junit_xml, members_processor, metadata, mock_api_keys, mock_bigquery_client, mock_credentials, mock_google_auth, mock_monitoring_client, mock_torn_api, mocker, module_mocker, monkeypatch, no_cover, package_mocker, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, sample_bigquery_schema, sample_config, sample_endpoint_config, session_mocker, setup, testrun_uid, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory, torn_client, unit/services/integration/test_data_pipeline.py::&lt;event_loop&gt;, unit/services/integration/test_data_pipeline.py::TestDataPipelineIntegration::&lt;event_loop&gt;, unused_tcp_port, unused_tcp_port_factory, unused_udp_port, unused_udp_port_factory, user_processor, worker_id&#10;&gt;       use 'pytest --fixtures [testpath]' for help on them.&#10;&#10;/Users/shepner/src/TornCity/TCdatalogger/tests/unit/services/integration/test_data_pipeline.py:80&quot;">file /Users/shepner/src/TornCity/TCdatalogger/tests/unit/services/integration/test_data_pipeline.py, line 228
+      def test_concurrent_processing(self):
+file /Users/shepner/src/TornCity/TCdatalogger/tests/unit/services/integration/test_data_pipeline.py, line 80
+      @pytest.fixture(autouse=True)
+      def setup(self, monkeypatch, mock_bigquery_client, mock_torn_api, mock_fetch, mock_batch_write, mock_write, mock_update_schema):
+E       fixture 'mock_fetch' not found
+&gt;       available fixtures: _session_event_loop, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, class_mocker, cov, doctest_namespace, event_loop, event_loop_policy, extra, extras, include_metadata_in_junit_xml, members_processor, metadata, mock_api_keys, mock_bigquery_client, mock_credentials, mock_google_auth, mock_monitoring_client, mock_torn_api, mocker, module_mocker, monkeypatch, no_cover, package_mocker, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, sample_bigquery_schema, sample_config, sample_endpoint_config, session_mocker, setup, testrun_uid, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory, torn_client, unit/services/integration/test_data_pipeline.py::&lt;event_loop&gt;, unit/services/integration/test_data_pipeline.py::TestDataPipelineIntegration::&lt;event_loop&gt;, unused_tcp_port, unused_tcp_port_factory, unused_udp_port, unused_udp_port_factory, user_processor, worker_id
+&gt;       use 'pytest --fixtures [testpath]' for help on them.
 
-During handling of the above exception, another exception occurred:
-tests/unit/services/torncity/endpoints/test_members.py:286: in test_run_end_to_end
-    result = processor.run()
-        mock_data  = {'data': {'1': {'last_action': {'status': 'Online', 'timestamp': 1710766800},
-                'level': 10,
-                'member_id': 1,
-                'name': 'TestUser',
-                'status': {'state': 'Okay'},
-                'timestamp': 1710766800}}}
-        processor  = &lt;app.services.torncity.endpoints.members.MembersEndpointProcessor object at 0x1279c4950&gt;
-        self       = &lt;test_members.TestMembersProcessor object at 0x1275bcaf0&gt;
-app/services/torncity/base.py:184: in run
-    data = self.fetch_torn_data()
-        self       = &lt;app.services.torncity.endpoints.members.MembersEndpointProcessor object at 0x1279c4950&gt;
-app/services/torncity/base.py:140: in fetch_torn_data
-    return self.torn_client.make_request(
-        self       = &lt;app.services.torncity.endpoints.members.MembersEndpointProcessor object at 0x1279c4950&gt;
-app/services/torncity/client.py:342: in make_request
-    raise TornAPIError(f"API request failed: {str(e)}")
-E   app.services.torncity.exceptions.TornAPIError: API request failed: Invalid API key: Incorrect key
-        api_key    = 'test_key_1'
-        endpoint   = 'user'
-        selection  = 'default'
-        self       = &lt;app.services.torncity.client.TornClient object at 0x1276ad860&gt;</failure></testcase><testcase classname="unit.services.torncity.test_members_pull.TestMembersPull" name="test_members_data_pull" time="0.006" /><testcase classname="unit.services.torncity.test_members_pull.TestMembersPull" name="test_empty_members_response" time="0.006" /><testcase classname="unit.services.torncity.test_members_pull.TestMembersPull" name="test_empty_records_list" time="0.005" /><testcase classname="unit.services.torncity.test_members_pull.TestMembersPull" name="test_members_bigquery_integration" time="0.005" /><testcase classname="unit.services.torncity.test_members_pull.TestMembersPull" name="test_empty_dataframe_after_processing" time="0.005" /><testcase classname="unit.services.torncity.test_members_pull.TestMembersPull" name="test_transform_data_exception" time="0.006" /><testcase classname="unit.services.torncity.test_members_pull.TestMembersPull" name="test_timestamp_conversion_error" time="0.006" /><testcase classname="unit.services.torncity.test_members_pull.TestMembersPull" name="test_invalid_members_data" time="0.005" /><testcase classname="unit.services.torncity.test_members_pull.TestMembersPull" name="test_members_data_validation" time="0.009" /><testcase classname="unit.services.torncity.test_members_pull.TestMembersPull" name="test_empty_valid_members_data" time="0.007" /><testcase classname="unit.services.torncity.test_members_pull.TestMembersPull" name="test_members_error_handling" time="0.006" /><testcase classname="unit.services.torncity.test_members_pull.TestMembersPull" name="test_numeric_conversion_error" time="0.006" /><testcase classname="unit.services.torncity.test_members_pull.TestMembersPull" name="test_members_data_update" time="0.006" /><testcase classname="unit.services.torncity.test_crimes_pull.TestCrimesPull" name="test_old_field_name_mapping" time="0.014" /><testcase classname="unit.services.torncity.test_crimes_pull.TestCrimesPull" name="test_rewards_data_processing" time="0.011" /><testcase classname="unit.services.torncity.test_crimes_pull.TestCrimesPull" name="test_participants_data_processing" time="0.011" /><testcase classname="unit.services.torncity.test_crimes_pull.TestCrimesPull" name="test_process_data_missing_fields" time="0.003"><failure message="TypeError: TestCrimesPull.test_process_data_missing_fields() missing 1 required positional argument: 'crimes_processor'">/opt/homebrew/Cellar/python@3.13/3.13.2/Frameworks/Python.framework/Versions/3.13/lib/python3.13/unittest/case.py:58: in testPartExecutor
-    yield
-        exc_info   = None
-        old_success = True
-        self       = &lt;unittest.case._Outcome object at 0x127aea060&gt;
-        subTest    = False
-        test_case  = &lt;test_crimes_pull.TestCrimesPull testMethod=test_process_data_missing_fields&gt;
-/opt/homebrew/Cellar/python@3.13/3.13.2/Frameworks/Python.framework/Versions/3.13/lib/python3.13/unittest/case.py:651: in run
-    self._callTestMethod(testMethod)
-        expecting_failure = False
-        outcome    = None
-        result     = &lt;TestCaseFunction test_process_data_missing_fields&gt;
-        self       = &lt;test_crimes_pull.TestCrimesPull testMethod=test_process_data_missing_fields&gt;
-        start_time = 547596.52421825
-        stopTestRun = None
-        testMethod = &lt;bound method TestCrimesPull.test_process_data_missing_fields of &lt;test_crimes_pull.TestCrimesPull testMethod=test_process_data_missing_fields&gt;&gt;
-/opt/homebrew/Cellar/python@3.13/3.13.2/Frameworks/Python.framework/Versions/3.13/lib/python3.13/unittest/case.py:606: in _callTestMethod
-    if method() is not None:
-E   TypeError: TestCrimesPull.test_process_data_missing_fields() missing 1 required positional argument: 'crimes_processor'
-        method     = &lt;bound method TestCrimesPull.test_process_data_missing_fields of &lt;test_crimes_pull.TestCrimesPull testMethod=test_process_data_missing_fields&gt;&gt;
-        self       = &lt;test_crimes_pull.TestCrimesPull testMethod=test_process_data_missing_fields&gt;</failure></testcase><testcase classname="unit.services.torncity.test_crimes_pull.TestCrimesPull" name="test_invalid_participant_types" time="0.012" /><testcase classname="unit.services.torncity.test_crimes_pull.TestCrimesPull" name="test_empty_records_list" time="0.006" /><testcase classname="unit.services.torncity.test_crimes_pull.TestCrimesPull" name="test_mixed_participant_data" time="0.011" /><testcase classname="unit.services.torncity.test_crimes_pull.TestCrimesPull" name="test_crimes_bigquery_integration" time="0.006"><failure message="app.services.torncity.exceptions.DataValidationError: Error transforming crimes data: Missing required fields in DataFrame: ['server_timestamp', 'id', 'name', 'difficulty', 'status', 'created_at', 'rewards_money', 'rewards_respect']">app/services/torncity/endpoints/crimes.py:305: in process_data
-    self.validate_schema(transformed_data)
-        data       = {'data': {'crimes': {'123': {'id': 123,
-                             'name': 'Test Crime',
-                             'status': 'completed',
-                             'timestamp': 1710633600}}}}
-        error_msg  = ('Error transforming crimes data: Missing required fields in DataFrame: '
- "['server_timestamp', 'id', 'name', 'difficulty', 'status', 'created_at', "
- "'rewards_money', 'rewards_respect']")
-        self       = &lt;test_crimes_pull.TestCrimesEndpointProcessor object at 0x127ab8af0&gt;
-        transformed_data = Empty DataFrame
-Columns: []
-Index: []
-app/services/torncity/base.py:513: in validate_schema
-    raise SchemaError(f"Missing required fields in DataFrame: {missing_fields}")
-E   app.services.torncity.exceptions.SchemaError: Missing required fields in DataFrame: ['server_timestamp', 'id', 'name', 'difficulty', 'status', 'created_at', 'rewards_money', 'rewards_respect']
-        data       = Empty DataFrame
-Columns: []
-Index: []
-        missing_fields = ['server_timestamp',
+/Users/shepner/src/TornCity/TCdatalogger/tests/unit/services/integration/test_data_pipeline.py:80</error></testcase><testcase classname="unit.services.integration.test_data_pipeline.TestDataPipelineIntegration" name="test_schema_evolution_handling" time="0.002"><error message="failed on setup with &quot;file /Users/shepner/src/TornCity/TCdatalogger/tests/unit/services/integration/test_data_pipeline.py, line 207&#10;      def test_schema_evolution_handling(self):&#10;file /Users/shepner/src/TornCity/TCdatalogger/tests/unit/services/integration/test_data_pipeline.py, line 80&#10;      @pytest.fixture(autouse=True)&#10;      def setup(self, monkeypatch, mock_bigquery_client, mock_torn_api, mock_fetch, mock_batch_write, mock_write, mock_update_schema):&#10;E       fixture 'mock_fetch' not found&#10;&gt;       available fixtures: _session_event_loop, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, class_mocker, cov, doctest_namespace, event_loop, event_loop_policy, extra, extras, include_metadata_in_junit_xml, members_processor, metadata, mock_api_keys, mock_bigquery_client, mock_credentials, mock_google_auth, mock_monitoring_client, mock_torn_api, mocker, module_mocker, monkeypatch, no_cover, package_mocker, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, sample_bigquery_schema, sample_config, sample_endpoint_config, session_mocker, setup, testrun_uid, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory, torn_client, unit/services/integration/test_data_pipeline.py::&lt;event_loop&gt;, unit/services/integration/test_data_pipeline.py::TestDataPipelineIntegration::&lt;event_loop&gt;, unused_tcp_port, unused_tcp_port_factory, unused_udp_port, unused_udp_port_factory, user_processor, worker_id&#10;&gt;       use 'pytest --fixtures [testpath]' for help on them.&#10;&#10;/Users/shepner/src/TornCity/TCdatalogger/tests/unit/services/integration/test_data_pipeline.py:80&quot;">file /Users/shepner/src/TornCity/TCdatalogger/tests/unit/services/integration/test_data_pipeline.py, line 207
+      def test_schema_evolution_handling(self):
+file /Users/shepner/src/TornCity/TCdatalogger/tests/unit/services/integration/test_data_pipeline.py, line 80
+      @pytest.fixture(autouse=True)
+      def setup(self, monkeypatch, mock_bigquery_client, mock_torn_api, mock_fetch, mock_batch_write, mock_write, mock_update_schema):
+E       fixture 'mock_fetch' not found
+&gt;       available fixtures: _session_event_loop, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, class_mocker, cov, doctest_namespace, event_loop, event_loop_policy, extra, extras, include_metadata_in_junit_xml, members_processor, metadata, mock_api_keys, mock_bigquery_client, mock_credentials, mock_google_auth, mock_monitoring_client, mock_torn_api, mocker, module_mocker, monkeypatch, no_cover, package_mocker, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, sample_bigquery_schema, sample_config, sample_endpoint_config, session_mocker, setup, testrun_uid, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory, torn_client, unit/services/integration/test_data_pipeline.py::&lt;event_loop&gt;, unit/services/integration/test_data_pipeline.py::TestDataPipelineIntegration::&lt;event_loop&gt;, unused_tcp_port, unused_tcp_port_factory, unused_udp_port, unused_udp_port_factory, user_processor, worker_id
+&gt;       use 'pytest --fixtures [testpath]' for help on them.
+
+/Users/shepner/src/TornCity/TCdatalogger/tests/unit/services/integration/test_data_pipeline.py:80</error></testcase><testcase classname="unit.services.integration.test_data_pipeline.TestDataPipelineIntegration" name="test_data_type_consistency" time="0.002"><error message="failed on setup with &quot;file /Users/shepner/src/TornCity/TCdatalogger/tests/unit/services/integration/test_data_pipeline.py, line 187&#10;      def test_data_type_consistency(self):&#10;file /Users/shepner/src/TornCity/TCdatalogger/tests/unit/services/integration/test_data_pipeline.py, line 80&#10;      @pytest.fixture(autouse=True)&#10;      def setup(self, monkeypatch, mock_bigquery_client, mock_torn_api, mock_fetch, mock_batch_write, mock_write, mock_update_schema):&#10;E       fixture 'mock_fetch' not found&#10;&gt;       available fixtures: _session_event_loop, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, class_mocker, cov, doctest_namespace, event_loop, event_loop_policy, extra, extras, include_metadata_in_junit_xml, members_processor, metadata, mock_api_keys, mock_bigquery_client, mock_credentials, mock_google_auth, mock_monitoring_client, mock_torn_api, mocker, module_mocker, monkeypatch, no_cover, package_mocker, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, sample_bigquery_schema, sample_config, sample_endpoint_config, session_mocker, setup, testrun_uid, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory, torn_client, unit/services/integration/test_data_pipeline.py::&lt;event_loop&gt;, unit/services/integration/test_data_pipeline.py::TestDataPipelineIntegration::&lt;event_loop&gt;, unused_tcp_port, unused_tcp_port_factory, unused_udp_port, unused_udp_port_factory, user_processor, worker_id&#10;&gt;       use 'pytest --fixtures [testpath]' for help on them.&#10;&#10;/Users/shepner/src/TornCity/TCdatalogger/tests/unit/services/integration/test_data_pipeline.py:80&quot;">file /Users/shepner/src/TornCity/TCdatalogger/tests/unit/services/integration/test_data_pipeline.py, line 187
+      def test_data_type_consistency(self):
+file /Users/shepner/src/TornCity/TCdatalogger/tests/unit/services/integration/test_data_pipeline.py, line 80
+      @pytest.fixture(autouse=True)
+      def setup(self, monkeypatch, mock_bigquery_client, mock_torn_api, mock_fetch, mock_batch_write, mock_write, mock_update_schema):
+E       fixture 'mock_fetch' not found
+&gt;       available fixtures: _session_event_loop, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, class_mocker, cov, doctest_namespace, event_loop, event_loop_policy, extra, extras, include_metadata_in_junit_xml, members_processor, metadata, mock_api_keys, mock_bigquery_client, mock_credentials, mock_google_auth, mock_monitoring_client, mock_torn_api, mocker, module_mocker, monkeypatch, no_cover, package_mocker, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, sample_bigquery_schema, sample_config, sample_endpoint_config, session_mocker, setup, testrun_uid, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory, torn_client, unit/services/integration/test_data_pipeline.py::&lt;event_loop&gt;, unit/services/integration/test_data_pipeline.py::TestDataPipelineIntegration::&lt;event_loop&gt;, unused_tcp_port, unused_tcp_port_factory, unused_udp_port, unused_udp_port_factory, user_processor, worker_id
+&gt;       use 'pytest --fixtures [testpath]' for help on them.
+
+/Users/shepner/src/TornCity/TCdatalogger/tests/unit/services/integration/test_data_pipeline.py:80</error></testcase><testcase classname="unit.services.integration.test_data_pipeline.TestDataPipelineIntegration" name="test_end_to_end_data_pipeline" time="0.002"><error message="failed on setup with &quot;file /Users/shepner/src/TornCity/TCdatalogger/tests/unit/services/integration/test_data_pipeline.py, line 108&#10;      def test_end_to_end_data_pipeline(self, sample_config):&#10;file /Users/shepner/src/TornCity/TCdatalogger/tests/unit/services/integration/test_data_pipeline.py, line 80&#10;      @pytest.fixture(autouse=True)&#10;      def setup(self, monkeypatch, mock_bigquery_client, mock_torn_api, mock_fetch, mock_batch_write, mock_write, mock_update_schema):&#10;E       fixture 'mock_fetch' not found&#10;&gt;       available fixtures: _session_event_loop, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, class_mocker, cov, doctest_namespace, event_loop, event_loop_policy, extra, extras, include_metadata_in_junit_xml, members_processor, metadata, mock_api_keys, mock_bigquery_client, mock_credentials, mock_google_auth, mock_monitoring_client, mock_torn_api, mocker, module_mocker, monkeypatch, no_cover, package_mocker, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, sample_bigquery_schema, sample_config, sample_endpoint_config, session_mocker, setup, testrun_uid, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory, torn_client, unit/services/integration/test_data_pipeline.py::&lt;event_loop&gt;, unit/services/integration/test_data_pipeline.py::TestDataPipelineIntegration::&lt;event_loop&gt;, unused_tcp_port, unused_tcp_port_factory, unused_udp_port, unused_udp_port_factory, user_processor, worker_id&#10;&gt;       use 'pytest --fixtures [testpath]' for help on them.&#10;&#10;/Users/shepner/src/TornCity/TCdatalogger/tests/unit/services/integration/test_data_pipeline.py:80&quot;">file /Users/shepner/src/TornCity/TCdatalogger/tests/unit/services/integration/test_data_pipeline.py, line 108
+      def test_end_to_end_data_pipeline(self, sample_config):
+file /Users/shepner/src/TornCity/TCdatalogger/tests/unit/services/integration/test_data_pipeline.py, line 80
+      @pytest.fixture(autouse=True)
+      def setup(self, monkeypatch, mock_bigquery_client, mock_torn_api, mock_fetch, mock_batch_write, mock_write, mock_update_schema):
+E       fixture 'mock_fetch' not found
+&gt;       available fixtures: _session_event_loop, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, class_mocker, cov, doctest_namespace, event_loop, event_loop_policy, extra, extras, include_metadata_in_junit_xml, members_processor, metadata, mock_api_keys, mock_bigquery_client, mock_credentials, mock_google_auth, mock_monitoring_client, mock_torn_api, mocker, module_mocker, monkeypatch, no_cover, package_mocker, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, sample_bigquery_schema, sample_config, sample_endpoint_config, session_mocker, setup, testrun_uid, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory, torn_client, unit/services/integration/test_data_pipeline.py::&lt;event_loop&gt;, unit/services/integration/test_data_pipeline.py::TestDataPipelineIntegration::&lt;event_loop&gt;, unused_tcp_port, unused_tcp_port_factory, unused_udp_port, unused_udp_port_factory, user_processor, worker_id
+&gt;       use 'pytest --fixtures [testpath]' for help on them.
+
+/Users/shepner/src/TornCity/TCdatalogger/tests/unit/services/integration/test_data_pipeline.py:80</error></testcase><testcase classname="unit.core.test_scheduler" name="test_imports" time="0.001" /><testcase classname="unit.core.test_scheduler.TestScheduler" name="test_placeholder" time="0.001" /><testcase classname="unit.services.google.bigquery.test_client" name="test_write_data_with_retry_success" time="2.007" /><testcase classname="unit.services.google.bigquery.test_client" name="test_validate_data_types_success" time="0.002" /><testcase classname="unit.services.google.bigquery.test_client" name="test_write_data_success" time="0.002" /><testcase classname="unit.services.google.bigquery.test_client" name="test_table_exists_success" time="0.001" /><testcase classname="unit.services.google.bigquery.test_client" name="test_create_table" time="0.002" /><testcase classname="unit.services.google.bigquery.test_client" name="test_init_failure" time="0.002" /><testcase classname="unit.services.google.bigquery.test_client" name="test_write_data_invalid_disposition" time="0.002" /><testcase classname="unit.services.google.bigquery.test_client" name="test_validate_data_types_required_null" time="0.002" /><testcase classname="unit.services.google.bigquery.test_client" name="test_get_table_schema_success" time="0.001" /><testcase classname="unit.services.google.bigquery.test_client" name="test_delete_table_success" time="0.002" /><testcase classname="unit.services.google.bigquery.test_client" name="test_get_table_schema_not_found" time="0.002" /><testcase classname="unit.services.google.bigquery.test_client" name="test_validate_schema_compatibility_type_mismatch" time="0.002" /><testcase classname="unit.services.google.bigquery.test_client" name="test_table_exists_not_found" time="0.001" /><testcase classname="unit.services.google.bigquery.test_client" name="test_write_data_empty" time="0.002" /><testcase classname="unit.services.google.bigquery.test_client" name="test_write_data_with_retry_failure" time="6.010" /><testcase classname="unit.services.google.bigquery.test_client" name="test_validate_data_types_invalid_type" time="0.002" /><testcase classname="unit.services.google.bigquery.test_client" name="test_validate_schema_compatibility_required_field_missing" time="0.002" /><testcase classname="unit.services.google.bigquery.test_client" name="test_delete_table_failure" time="0.002" /><testcase classname="unit.services.google.bigquery.test_client" name="test_validate_schema_compatibility_success" time="0.001" /><testcase classname="unit.services.google.bigquery.test_client" name="test_table_exists_auth_error" time="0.002" /><testcase classname="unit.services.google.bigquery.test_client" name="test_write_data_in_batches" time="0.004" /><testcase classname="unit.services.torncity.endpoints.test_members" name="test_transform_data_missing_fields" time="0.008" /><testcase classname="unit.services.torncity.endpoints.test_members" name="test_transform_data" time="0.006"><failure message="AssertionError: assert dtype('O') == 'int64'&#10; +  where dtype('O') = 0    None\nName: days_in_faction, dtype: object.dtype">tests/unit/services/torncity/endpoints/test_members.py:366: in test_transform_data
+    assert df['days_in_faction'].dtype == 'int64'
+E   AssertionError: assert dtype('O') == 'int64'
+E    +  where dtype('O') = 0    None\nName: days_in_faction, dtype: object.dtype
+        col        = 'life_maximum'
+        df         =                   server_timestamp   id      name  ...  status_until life_current life_maximum
+0 2025-03-19 14:36:39.581736+00:00  123  TestUser  ...          None         1000         1000
+
+[1 rows x 20 columns]
+        processor  = &lt;app.services.torncity.endpoints.members.MembersEndpointProcessor object at 0x121dc3750&gt;
+        required_columns = ['server_timestamp',
  'id',
  'name',
- 'difficulty',
- 'status',
- 'created_at',
- 'rewards_money',
- 'rewards_respect']
-        required_fields = ['server_timestamp',
- 'id',
- 'name',
- 'difficulty',
- 'status',
- 'created_at',
- 'rewards_money',
- 'rewards_respect']
-        schema     = [SchemaField('server_timestamp', 'TIMESTAMP', 'REQUIRED', None, None, (), None),
- SchemaField('id', 'INTEGER', 'REQUIRED', None, None, (), None),
- SchemaField('name', 'STRING', 'REQUIRED', None, None, (), None),
- SchemaField('difficulty', 'STRING', 'REQUIRED', None, None, (), None),
- SchemaField('status', 'STRING', 'REQUIRED', None, None, (), None),
- SchemaField('created_at', 'TIMESTAMP', 'REQUIRED', None, None, (), None),
- SchemaField('planning_at', 'TIMESTAMP', 'NULLABLE', None, None, (), None),
- SchemaField('executed_at', 'TIMESTAMP', 'NULLABLE', None, None, (), None),
- SchemaField('ready_at', 'TIMESTAMP', 'NULLABLE', None, None, (), None),
- SchemaField('expired_at', 'TIMESTAMP', 'NULLABLE', None, None, (), None),
- SchemaField('rewards_money', 'INTEGER', 'REQUIRED', None, None, (), None),
- SchemaField('rewards_respect', 'FLOAT', 'REQUIRED', None, None, (), None),
- SchemaField('rewards_payout_type', 'STRING', 'NULLABLE', None, None, (), None),
- SchemaField('rewards_payout_percentage', 'FLOAT', 'NULLABLE', None, None, (), None),
- SchemaField('rewards_payout_paid_by', 'INTEGER', 'NULLABLE', None, None, (), None),
- SchemaField('rewards_payout_paid_at', 'TIMESTAMP', 'NULLABLE', None, None, (), None),
- SchemaField('rewards_items_id', 'STRING', 'NULLABLE', None, None, (), None),
- SchemaField('rewards_items_quantity', 'STRING', 'NULLABLE', None, None, (), None),
- SchemaField('slots_position', 'INTEGER', 'NULLABLE', None, None, (), None),
- SchemaField('slots_user_id', 'INTEGER', 'NULLABLE', None, None, (), None),
- SchemaField('slots_success_chance', 'FLOAT', 'NULLABLE', None, None, (), None),
- SchemaField('slots_crime_pass_rate', 'FLOAT', 'NULLABLE', None, None, (), None),
- SchemaField('slots_item_requirement_id', 'INTEGER', 'NULLABLE', None, None, (), None),
- SchemaField('slots_item_requirement_is_reusable', 'BOOLEAN', 'NULLABLE', None, None, (), None),
- SchemaField('slots_item_requirement_is_available', 'BOOLEAN', 'NULLABLE', None, None, (), None),
- SchemaField('slots_user_joined_at', 'TIMESTAMP', 'NULLABLE', None, None, (), None),
- SchemaField('slots_user_progress', 'FLOAT', 'NULLABLE', None, None, (), None)]
-        self       = &lt;test_crimes_pull.TestCrimesEndpointProcessor object at 0x127ab8af0&gt;
-
-During handling of the above exception, another exception occurred:
-tests/unit/services/torncity/test_crimes_pull.py:737: in test_crimes_bigquery_integration
-    crimes_processor.process_data({'data': test_data})
-        config     = {'api_key': 'test_api_key',
- 'bigquery_client': &lt;MagicMock spec='Client' id='4961851376'&gt;,
- 'dataset': 'test_dataset',
- 'endpoint': 'crimes',
- 'gcp_credentials_file': 'test_credentials.json',
- 'gcp_project_id': 'test-project',
- 'monitoring_client': &lt;MagicMock spec='MetricServiceClient' id='4961851712'&gt;,
- 'selection': 'default',
- 'storage_mode': 'append',
- 'table': 'crimes'}
-        crimes_processor = &lt;test_crimes_pull.TestCrimesEndpointProcessor object at 0x127ab8af0&gt;
-        mock_bigquery_client = &lt;MagicMock spec='Client' id='4961851376'&gt;
-        mock_credentials = &lt;MagicMock spec='Credentials' id='4961851040'&gt;
-        mock_monitoring_client = &lt;MagicMock spec='MetricServiceClient' id='4961851712'&gt;
-        mock_table = &lt;Mock name='mock.get_table()' id='4961850704'&gt;
-        self       = &lt;test_crimes_pull.TestCrimesPull testMethod=test_crimes_bigquery_integration&gt;
-        test_data  = {'crimes': {'123': {'id': 123,
-                    'name': 'Test Crime',
-                    'status': 'completed',
-                    'timestamp': 1710633600}}}
-app/services/torncity/endpoints/crimes.py:310: in process_data
-    raise DataValidationError(error_msg)
-E   app.services.torncity.exceptions.DataValidationError: Error transforming crimes data: Missing required fields in DataFrame: ['server_timestamp', 'id', 'name', 'difficulty', 'status', 'created_at', 'rewards_money', 'rewards_respect']
-        data       = {'data': {'crimes': {'123': {'id': 123,
-                             'name': 'Test Crime',
-                             'status': 'completed',
-                             'timestamp': 1710633600}}}}
-        error_msg  = ('Error transforming crimes data: Missing required fields in DataFrame: '
- "['server_timestamp', 'id', 'name', 'difficulty', 'status', 'created_at', "
- "'rewards_money', 'rewards_respect']")
-        self       = &lt;test_crimes_pull.TestCrimesEndpointProcessor object at 0x127ab8af0&gt;
-        transformed_data = Empty DataFrame
-Columns: []
-Index: []</failure></testcase><testcase classname="unit.services.torncity.test_crimes_pull.TestCrimesPull" name="test_convert_numerics_method" time="0.007" /><testcase classname="unit.services.torncity.test_crimes_pull.TestCrimesPull" name="test_invalid_rewards_types" time="0.011"><failure message="assert np.int64(2) == 1">tests/unit/services/torncity/test_crimes_pull.py:949: in test_invalid_rewards_types
-    assert df.loc[df['id'] == 3, 'reward_item_count'].iloc[0] == 1  # Only count valid items
-E   assert np.int64(2) == 1
-        crimes_processor = &lt;test_crimes_pull.TestCrimesEndpointProcessor object at 0x12795ae50&gt;
-        data       = {'crimes': {'1': {'id': 1, 'name': 'Test Crime', 'rewards': 'not_a_dict'},
-            '2': {'id': 2,
-                  'name': 'Test Crime 2',
-                  'rewards': {'items': 'not_a_list',
-                              'money': 'not_a_number',
-                              'respect': None}},
-            '3': {'id': 3,
-                  'name': 'Test Crime 3',
-                  'rewards': {'items': ['not_a_dict',
-                                        {'wrong_field': 123},
-                                        {'id': 'not_a_number', 'quantity': 2},
-                                        {'id': 123, 'quantity': 'not_a_number'},
-                                        {'id': 456, 'quantity': 3}],
-                              'money': 1000000,
-                              'respect': 100}}},
- 'fetched_at': '2024-03-17T00:00:00',
- 'timestamp': 1710633600}
-        df         =   server_timestamp created_at planning_at  ... reward_item_ids reward_item_quantities fetched_at
-0       2024-03-17        NaT         NaT  ...                                        2024-03-17
-1       2024-03-17        NaT         NaT  ...                                        2024-03-17
-2       2024-03-17        NaT         NaT  ...         123,456                    0,3 2024-03-17
-
-[3 rows x 19 columns]
-        self       = &lt;test_crimes_pull.TestCrimesPull testMethod=test_invalid_rewards_types&gt;</failure></testcase><testcase classname="unit.services.torncity.test_crimes_pull.TestCrimesPull" name="test_server_timestamp_handling" time="0.022"><failure message="assert not True&#10; +  where True = Empty DataFrame\nColumns: []\nIndex: [].empty">tests/unit/services/torncity/test_crimes_pull.py:825: in test_server_timestamp_handling
-    assert not df.empty
-E   assert not True
-E    +  where True = Empty DataFrame\nColumns: []\nIndex: [].empty
-        crimes_processor = &lt;test_crimes_pull.TestCrimesEndpointProcessor object at 0x12795b750&gt;
-        data       = {'crimes': {'1': {'id': 1, 'name': 'Test Crime'}},
- 'fetched_at': '2024-03-17T00:00:00',
- 'timestamp': 'invalid'}
-        df         = Empty DataFrame
+ 'level',
+ 'days_in_faction',
+ 'position',
+ 'status_description',
+ 'status_details',
+ 'status_state',
+ 'status_until',
+ 'last_action_status',
+ 'last_action_timestamp',
+ 'last_action_relative',
+ 'life_current',
+ 'life_maximum']
+        sample_members_response = {'members': {'123': {'days_in_faction': 100,
+                     'last_action': {'relative': '1 minute ago',
+                                     'status': 'Online',
+                                     'timestamp': 1647123456},
+                     'level': 50,
+                     'life': {'current': 1000, 'maximum': 1000},
+                     'name': 'TestUser',
+                     'position': 'Member',
+                     'status': {'description': 'Online',
+                                'details': '',
+                                'state': 'Online',
+                                'until': 0}}}}</failure></testcase><testcase classname="unit.services.torncity.endpoints.test_members" name="test_transform_data_empty_response" time="0.003" /><testcase classname="unit.services.torncity.endpoints.test_members.TestMembersProcessor" name="test_init" time="0.002" /><testcase classname="unit.services.torncity.endpoints.test_members.TestMembersProcessor" name="test_process_data_missing_fields" time="0.006" /><testcase classname="unit.services.torncity.endpoints.test_members.TestMembersProcessor" name="test_process_data_empty" time="0.003" /><testcase classname="unit.services.torncity.endpoints.test_members.TestMembersProcessor" name="test_process_data_valid" time="0.004"><failure message="assert 0 == 2&#10; +  where 0 = len(Empty DataFrame\nColumns: []\nIndex: [])">tests/unit/services/torncity/endpoints/test_members.py:144: in test_process_data_valid
+    assert len(processed_data) == 2
+E   assert 0 == 2
+E    +  where 0 = len(Empty DataFrame\nColumns: []\nIndex: [])
+        mock_torn_response = {'data': {'members': {'1': {'faction': {'days_in_faction': 0,
+                                        'faction_id': 123,
+                                        'position': 'Member'},
+                            'last_action': {'status': 'Online',
+                                            'timestamp': 1234567890},
+                            'level': 10,
+                            'life': {'current': 100, 'maximum': 100},
+                            'name': 'TestUser1',
+                            'status': {'description': '', 'state': 'Okay'},
+                            'timestamp': 1234567890},
+                      '2': {'last_action': {'status': 'Offline',
+                                            'timestamp': 1234567880},
+                            'level': 20,
+                            'life': {'current': 50, 'maximum': 100},
+                            'name': 'TestUser2',
+                            'status': {'description': 'Hospitalized',
+                                       'state': 'Hospital'},
+                            'timestamp': 1234567880}}}}
+        processed_data = Empty DataFrame
 Columns: []
 Index: []
-        expected_ts = Timestamp('2025-03-19 06:35:11')
-        input_ts   = 'invalid'
-        self       = &lt;test_crimes_pull.TestCrimesPull testMethod=test_server_timestamp_handling&gt;
-        test_cases = [(1710633600, Timestamp('2024-03-17 00:00:00')),
- ('2024-03-17T00:00:00', Timestamp('2024-03-17 00:00:00')),
- (None, Timestamp('2025-03-19 06:35:11')),
- ('invalid', Timestamp('2025-03-19 06:35:11'))]</failure></testcase><testcase classname="unit.services.torncity.test_crimes_pull.TestCrimesPull" name="test_mixed_rewards_data" time="0.010" /><testcase classname="unit.services.torncity.test_crimes_pull.TestCrimesPull" name="test_timestamp_formats" time="0.010"><failure message="assert False&#10; +  where False = &lt;function notna at 0x1226c91c0&gt;(NaT)&#10; +    where &lt;function notna at 0x1226c91c0&gt; = pd.notna">tests/unit/services/torncity/test_crimes_pull.py:1020: in test_timestamp_formats
-    assert pd.notna(df['ready_at'].iloc[0])
-E   assert False
-E    +  where False = &lt;function notna at 0x1226c91c0&gt;(NaT)
-E    +    where &lt;function notna at 0x1226c91c0&gt; = pd.notna
-        crimes_processor = &lt;test_crimes_pull.TestCrimesEndpointProcessor object at 0x12793b980&gt;
-        data       = {'crimes': {'1': {'created_at': 1710633600,
-                  'difficulty': 'medium',
-                  'executed_at': 'invalid_date',
-                  'expired_at': 1710720000,
-                  'id': 1,
-                  'name': 'Test Crime',
-                  'planning_at': None,
-                  'ready_at': '2024-03-17T00:00:00',
-                  'status': 'completed'}},
- 'fetched_at': '2024-03-17T00:00:00',
- 'timestamp': 1710633600}
-        df         =   server_timestamp created_at planning_at  ... reward_item_ids reward_item_quantities fetched_at
-0       2024-03-17 2024-03-17         NaT  ...                                        2024-03-17
-
-[1 rows x 19 columns]
-        self       = &lt;test_crimes_pull.TestCrimesPull testMethod=test_timestamp_formats&gt;</failure></testcase><testcase classname="unit.services.torncity.test_crimes_pull.TestCrimesPull" name="test_column_type_conversion" time="0.010"><failure message="assert np.int64(1) == 0">tests/unit/services/torncity/test_crimes_pull.py:1075: in test_column_type_conversion
-    assert df['id'].iloc[0] == 0
-E   assert np.int64(1) == 0
-        crimes_processor = &lt;test_crimes_pull.TestCrimesEndpointProcessor object at 0x127963e70&gt;
-        data       = {'crimes': {'1': {'difficulty': None,
-                  'id': None,
-                  'name': None,
-                  'participant_count': '5',
-                  'reward_item_count': None,
-                  'reward_money': 1000.5,
-                  'reward_respect': '100',
-                  'status': None}},
- 'fetched_at': '2024-03-17T00:00:00',
- 'timestamp': 1710633600}
-        df         =   server_timestamp created_at planning_at  ... reward_item_ids reward_item_quantities fetched_at
-0       2024-03-17        NaT         NaT  ...                                        2024-03-17
-
-[1 rows x 19 columns]
-        self       = &lt;test_crimes_pull.TestCrimesPull testMethod=test_column_type_conversion&gt;</failure></testcase></testsuite></testsuites>
+        processor  = &lt;app.services.torncity.endpoints.members.MembersEndpointProcessor object at 0x121d816a0&gt;
+        self       = &lt;test_members.TestMembersProcessor object at 0x121aa6d50&gt;</failure></testcase><testcase classname="unit.services.torncity.endpoints.test_members.TestMembersProcessor" name="test_process_data_invalid_types" time="0.003"><failure message="Failed: DID NOT RAISE &lt;class 'app.services.torncity.exceptions.DataValidationError'&gt;">tests/unit/services/torncity/endpoints/test_members.py:230: in test_process_data_invalid_types
+    with pytest.raises(DataValidationError) as exc:
+E   Failed: DID NOT RAISE &lt;class 'app.services.torncity.exceptions.DataValidationError'&gt;
+        exc        = &lt;ExceptionInfo for raises contextmanager&gt;
+        invalid_data = {'members': {'1': {'faction': {'faction_id': 'invalid', 'position': 123},
+                   'last_action': {'status': 'Online', 'timestamp': 'invalid'},
+                   'level': 'invalid',
+                   'life': {'current': '50', 'maximum': True},
+                   'name': 123,
+                   'status': {'state': True},
+                   'timestamp': 'invalid'}}}
+        processor  = &lt;app.services.torncity.endpoints.members.MembersEndpointProcessor object at 0x1219cfd50&gt;
+        self       = &lt;test_members.TestMembersProcessor object at 0x1219fa9f0&gt;</failure></testcase></testsuite></testsuites>

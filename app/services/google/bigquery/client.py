@@ -36,6 +36,13 @@ class BigQueryClient(BaseGoogleClient):
     - Executing queries
     """
     
+    # Valid BigQuery data types
+    VALID_TYPES = {
+        'STRING', 'BYTES', 'INTEGER', 'INT64', 'FLOAT', 'FLOAT64',
+        'BOOLEAN', 'BOOL', 'TIMESTAMP', 'DATE', 'TIME', 'DATETIME',
+        'RECORD', 'STRUCT', 'NUMERIC', 'BIGNUMERIC', 'GEOGRAPHY'
+    }
+
     def __init__(self, project_id: Union[str, Dict[str, Any]], credentials: Optional[str] = None):
         """Initialize the BigQuery client.
         
@@ -282,30 +289,27 @@ class BigQueryClient(BaseGoogleClient):
             self.write_data(batch, table_id)
 
     def write_data_with_retry(self, data: List[Dict], table_id: str, max_retries: int = 3) -> None:
-        """Write data to a BigQuery table with retry on failure.
-        
+        """Write data to BigQuery with retry logic.
+
         Args:
-            data: List of dictionaries containing the data
-            table_id: The table to write to
-            max_retries: Maximum number of retries
-            
+            data: List of dictionaries containing the data to write
+            table_id: The ID of the table to write to
+            max_retries: Maximum number of retry attempts
+
         Raises:
-            ValueError: If data is invalid
-            Exception: If all retries fail
+            BigQueryError: If the write operation fails after all retries
         """
-        if not isinstance(data, list) or len(data) == 0:
-            return
-            
-        retry_count = 0
-        while retry_count < max_retries:
+        attempt = 0
+        while attempt < max_retries:
             try:
-                self.write_data(data, table_id)
+                df = pd.DataFrame(data)
+                self.upload_dataframe(df, self._get_full_table_id(table_id))
                 return
             except Exception as e:
-                retry_count += 1
-                if retry_count == max_retries:
-                    raise Exception(f"Failed to write data after {max_retries} retries: {str(e)}")
-                time.sleep(2 ** retry_count)  # Exponential backoff
+                attempt += 1
+                if attempt == max_retries:
+                    raise BigQueryError(f"Failed to write data after {max_retries} retries: {str(e)}")
+                time.sleep(2 ** attempt)  # Exponential backoff
 
     def validate_field_names(self, schema: List[bigquery.SchemaField]) -> None:
         """Validate field names in a schema.
@@ -371,21 +375,6 @@ class BigQueryClient(BaseGoogleClient):
             if "Schema mismatch" not in str(e):
                 raise ValueError(f"Failed to validate schema compatibility: {str(e)}")
             raise
-
-    VALID_TYPES = {
-        'STRING',
-        'BYTES',
-        'INTEGER',
-        'FLOAT',
-        'NUMERIC',
-        'BOOLEAN',
-        'TIMESTAMP',
-        'DATE',
-        'TIME',
-        'DATETIME',
-        'GEOGRAPHY',
-        'RECORD',
-    }
 
     def validate_data_types(self, data: List[Dict], schema: List[bigquery.SchemaField]) -> None:
         """Validate that data types match schema.
@@ -636,57 +625,25 @@ class BigQueryClient(BaseGoogleClient):
         except Exception as e:
             raise ValueError(f"Failed to get schema for table {table_id}: {str(e)}")
 
-    def write_data_with_retry(self, table_name: str, data: List[Dict[str, Any]], max_retries: int = 3) -> None:
-        """Write data to a table with retries on failure.
-        
-        Args:
-            table_name: The table to write to
-            data: The data to write
-            max_retries: Maximum number of retry attempts
-        """
-        retries = 0
-        while retries < max_retries:
-            try:
-                self.write_data(data, table_name)
-                return
-            except Exception as e:
-                retries += 1
-                if retries == max_retries:
-                    raise e
-                time.sleep(2 ** retries)  # Exponential backoff
-
-    def write_data_in_batches(self, table_name: str, data: List[Dict[str, Any]], batch_size: int = 1000) -> None:
-        """Write data to a table in batches.
-        
-        Args:
-            table_name: The table to write to
-            data: The data to write
-            batch_size: Number of rows per batch
-        """
-        for i in range(0, len(data), batch_size):
-            batch = data[i:i + batch_size]
-            self.write_data(batch, table_name)
-
     def write_data_to_table(self, table_id: str, data: List[Dict[str, Any]], schema: Optional[List[Dict[str, str]]] = None) -> None:
-        """Write data to a table, creating it if it doesn't exist.
+        """Write data to a BigQuery table.
         
         Args:
             table_id: The table to write to
-            data: The data to write
-            schema: Optional schema for table creation
+            data: List of dictionaries containing the data
+            schema: Optional schema to validate against
+            
+        Raises:
+            ValueError: If data is invalid
         """
         if not data:
             return
-
-        full_table_id = self._get_full_table_id(table_id)
-        
-        if not self.table_exists(table_id):
-            if not schema:
-                raise ValueError(f"Schema required to create table {table_id}")
-            self.create_table(table_id, schema)
-        
-        write_disposition = 'WRITE_TRUNCATE' if self.storage_mode == 'replace' else 'WRITE_APPEND'
-        self.write_data(data, table_id, write_disposition)
+            
+        if schema:
+            schema_fields = self._convert_schema(schema)
+            self.validate_data_types(data, schema_fields)
+            
+        self.write_data_with_retry(data, table_id)
 
     def _infer_schema_from_data(self, sample_data: Dict[str, Any]) -> List[Dict[str, str]]:
         """Infer BigQuery schema from sample data.
@@ -743,3 +700,34 @@ class BigQueryClient(BaseGoogleClient):
         if isinstance(e, (exceptions.Unauthorized, exceptions.Forbidden)):
             raise ValueError(f"Authentication error during {operation}: {str(e)}")
         raise e
+
+    def write_data_in_batches(self, data: List[Dict[str, Any]], table_id: str, batch_size: int = 1000) -> None:
+        """Write data to BigQuery in batches.
+
+        Args:
+            data: List of dictionaries containing the data to write
+            table_id: The ID of the table to write to
+            batch_size: The size of each batch
+
+        Raises:
+            BigQueryError: If the write operation fails
+        """
+        try:
+            # Get the full table ID
+            full_table_id = self._get_full_table_id(table_id)
+
+            # Get or infer schema
+            if not self.table_exists(table_id):
+                if not data:
+                    raise BigQueryError("Cannot create table without data or schema")
+                schema = self._infer_schema_from_data(data[0])
+                self.create_table(table_id, schema)
+
+            # Process data in batches
+            for i in range(0, len(data), batch_size):
+                batch = data[i:i + batch_size]
+                df = pd.DataFrame(batch)
+                self.upload_dataframe(df, full_table_id)
+
+        except Exception as e:
+            raise BigQueryError(f"Failed to write data in batches: {str(e)}")

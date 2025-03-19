@@ -11,6 +11,8 @@ from unittest.mock import MagicMock, patch
 import google.auth.credentials
 import google.cloud.bigquery
 import requests
+from unittest.mock import Mock
+from requests.exceptions import Timeout
 
 # Constants
 TEST_DATA_DIR = Path(__file__).parent / "fixtures"
@@ -22,31 +24,40 @@ TEST_CONFIG = {
     "storage_mode": "append",
     "endpoint": "user",
     "selection": "default",
-    "api_key": "test_key_1"  # Direct API key for testing
+    "api_key": "abcd1234efgh5678"  # 16-character alphanumeric API key
 }
 
 @pytest.fixture
 def mock_api_keys():
     """Provide mock API keys for testing."""
     return {
-        "default": "test_key_1",
-        "secondary": "test_key_2"
+        "default": "abcd1234efgh5678",
+        "secondary": "ijkl9012mnop3456"
     }
 
 @pytest.fixture
-def sample_config(mock_credentials, mock_api_keys) -> Dict[str, Any]:
-    """Provide sample configuration for testing."""
-    config = TEST_CONFIG.copy()
-    config["gcp_credentials_file"] = mock_credentials
-    config["api_keys"] = mock_api_keys
-    return config
+def sample_config():
+    """Provide a sample configuration for testing."""
+    return {
+        "api_key": "abcd1234efgh5678",
+        "project_id": "test-project",
+        "dataset": "test_dataset",
+        "gcp_project_id": "test-project",
+        "gcp_credentials_file": "test_credentials.json",
+        "credentials_path": "test_credentials.json",
+        "dataset_id": "test_dataset",
+        "table_id": "test_table",
+        "endpoint": "user",
+        "selection": "default",
+        "storage_mode": "append"
+    }
 
 @pytest.fixture
 def mock_api_keys(tmp_path) -> str:
     """Create a temporary API keys file for testing."""
     api_keys = {
-        "default": "test_key_1",
-        "secondary": "test_key_2"
+        "default": "abcd1234efgh5678",
+        "secondary": "ijkl9012mnop3456"
     }
     api_keys_file = tmp_path / "api_keys.json"
     api_keys_file.write_text(json.dumps(api_keys))
@@ -155,26 +166,30 @@ def mock_credentials():
         return mock_creds
 
 @pytest.fixture
-def mock_torn_api(monkeypatch):
-    """Mock Torn API responses"""
-    def mock_get(*args, **kwargs):
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = {"status": True, "data": {"test": "data"}}
-        return mock_response
-        
+def mock_torn_api():
+    """Provide mock Torn API responses for testing."""
+    def mock_get_normal(*args, **kwargs):
+        response = Mock(spec=requests.Response)
+        response.status_code = 200
+        response.json.return_value = {"error": None, "data": {"test": "data"}}
+        return response
+
     def mock_get_rate_limit(*args, **kwargs):
-        mock_response = MagicMock()
-        mock_response.status_code = 429
-        mock_response.json.return_value = {"error": {"code": 5, "error": "Too many requests"}}
-        return mock_response
-        
+        response = Mock(spec=requests.Response)
+        response.status_code = 429
+        response.json.return_value = {
+            "error": {
+                "code": 5,
+                "error": "Rate limit exceeded. Please wait before sending more requests."
+            }
+        }
+        return response
+
     def mock_get_timeout(*args, **kwargs):
-        raise requests.exceptions.Timeout("Request timed out")
-        
-    monkeypatch.setattr(requests, "get", mock_get)
+        raise Timeout("Request timed out")
+
     return {
-        "normal": mock_get,
+        "normal": mock_get_normal,
         "rate_limit": mock_get_rate_limit,
         "timeout": mock_get_timeout
     } 

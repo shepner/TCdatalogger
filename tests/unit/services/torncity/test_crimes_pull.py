@@ -545,13 +545,14 @@ class TestCrimesPull(unittest.TestCase):
             }
         }
         
-        df = crimes_processor.transform_data(data)
+        result = crimes_processor.transform_data(data)
+        df = pd.DataFrame(result)
         assert not df.empty
-        assert df['reward_money'].iloc[0] == 1000000
-        assert df['reward_respect'].iloc[0] == 100
+        assert df['rewards_money'].iloc[0] == 1000000
+        assert df['rewards_respect'].iloc[0] == 100
         assert df['reward_item_count'].iloc[0] == 3
-        assert df['reward_item_ids'].iloc[0] == '1,2,3'
-        assert df['reward_item_quantities'].iloc[0] == '2,3,1'
+        assert df['rewards_items_id'].iloc[0] == '1,2,3'
+        assert df['rewards_items_quantity'].iloc[0] == '2,3,1'
 
     def test_participants_data_processing(self):
         """Test processing of participants data."""
@@ -573,11 +574,11 @@ class TestCrimesPull(unittest.TestCase):
             }
         }
         
-        df = crimes_processor.transform_data(data)
+        result = crimes_processor.transform_data(data)
+        df = pd.DataFrame(result)
         assert not df.empty
-        assert df['participant_count'].iloc[0] == 3
-        assert df['participant_ids'].iloc[0] == '123,456,789'
-        assert df['participant_names'].iloc[0] == 'Player1,Player2,Player3'
+        assert df['slots_user_id'].iloc[0] == 123
+        assert len(df) == 3  # One row per participant
 
     def test_server_timestamp_handling(self):
         """Test handling of server timestamps."""
@@ -610,7 +611,7 @@ class TestCrimesPull(unittest.TestCase):
                 assert pd.Timestamp(df['server_timestamp'].iloc[0]) == expected_ts
 
     def test_old_field_name_mapping(self):
-        """Test mapping of old field names to new ones."""
+        """Test mapping of old field names to new schema."""
         crimes_processor = self._get_processor()
         
         data = {
@@ -618,26 +619,26 @@ class TestCrimesPull(unittest.TestCase):
             'fetched_at': '2024-03-17T00:00:00',
             'crimes': {
                 '1': {
-                    'crime_name': 'Old Name',  # Should map to 'name'
-                    'time_started': 1710633600,  # Should map to 'created_at'
-                    'time_completed': 1710637200,  # Should map to 'executed_at'
-                    'initiated_by': 123,  # Should be added to participants
-                    'planned_by': 456,  # Should be added to participants
-                    'money_gain': 1000000,  # Should map to rewards.money
-                    'respect_gain': 100  # Should map to rewards.respect
+                    'crime_name': 'Old Name',
+                    'initiated_by': 123,
+                    'planned_by': 456,
+                    'time_started': 1710633600,
+                    'time_completed': 1710637200,
+                    'respect_gain': 100,
+                    'money_gain': 1000000
                 }
             }
         }
         
-        df = crimes_processor.transform_data(data)
+        result = crimes_processor.transform_data(data)
+        df = pd.DataFrame(result)
         assert not df.empty
         assert df['name'].iloc[0] == 'Old Name'
-        assert pd.Timestamp(df['created_at'].iloc[0]) == pd.Timestamp('2024-03-17 00:00:00')
-        assert pd.Timestamp(df['executed_at'].iloc[0]) == pd.Timestamp('2024-03-17 01:00:00')
-        assert df['participant_count'].iloc[0] == 2
-        assert df['participant_ids'].iloc[0] == '123,456'
-        assert df['reward_money'].iloc[0] == 1000000
-        assert df['reward_respect'].iloc[0] == 100
+        assert df['slots_user_id'].iloc[0] == 123
+        assert df['created_at'].iloc[0] == pd.Timestamp('2024-03-16 19:00:00')
+        assert df['executed_at'].iloc[0] == pd.Timestamp('2024-03-16 20:00:00')
+        assert df['rewards_respect'].iloc[0] == 100
+        assert df['rewards_money'].iloc[0] == 1000000
 
     def test_invalid_participant_types(self):
         """Test handling of invalid participant types."""

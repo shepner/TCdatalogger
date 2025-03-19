@@ -206,7 +206,8 @@ TCdatalogger/
      ```
 
 2. **Table Schemas**
-
+  This is what the BigQuery table schemas are to look like
+  
    a. Members Table (`torn.members`):
    ```
    Schema for v2_faction_*_members:

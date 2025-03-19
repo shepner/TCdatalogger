@@ -69,7 +69,7 @@ class TestBaseProcessor:
         
         # Verify TornClient initialization
         assert isinstance(processor.torn_client, TornClient)
-        assert processor.torn_client.api_keys.get('default') == "test_key_1"  # From mock_api_keys
+        assert processor.torn_client.api_keys.get('default') == "abcd1234efgh5678"  # From mock_api_keys
         
         # Verify BigQueryClient initialization
         assert isinstance(processor.bq_client, BigQueryClient)

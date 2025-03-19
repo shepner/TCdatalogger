@@ -17,9 +17,11 @@ from typing import Optional, Dict, Any, Union, Tuple, List
 import re
 from datetime import datetime, timedelta
 import os
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 from requests.exceptions import RequestException, HTTPError, ConnectionError, Timeout
 from tenacity import (
     retry,
@@ -44,6 +46,18 @@ class TornClient:
 
     # Default minimum interval between requests (in seconds)
     MIN_REQUEST_INTERVAL = timedelta(seconds=1)
+    
+    # Default timeouts
+    DEFAULT_CONNECT_TIMEOUT = 5
+    DEFAULT_READ_TIMEOUT = 30
+
+    # API Base URL
+    API_BASE_URL = "https://api.torn.com"
+    
+    # Default retry settings
+    MAX_RETRIES = 3
+    BACKOFF_FACTOR = 0.5
+    RETRY_STATUS_FORCELIST = [408, 429, 500, 502, 503, 504]
 
     def __init__(self, api_key_or_file: str):
         """Initialize the Torn API client.
@@ -56,6 +70,32 @@ class TornClient:
         self._last_request_time = {}  # Initialize the request time tracking dict
         self.logger = logging.getLogger(__name__)  # Initialize logger
         self._load_api_keys()
+        self._init_session()
+
+    def _init_session(self) -> None:
+        """Initialize a requests session with retry configuration."""
+        self.session = requests.Session()
+        
+        # Configure retry strategy
+        retry_strategy = Retry(
+            total=self.MAX_RETRIES,
+            backoff_factor=self.BACKOFF_FACTOR,
+            status_forcelist=self.RETRY_STATUS_FORCELIST,
+            allowed_methods=["GET"]
+        )
+        
+        # Configure adapter with retry strategy
+        adapter = HTTPAdapter(max_retries=retry_strategy)
+        self.session.mount("http://", adapter)
+        self.session.mount("https://", adapter)
+        
+        # Set default timeouts
+        original_request = self.session.request
+        self.session.request = lambda *args, **kwargs: original_request(
+            *args,
+            timeout=kwargs.pop('timeout', (self.DEFAULT_CONNECT_TIMEOUT, self.DEFAULT_READ_TIMEOUT)),
+            **kwargs
+        )
 
     def _load_api_keys(self) -> None:
         """Load API keys from file or direct key.
@@ -81,6 +121,13 @@ class TornClient:
                 # Treat the input as a direct API key
                 self.api_keys = {"default": self.api_key_or_file}
 
+            # Validate all API keys
+            for key_name, api_key in self.api_keys.items():
+                if not isinstance(api_key, str) or not api_key.strip():
+                    raise TornAPIKeyError(f"Invalid API key for '{key_name}'")
+                if not re.match(r'^[A-Za-z0-9]{16}$', api_key):
+                    raise TornAPIKeyError(f"API key '{key_name}' has invalid format")
+
         except TornAPIKeyError:
             raise
         except Exception as e:
@@ -97,7 +144,9 @@ class TornClient:
                 TornAPITimeoutError,
                 requests.exceptions.ConnectionError,
                 requests.exceptions.Timeout
-            ))
+            )),
+            'before': before_log(self.logger, logging.DEBUG),
+            'after': after_log(self.logger, logging.DEBUG)
         }
 
     def cleanup(self):
@@ -139,10 +188,12 @@ class TornClient:
             time_since_last = now - self._last_request_time[api_key]
             if time_since_last < self.MIN_REQUEST_INTERVAL:
                 sleep_time = (self.MIN_REQUEST_INTERVAL - time_since_last).total_seconds()
-                time.sleep(sleep_time)
+                if sleep_time > 0:  # Only sleep if positive time
+                    self.logger.debug(f"Rate limiting: sleeping for {sleep_time:.2f} seconds")
+                    time.sleep(sleep_time)
         self._last_request_time[api_key] = now
 
-    def _handle_api_response(self, response):
+    def _handle_api_response(self, response: requests.Response) -> dict:
         """Handle the API response and check for errors.
         
         Args:
@@ -160,31 +211,39 @@ class TornClient:
             data = response.json() if hasattr(response, 'json') else response
             
             if isinstance(data, dict):
-                if 'error' in data:
+                if 'error' in data and data['error'] is not None:  # Only check for errors if error is not None
                     error = data['error']
                     if isinstance(error, dict):
                         code = error.get('code')
                         message = error.get('error', '')
                         
-                        if code == 2:  # Invalid API key
-                            error_msg = f"API key not found: {self._mask_api_key(message)}"
-                            logging.error(error_msg)
-                            raise TornAPIKeyError(error_msg)
-                        elif code == 5:  # Rate limit
-                            error_msg = "Rate limit exceeded"
-                            logging.error(error_msg)
-                            raise TornAPIRateLimitError(error_msg)
-                        elif code == 9:  # API system disabled
-                            error_msg = "API system disabled"
-                            logging.error(error_msg)
-                            raise TornAPIError(error_msg)
-                        else:
-                            error_msg = f"API Error: {self._mask_api_key(message)}"
-                            logging.error(error_msg)
-                            raise TornAPIError(error_msg)
+                        error_mapping = {
+                            0: ("Unknown error", TornAPIError),
+                            1: ("Private endpoint", TornAPIError),
+                            2: ("Invalid API key", TornAPIKeyError),
+                            3: ("Authentication error", TornAPIKeyError),
+                            4: ("Invalid format specified", TornAPIError),
+                            5: ("Rate limit exceeded", TornAPIRateLimitError),
+                            6: ("Incorrect ID specified", TornAPIError),
+                            7: ("Incorrect ID-entity relation", TornAPIError),
+                            8: ("IP block", TornAPIError),
+                            9: ("API system disabled", TornAPIError),
+                            10: ("Key owner is in federal jail", TornAPIError),
+                            11: ("Key change error", TornAPIError),
+                            12: ("Key read error", TornAPIError),
+                            13: ("The requested selection is invalid", TornAPIError),
+                            14: ("The requested selection is disabled", TornAPIError),
+                            15: ("The requested selection is not available", TornAPIError),
+                            16: ("The requested selection is not available for the specified ID", TornAPIError)
+                        }
+                        
+                        error_msg, error_class = error_mapping.get(code, ("Unknown error", TornAPIError))
+                        error_msg = f"{error_msg}: {self._mask_api_key(message)}"
+                        self.logger.error(error_msg)
+                        raise error_class(error_msg)
                     else:
                         error_msg = f"API Error: {self._mask_api_key(str(error))}"
-                        logging.error(error_msg)
+                        self.logger.error(error_msg)
                         raise TornAPIError(error_msg)
                 
                 # Return the full response structure
@@ -233,13 +292,7 @@ class TornClient:
             raise TornAPIKeyError(f"API key selection '{selection}' not found")
         return self.api_keys[selection]
 
-    def _get_next_api_key(self, current_key):
-        """Get the next API key to use."""
-        if current_key not in self.api_keys:
-            raise TornAPIKeyError(f"API key not found: {current_key}")
-        return self.api_keys[current_key]
-
-    def get_timeout_config(self, timeout=None):
+    def get_timeout_config(self, timeout: Optional[Union[int, Tuple[int, int]]] = None) -> Tuple[int, int]:
         """Get timeout configuration for requests.
         
         Args:
@@ -248,122 +301,90 @@ class TornClient:
                     If None, returns default timeout of (5, 30).
         
         Returns:
-            int or tuple: Timeout configuration
+            Tuple[int, int]: A tuple of (connect_timeout, read_timeout)
         """
         if timeout is None:
-            return (5, 30)
-        if isinstance(timeout, (int, float)):
-            return timeout
-        return timeout
+            return (self.DEFAULT_CONNECT_TIMEOUT, self.DEFAULT_READ_TIMEOUT)
+        elif isinstance(timeout, (int, float)):
+            return (timeout, timeout)
+        elif isinstance(timeout, (tuple, list)) and len(timeout) == 2:
+            return (int(timeout[0]), int(timeout[1]))
+        else:
+            raise ValueError("Invalid timeout configuration")
 
-    def _make_request_internal(self, endpoint: str, api_key: str, timeout: Optional[int] = None) -> Dict[str, Any]:
-        """Make an internal request to the Torn API.
+    def make_request(self, endpoint: str, selection: Optional[str] = None, timeout: Optional[Union[int, Tuple[int, int]]] = None) -> Dict[str, Any]:
+        """Make a request to the Torn API.
 
         Args:
-            endpoint: The API endpoint to request.
-            api_key: The API key to use.
-            timeout: Optional request timeout in seconds.
+            endpoint: API endpoint to call
+            selection: Optional data selection filter
+            timeout: Optional request timeout override
 
         Returns:
-            Dict containing the API response data.
+            API response data
 
         Raises:
-            TornAPIError: For any API-related errors.
+            TornAPIError: On API error
+            TornAPITimeoutError: On request timeout
+            TornAPIRateLimitError: On rate limit exceeded
         """
-        url = f"https://api.torn.com/{endpoint}?key={api_key}"
+        api_key = self.api_keys.get(selection or "default")
+        if not api_key:
+            raise TornAPIKeyError(f"API key not found for selection: {selection}")
+
+        # Build URL with base
+        url = f"{self.API_BASE_URL}/{endpoint}?key={api_key}"
         
+        # Configure timeout
+        timeout_config = timeout or (self.DEFAULT_CONNECT_TIMEOUT, self.DEFAULT_READ_TIMEOUT)
+
         try:
             # Enforce rate limiting
             self._enforce_rate_limit(api_key)
             
-            # Make the request with retries
-            for attempt in range(3):  # Try up to 3 times
-                try:
-                    response = requests.get(url, timeout=self.get_timeout_config(timeout))
-                    data = response.json()
-                    
-                    # Check for error response
-                    if "error" in data:
-                        error_code = data["error"].get("code", 0)
-                        error_msg = data["error"].get("error", "Unknown error")
-                        
-                        if error_code == 5:  # Too many requests
-                            logging.warning(f"Rate limit hit for key {api_key}, attempt {attempt + 1}")
-                            time.sleep(2 ** attempt)  # Exponential backoff
-                            continue
-                        elif error_code == 2:  # Incorrect key
-                            raise TornAPIKeyError(f"Invalid API key: {error_msg}")
-                        else:
-                            raise TornAPIError(f"API error: {error_msg}")
-                    
-                    return data
-                    
-                except (requests.exceptions.RequestException, json.JSONDecodeError) as e:
-                    if attempt == 2:  # Last attempt
-                        raise TornAPIConnectionError(f"Failed to connect to Torn API: {str(e)}")
-                    time.sleep(2 ** attempt)  # Exponential backoff
-                    continue
+            # Make request
+            response = self.session.get(url, timeout=timeout_config)
+            response.raise_for_status()
             
-            # If we get here, we've exhausted our retries
-            raise TornAPIRateLimitError(f"Rate limit exceeded for key {api_key}")
+            # Handle response
+            return self._handle_api_response(response)
             
-        except Exception as e:
-            if isinstance(e, (TornAPIError, TornAPIKeyError, TornAPIRateLimitError, TornAPIConnectionError)):
-                raise
-            raise TornAPIError(f"Unexpected error: {str(e)}")
+        except requests.exceptions.Timeout:
+            raise TornAPITimeoutError("Request timed out")
+        except requests.exceptions.RequestException as e:
+            raise TornAPIError(f"Request failed: {str(e)}")
 
-    def make_request(self, endpoint: str, selection: str = "default") -> Dict[str, Any]:
-        """Make a request to the Torn API.
-
+    def make_concurrent_requests(self, endpoints: List[str], selection: str = 'default', max_workers: int = 5) -> List[Dict]:
+        """Make concurrent requests to multiple endpoints.
+        
         Args:
-            endpoint: The API endpoint to request
+            endpoints: List of API endpoints to request
             selection: The API key selection to use
-
-        Returns:
-            The API response data
-
-        Raises:
-            TornAPIError: For general API errors
-            TornAPIKeyError: For API key related errors
-            TornAPIRateLimitError: For rate limit errors
-            TornAPITimeoutError: For timeout errors
-            TornAPIConnectionError: For connection errors
-        """
-        try:
-            api_key = self._get_api_key(selection)
-            return self._make_request_internal(endpoint, api_key)
-        except TornAPITimeoutError:
-            raise
-        except TornAPIConnectionError as e:
-            if "Request timed out" in str(e):
-                raise TornAPITimeoutError("Request timed out")
-            raise TornAPIError(f"API request failed: {str(e)}")
-        except Exception as e:
-            raise TornAPIError(f"API request failed: {str(e)}")
-
-    def make_concurrent_requests(self, endpoints: List[str], selection: str = 'default') -> List[Dict]:
-        """Make multiple concurrent requests to the Torn API.
-        
-        Args:
-            endpoints: List of API endpoints to call
-            selection: Which API key to use ('default' or 'secondary')
+            max_workers: Maximum number of concurrent requests
             
         Returns:
-            List of API response data
+            List[Dict]: List of API response data
+            
+        Raises:
+            TornAPIError: If any request fails
         """
-        api_key = self._get_api_key(selection)
-        responses = []
+        results = []
         
-        for endpoint in endpoints:
-            try:
-                response = self._make_request_internal(endpoint, api_key)
-                responses.append(response)
-            except Exception as e:
-                # Log error but continue with other requests
-                self.logger.error(f"Error making request to {endpoint}: {str(e)}")
-                responses.append(None)
-                
-        return responses
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = [
+                executor.submit(self.make_request, endpoint, selection)
+                for endpoint in endpoints
+            ]
+            
+            for future in as_completed(futures):
+                try:
+                    result = future.result()
+                    results.append(result)
+                except Exception as e:
+                    # Re-raise the first error encountered
+                    raise
+            
+            return results
 
     def fetch_data(self, url: str, timeout: Optional[Union[int, Tuple[int, int]]] = None) -> Dict[str, Any]:
         """Fetch data from a specific URL.

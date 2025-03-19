@@ -193,22 +193,25 @@ def test_write_data_with_retry_success(bq_client, mock_bigquery_client):
     """Test successful data write with retry."""
     mock_job = Mock()
     mock_job.result.return_value = None
-    mock_bigquery_client.return_value.load_table_from_dataframe.return_value = mock_job
+    mock_bigquery_client.return_value.load_table_from_dataframe.side_effect = [
+        Exception("First attempt failed"),
+        mock_job
+    ]
     
     data = [{'col1': 'val1'}]
-    bq_client.write_data_with_retry('test_table', data)
+    bq_client.write_data_with_retry(data, 'test_table')
     
-    assert mock_bigquery_client.return_value.load_table_from_dataframe.call_count == 1
+    assert mock_bigquery_client.return_value.load_table_from_dataframe.call_count == 2
 
 def test_write_data_with_retry_failure(bq_client, mock_bigquery_client):
     """Test data write with retry exhaustion."""
-    mock_bigquery_client.return_value.load_table_from_dataframe.side_effect = Exception('Write failed')
+    mock_bigquery_client.return_value.load_table_from_dataframe.side_effect = Exception("Write failed")
     
     data = [{'col1': 'val1'}]
-    with pytest.raises(Exception, match='Write failed'):
-        bq_client.write_data_with_retry('test_table', data, max_retries=2)
+    with pytest.raises(BigQueryError, match="Failed to write data after 3 retries"):
+        bq_client.write_data_with_retry(data, 'test_table', max_retries=3)
     
-    assert mock_bigquery_client.return_value.load_table_from_dataframe.call_count == 2
+    assert mock_bigquery_client.return_value.load_table_from_dataframe.call_count == 3
 
 def test_write_data_in_batches(bq_client, mock_bigquery_client):
     """Test batch data writing."""
@@ -217,7 +220,7 @@ def test_write_data_in_batches(bq_client, mock_bigquery_client):
     mock_bigquery_client.return_value.load_table_from_dataframe.return_value = mock_job
     
     data = [{'col1': f'val{i}'} for i in range(2500)]  # Create 2500 records
-    bq_client.write_data_in_batches('test_table', data, batch_size=1000)
+    bq_client.write_data_in_batches(data, 'test_table', batch_size=1000)
     
     # Should have made 3 calls (2 full batches + 1 partial)
     assert mock_bigquery_client.return_value.load_table_from_dataframe.call_count == 3 

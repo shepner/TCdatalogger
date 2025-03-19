@@ -4,17 +4,19 @@ from unittest.mock import Mock, patch
 
 import pytest
 from google.cloud import bigquery
+import pandas as pd
+from datetime import datetime
 
 from app.services.torncity.endpoints.members import MembersEndpointProcessor
 from app.services.torncity.exceptions import TornAPIRateLimitError, DataValidationError
 
+@pytest.fixture
+def processor(sample_config, mock_api_keys):
+    """Create a MembersEndpointProcessor instance for testing."""
+    return MembersEndpointProcessor(sample_config)
+
 class TestMembersProcessor:
     """Test suite for MembersEndpointProcessor."""
-
-    @pytest.fixture
-    def processor(self, sample_config, mock_api_keys):
-        """Create a MembersEndpointProcessor instance for testing."""
-        return MembersEndpointProcessor(sample_config)
 
     @pytest.fixture
     def sample_members_data(self):
@@ -178,34 +180,36 @@ class TestMembersProcessor:
     def test_process_data_missing_fields(self, processor):
         """Test processing data with missing fields."""
         data = {
-            "data": {
-                "members": {
-                    "1": {
-                        "name": "TestUser1",
-                        "level": 10,
-                        # Missing status, last_action, faction, life
-                        "timestamp": 1234567890
-                    }
+            "members": {
+                "1": {
+                    "name": "TestUser1",
+                    "level": 10,
+                    # Missing status, last_action, life
+                    "timestamp": 1234567890
                 }
             }
         }
         
         processed_data = processor.process_data(data)
         assert len(processed_data) == 1
-        member = processed_data[0]
         
-        assert member["player_id"] == 1
-        assert member["name"] == "TestUser1"
-        assert member["level"] == 10
-        assert member["status"] is None
-        assert member["status_description"] is None
-        assert member["last_action"] is None
-        assert member["last_action_timestamp"] is None
-        assert member["faction_position"] is None
-        assert member["faction_id"] is None
-        assert member["life_current"] is None
-        assert member["life_maximum"] is None
-        assert member["timestamp"] == 1234567890
+        # Verify basic fields
+        assert processed_data.iloc[0]["id"] == 1
+        assert processed_data.iloc[0]["name"] == "TestUser1"
+        assert processed_data.iloc[0]["level"] == 10
+        
+        # Verify missing fields are None
+        assert pd.isna(processed_data.iloc[0]["status_description"])
+        assert pd.isna(processed_data.iloc[0]["status_details"])
+        assert pd.isna(processed_data.iloc[0]["status_state"])
+        assert pd.isna(processed_data.iloc[0]["status_until"])
+        assert pd.isna(processed_data.iloc[0]["last_action_status"])
+        assert pd.isna(processed_data.iloc[0]["last_action_timestamp"])
+        assert pd.isna(processed_data.iloc[0]["last_action_relative"])
+        assert pd.isna(processed_data.iloc[0]["position"])
+        assert pd.isna(processed_data.iloc[0]["days_in_faction"])
+        assert pd.isna(processed_data.iloc[0]["life_current"])
+        assert pd.isna(processed_data.iloc[0]["life_maximum"])
 
     def test_process_data_invalid_types(self, processor):
         """Test handling of invalid data types."""
@@ -296,4 +300,109 @@ class TestMembersProcessor:
             # Test rate limit handling
             with patch.object(processor.torn_client, 'fetch_data', side_effect=TornAPIRateLimitError("Rate limit exceeded")):
                 with pytest.raises(TornAPIRateLimitError):
-                    processor.run() 
+                    processor.run()
+
+@pytest.fixture
+def sample_members_response():
+    """Sample API response for members endpoint."""
+    return {
+        "members": {
+            "123": {
+                "name": "TestUser",
+                "level": 50,
+                "days_in_faction": 100,
+                "position": "Member",
+                "status": {
+                    "description": "Online",
+                    "details": "",
+                    "state": "Online",
+                    "until": 0
+                },
+                "last_action": {
+                    "status": "Online",
+                    "timestamp": 1647123456,
+                    "relative": "1 minute ago"
+                },
+                "life": {
+                    "current": 1000,
+                    "maximum": 1000
+                }
+            }
+        }
+    }
+
+def test_transform_data(processor, sample_members_response):
+    """Test data transformation from API response to DataFrame."""
+    df = processor.transform_data(sample_members_response)
+    
+    # Verify DataFrame structure
+    assert isinstance(df, pd.DataFrame)
+    assert not df.empty
+    
+    # Verify required columns exist
+    required_columns = [
+        'server_timestamp',
+        'id',
+        'name',
+        'level',
+        'days_in_faction',
+        'position',
+        'status_description',
+        'status_details',
+        'status_state',
+        'status_until',
+        'last_action_status',
+        'last_action_timestamp',
+        'last_action_relative',
+        'life_current',
+        'life_maximum'
+    ]
+    for col in required_columns:
+        assert col in df.columns
+    
+    # Verify data types
+    assert df['id'].dtype == 'int64'
+    assert df['level'].dtype == 'int64'
+    assert df['days_in_faction'].dtype == 'int64'
+    assert df['life_current'].dtype == 'int64'
+    assert df['life_maximum'].dtype == 'int64'
+    
+    # Verify sample data values
+    row = df.iloc[0]
+    assert row['id'] == 123
+    assert row['name'] == "TestUser"
+    assert row['level'] == 50
+    assert row['days_in_faction'] == 100
+    assert row['position'] == "Member"
+    assert row['status_description'] == "Online"
+    assert row['life_current'] == 1000
+    assert row['life_maximum'] == 1000
+
+def test_transform_data_empty_response(processor):
+    """Test handling of empty API response."""
+    empty_response = {"members": {}}
+    df = processor.transform_data(empty_response)
+    
+    assert isinstance(df, pd.DataFrame)
+    assert df.empty
+
+def test_transform_data_missing_fields(processor):
+    """Test handling of response with missing fields."""
+    incomplete_response = {
+        "members": {
+            "123": {
+                "name": "TestUser",
+                "level": 50
+                # Missing other fields
+            }
+        }
+    }
+    
+    df = processor.transform_data(incomplete_response)
+    
+    assert isinstance(df, pd.DataFrame)
+    assert not df.empty
+    assert df.iloc[0]['name'] == "TestUser"
+    assert df.iloc[0]['level'] == 50
+    # Other fields should be null
+    assert pd.isna(df.iloc[0]['days_in_faction']) 

@@ -1,0 +1,35 @@
+{
+    "torn_api": {
+        "base_url": "https://api.torn.com/v1",
+        "api_key": "test_api_key",
+        "rate_limit": {
+            "requests_per_minute": 100,
+            "minimum_interval": 0.6
+        }
+    },
+    "bigquery": {
+        "project_id": "test-project",
+        "dataset_id": "test_dataset",
+        "tables": {
+            "members": "members",
+            "crimes": "crimes"
+        },
+        "credentials_path": "tests/config/mock_credentials.json"
+    },
+    "endpoints": {
+        "members": {
+            "path": "faction/members",
+            "frequency": "PT15M",
+            "batch_size": 1000
+        },
+        "crimes": {
+            "path": "faction/crimes",
+            "frequency": "PT15M",
+            "batch_size": 1000
+        }
+    },
+    "logging": {
+        "level": "DEBUG",
+        "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    }
+} 

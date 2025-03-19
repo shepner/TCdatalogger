@@ -31,20 +31,26 @@ class TestMembersEndpointProcessor(MembersEndpointProcessor):
     def get_schema(self) -> List[bigquery.SchemaField]:
         """Get the schema for test data."""
         return [
-            bigquery.SchemaField("member_id", "INTEGER", mode="REQUIRED"),
-            bigquery.SchemaField("player_id", "INTEGER", mode="REQUIRED"),
+            bigquery.SchemaField("server_timestamp", "TIMESTAMP", mode="REQUIRED"),
+            bigquery.SchemaField("id", "INTEGER", mode="REQUIRED"),
             bigquery.SchemaField("name", "STRING", mode="REQUIRED"),
             bigquery.SchemaField("level", "INTEGER", mode="REQUIRED"),
-            bigquery.SchemaField("status", "STRING"),
-            bigquery.SchemaField("status_description", "STRING"),
-            bigquery.SchemaField("last_action", "STRING"),
-            bigquery.SchemaField("last_action_timestamp", "INTEGER"),
-            bigquery.SchemaField("faction_position", "STRING"),
-            bigquery.SchemaField("faction_id", "INTEGER"),
-            bigquery.SchemaField("life_current", "INTEGER"),
-            bigquery.SchemaField("life_maximum", "INTEGER"),
-            bigquery.SchemaField("days_in_faction", "INTEGER"),
-            bigquery.SchemaField("timestamp", "INTEGER")
+            bigquery.SchemaField("days_in_faction", "INTEGER", mode="NULLABLE"),
+            bigquery.SchemaField("revive_setting", "STRING", mode="NULLABLE"),
+            bigquery.SchemaField("position", "STRING", mode="NULLABLE"),
+            bigquery.SchemaField("is_revivable", "BOOLEAN", mode="NULLABLE"),
+            bigquery.SchemaField("is_on_wall", "BOOLEAN", mode="NULLABLE"),
+            bigquery.SchemaField("is_in_oc", "BOOLEAN", mode="NULLABLE"),
+            bigquery.SchemaField("has_early_discharge", "BOOLEAN", mode="NULLABLE"),
+            bigquery.SchemaField("last_action_status", "STRING", mode="NULLABLE"),
+            bigquery.SchemaField("last_action_timestamp", "TIMESTAMP", mode="NULLABLE"),
+            bigquery.SchemaField("last_action_relative", "STRING", mode="NULLABLE"),
+            bigquery.SchemaField("status_description", "STRING", mode="NULLABLE"),
+            bigquery.SchemaField("status_details", "STRING", mode="NULLABLE"),
+            bigquery.SchemaField("status_state", "STRING", mode="NULLABLE"),
+            bigquery.SchemaField("status_until", "STRING", mode="NULLABLE"),
+            bigquery.SchemaField("life_current", "INTEGER", mode="NULLABLE"),
+            bigquery.SchemaField("life_maximum", "INTEGER", mode="NULLABLE")
         ]
 
     def convert_timestamps(self, df: pd.DataFrame, exclude_cols: list[str] = None) -> pd.DataFrame:
@@ -161,7 +167,6 @@ class TestMembersEndpointProcessor(MembersEndpointProcessor):
                 faction_data = member_data.get("faction", {})
                 if not isinstance(faction_data, dict):
                     faction_data = {}
-                faction_id = faction_data.get("faction_id")
                 faction_position = faction_data.get("position")
                 days_in_faction = faction_data.get("days_in_faction")
                 
@@ -205,20 +210,26 @@ class TestMembersEndpointProcessor(MembersEndpointProcessor):
                 
                 # Create transformed member data
                 transformed_member = {
-                    "member_id": int(member_id),
-                    "player_id": int(member_id),  # In Torn, member_id is the same as player_id
+                    "id": int(member_id),
                     "name": name,
                     "level": level,
-                    "status": status_data.get("state"),
+                    "status_state": status_data.get("state"),
                     "status_description": status_data.get("description"),
-                    "last_action": last_action,
+                    "status_details": status_data.get("details"),
+                    "status_until": status_data.get("until"),
+                    "last_action_status": last_action,
                     "last_action_timestamp": last_action_timestamp,
-                    "faction_id": faction_id,
-                    "faction_position": faction_position,
+                    "last_action_relative": last_action_data.get("relative"),
+                    "position": faction_position,
+                    "days_in_faction": int(days_in_faction) if days_in_faction is not None else None,
                     "life_current": life_current,
                     "life_maximum": life_maximum,
-                    "days_in_faction": int(days_in_faction) if days_in_faction is not None else None,
-                    "timestamp": timestamp
+                    "revive_setting": member_data.get("revive_setting"),
+                    "is_revivable": member_data.get("is_revivable"),
+                    "is_on_wall": member_data.get("is_on_wall"),
+                    "is_in_oc": member_data.get("is_in_oc"),
+                    "has_early_discharge": member_data.get("has_early_discharge"),
+                    "server_timestamp": pd.Timestamp(timestamp)
                 }
                 
                 transformed_data.append(transformed_member)
@@ -392,14 +403,16 @@ class TestMembersPull:
                         "level": 50,
                         "status": {
                             "state": "online",
-                            "description": "Online"
+                            "description": "Online",
+                            "details": "Active",
+                            "until": None
                         },
                         "last_action": {
                             "status": "1 hour ago",
-                            "timestamp": 1710579151
+                            "timestamp": 1710579151,
+                            "relative": "1 hour ago"
                         },
                         "faction": {
-                            "faction_id": 17991,
                             "position": "Member",
                             "days_in_faction": 100
                         },
@@ -407,7 +420,11 @@ class TestMembersPull:
                             "current": 100,
                             "maximum": 100
                         },
-                        "timestamp": 1710579151
+                        "revive_setting": "friends",
+                        "is_revivable": True,
+                        "is_on_wall": False,
+                        "is_in_oc": True,
+                        "has_early_discharge": False
                     }
                 }
             }
@@ -415,21 +432,27 @@ class TestMembersPull:
         result = members_processor.transform_data(mock_response)
         
         assert len(result) == 1
-        member = result[0]
-        assert member["member_id"] == 12345
-        assert member["player_id"] == 12345
+        member = result.iloc[0]
+        assert member["id"] == 12345
         assert member["name"] == "Test User"
         assert member["level"] == 50
-        assert member["status"] == "online"
+        assert member["status_state"] == "online"
         assert member["status_description"] == "Online"
-        assert member["last_action"] == "1 hour ago"
-        assert member["last_action_timestamp"] == 1710579151
-        assert member["faction_id"] == 17991
-        assert member["faction_position"] == "Member"
+        assert member["status_details"] == "Active"
+        assert member["status_until"] is None
+        assert member["last_action_status"] == "1 hour ago"
+        assert pd.Timestamp(member["last_action_timestamp"]).timestamp() == 1710579151
+        assert member["last_action_relative"] == "1 hour ago"
+        assert member["position"] == "Member"
         assert member["days_in_faction"] == 100
         assert member["life_current"] == 100
         assert member["life_maximum"] == 100
-        assert member["timestamp"] == 1710579151
+        assert member["revive_setting"] == "friends"
+        assert member["is_revivable"] is True
+        assert member["is_on_wall"] is False
+        assert member["is_in_oc"] is True
+        assert member["has_early_discharge"] is False
+        assert isinstance(member["server_timestamp"], pd.Timestamp)
 
     def test_members_data_validation(self, members_processor):
         """Test data validation against schema."""
@@ -468,8 +491,7 @@ class TestMembersPull:
         df = pd.DataFrame(result)
         
         # Verify required fields are present
-        assert "member_id" in df.columns
-        assert "player_id" in df.columns
+        assert "id" in df.columns
         assert "name" in df.columns
         assert "level" in df.columns
         
@@ -612,8 +634,7 @@ class TestMembersPull:
         
         # Verify the data structure matches BigQuery schema
         member = result[0]
-        assert "member_id" in member
-        assert "player_id" in member
+        assert "id" in member
         assert "name" in member
         assert "level" in member
         assert "status" in member

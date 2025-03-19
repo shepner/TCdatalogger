@@ -12,6 +12,7 @@ import pandas as pd
 from datetime import datetime
 import time
 import json
+import numpy as np
 
 from google.cloud import bigquery
 from google.cloud import monitoring_v3
@@ -74,6 +75,8 @@ class BaseEndpointProcessor(ABC):
         self.gcp_project_id = config['gcp_project_id']
         self.gcp_credentials_file = config['gcp_credentials_file']
         self.dataset = config['dataset']
+        
+        self.schema_validator = None
         
     @property
     def bq_client(self) -> BigQueryClient:
@@ -227,14 +230,94 @@ class BaseEndpointProcessor(ABC):
         except (ValueError, TypeError):
             return datetime.now().isoformat()
 
-    @abstractmethod
     def get_schema(self) -> List[bigquery.SchemaField]:
         """Get the BigQuery schema for this endpoint.
         
         Returns:
-            List[bigquery.SchemaField]: The table schema
+            List of SchemaField objects defining the table schema
+            
+        Raises:
+            NotImplementedError: Must be implemented by subclasses
         """
-        pass
+        raise NotImplementedError("Subclasses must implement get_schema()")
+
+    def get_validator(self) -> 'SchemaValidator':
+        """Get or create the schema validator.
+        
+        Returns:
+            SchemaValidator instance for this endpoint's schema
+        """
+        if self.schema_validator is None:
+            self.schema_validator = SchemaValidator(self.get_schema())
+        return self.schema_validator
+
+    def validate_data(self, data: Union[Dict[str, Any], pd.DataFrame]) -> Union[Dict[str, Any], pd.DataFrame]:
+        """Validate data against the schema.
+        
+        Args:
+            data: Data to validate (either a single record or DataFrame)
+            
+        Returns:
+            Validated data with correct types
+            
+        Raises:
+            DataValidationError: If validation fails
+        """
+        validator = self.get_validator()
+        
+        if isinstance(data, pd.DataFrame):
+            return validator.validate_dataframe(data)
+        else:
+            return validator.validate_record(data)
+
+    def get_quality_metrics(self, data: pd.DataFrame) -> Dict[str, float]:
+        """Get data quality metrics.
+        
+        Args:
+            data: DataFrame to analyze
+            
+        Returns:
+            Dictionary of quality metrics
+        """
+        return self.get_validator().get_quality_metrics(data)
+
+    def transform_data(self, data: Dict[str, Any]) -> pd.DataFrame:
+        """Transform raw API data into DataFrame format.
+        
+        Args:
+            data: Raw API response data
+            
+        Returns:
+            DataFrame containing transformed data
+            
+        Raises:
+            NotImplementedError: Must be implemented by subclasses
+        """
+        raise NotImplementedError("Subclasses must implement transform_data()")
+
+    def process_data(self, data: Dict[str, Any]) -> pd.DataFrame:
+        """Process raw API data into validated DataFrame.
+        
+        Args:
+            data: Raw API response data
+            
+        Returns:
+            DataFrame containing processed and validated data
+            
+        Raises:
+            DataValidationError: If data validation fails
+        """
+        # Transform raw data to DataFrame
+        df = self.transform_data(data)
+        
+        # Validate against schema
+        df = self.validate_data(df)
+        
+        # Get quality metrics
+        metrics = self.get_quality_metrics(df)
+        logging.info("Data quality metrics: %s", json.dumps(metrics, indent=2))
+        
+        return df
 
     def process(self, data: Dict) -> bool:
         """Process data from the endpoint.
@@ -282,21 +365,6 @@ class BaseEndpointProcessor(ABC):
         except Exception as e:
             self._log_error(str(e))
             return False
-
-    @abstractmethod
-    def transform_data(self, data: Dict) -> pd.DataFrame:
-        """Transform API response data into a DataFrame.
-        
-        Args:
-            data: Raw API response data
-            
-        Returns:
-            pd.DataFrame: Transformed data matching the schema
-            
-        Raises:
-            DataValidationError: If data cannot be transformed
-        """
-        pass
 
     def _validate_schema(self, df: pd.DataFrame, schema: List[bigquery.SchemaField]) -> pd.DataFrame:
         """Validate DataFrame against BigQuery schema.
@@ -480,21 +548,6 @@ class BaseEndpointProcessor(ABC):
             "timestamp": datetime.now().isoformat()
         })
 
-    @abstractmethod
-    def process_data(self, data: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Process the data from the API response.
-        
-        Args:
-            data: Raw data from the API response
-            
-        Returns:
-            List[Dict[str, Any]]: List of processed data records
-            
-        Raises:
-            NotImplementedError: If not implemented by child class
-        """
-        raise NotImplementedError("Child class must implement process_data method")
-
     def validate_schema(self, data: pd.DataFrame) -> None:
         """Validate that the data matches the schema.
         
@@ -535,3 +588,167 @@ class BaseEndpointProcessor(ABC):
             elif field.field_type == "TIMESTAMP":
                 if not pd.api.types.is_datetime64_any_dtype(values):
                     raise SchemaError(f"Invalid type for field {field.name}: expected TIMESTAMP, got {values.dtype}") 
+
+class SchemaValidator:
+    """Handles schema validation for BigQuery data."""
+    
+    def __init__(self, schema: List[bigquery.SchemaField]):
+        """Initialize the schema validator.
+        
+        Args:
+            schema: List of BigQuery SchemaField objects defining the table schema
+        """
+        self.schema = {field.name: field for field in schema}
+        self.required_fields = {
+            name: field for name, field in self.schema.items() 
+            if field.mode == 'REQUIRED'
+        }
+    
+    def validate_field(self, name: str, value: Any) -> Any:
+        """Validate and convert a single field value.
+        
+        Args:
+            name: Field name
+            value: Field value
+            
+        Returns:
+            Converted value matching schema type
+            
+        Raises:
+            DataValidationError: If validation fails
+        """
+        if name not in self.schema:
+            raise DataValidationError(f"Unknown field: {name}")
+            
+        field = self.schema[name]
+        
+        # Handle NULL values
+        if pd.isna(value) or value is None:
+            if field.mode == 'REQUIRED':
+                raise DataValidationError(f"Required field {name} cannot be NULL")
+            return None
+            
+        try:
+            # Convert based on BigQuery type
+            if field.field_type == 'STRING':
+                return str(value) if value is not None else None
+                
+            elif field.field_type == 'INTEGER':
+                if isinstance(value, str):
+                    value = float(value)  # Handle string numbers
+                return int(value)
+                
+            elif field.field_type == 'FLOAT':
+                return float(value)
+                
+            elif field.field_type == 'BOOLEAN':
+                if isinstance(value, str):
+                    return value.lower() in ('true', '1', 'yes')
+                return bool(value)
+                
+            elif field.field_type == 'TIMESTAMP':
+                if isinstance(value, (int, float)):
+                    return pd.Timestamp.fromtimestamp(value)
+                elif isinstance(value, str):
+                    try:
+                        return pd.Timestamp(value)
+                    except ValueError:
+                        return pd.Timestamp.fromtimestamp(float(value))
+                elif isinstance(value, datetime):
+                    return pd.Timestamp(value)
+                elif isinstance(value, pd.Timestamp):
+                    return value
+                else:
+                    raise DataValidationError(f"Invalid timestamp format for field {name}: {value}")
+                    
+            else:
+                raise DataValidationError(f"Unsupported field type: {field.field_type}")
+                
+        except (ValueError, TypeError) as e:
+            raise DataValidationError(f"Invalid value for field {name} ({field.field_type}): {str(e)}")
+    
+    def validate_record(self, record: Dict[str, Any]) -> Dict[str, Any]:
+        """Validate a complete data record.
+        
+        Args:
+            record: Dictionary containing field values
+            
+        Returns:
+            Dictionary with validated and converted values
+            
+        Raises:
+            DataValidationError: If validation fails
+        """
+        # Check for required fields
+        missing_fields = set(self.required_fields) - set(record)
+        if missing_fields:
+            raise DataValidationError(f"Missing required fields: {', '.join(missing_fields)}")
+        
+        validated = {}
+        for name, value in record.items():
+            if name in self.schema:
+                validated[name] = self.validate_field(name, value)
+        
+        return validated
+    
+    def validate_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Validate a complete DataFrame.
+        
+        Args:
+            df: DataFrame to validate
+            
+        Returns:
+            Validated DataFrame with correct types
+            
+        Raises:
+            DataValidationError: If validation fails
+        """
+        if df.empty:
+            return df
+            
+        # Check for required columns
+        missing_cols = set(self.required_fields) - set(df.columns)
+        if missing_cols:
+            raise DataValidationError(f"Missing required columns: {', '.join(missing_cols)}")
+        
+        # Validate each column
+        for col in df.columns:
+            if col in self.schema:
+                df[col] = df[col].apply(lambda x: self.validate_field(col, x))
+        
+        return df
+    
+    def get_quality_metrics(self, df: pd.DataFrame) -> Dict[str, float]:
+        """Calculate data quality metrics.
+        
+        Args:
+            df: DataFrame to analyze
+            
+        Returns:
+            Dictionary of quality metrics
+        """
+        metrics = {
+            'total_rows': len(df),
+            'null_percentage': df.isnull().mean().mean() * 100,
+            'duplicate_rows': df.duplicated().sum(),
+        }
+        
+        # Field-specific metrics
+        for name, field in self.schema.items():
+            if name in df.columns:
+                metrics[f'{name}_null_count'] = df[name].isnull().sum()
+                
+                if field.field_type in ('INTEGER', 'FLOAT'):
+                    non_null = df[name].dropna()
+                    if not non_null.empty:
+                        metrics[f'{name}_min'] = float(non_null.min())
+                        metrics[f'{name}_max'] = float(non_null.max())
+                        metrics[f'{name}_mean'] = float(non_null.mean())
+                
+                elif field.field_type == 'STRING':
+                    non_null = df[name].dropna()
+                    if not non_null.empty:
+                        metrics[f'{name}_empty_count'] = (non_null == '').sum()
+                        metrics[f'{name}_unique_count'] = non_null.nunique()
+        
+        return metrics 

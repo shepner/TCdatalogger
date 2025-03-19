@@ -19,21 +19,24 @@ class CrimesEndpointProcessor(BaseEndpointProcessor):
     data types and timestamps.
     """
 
-    def __init__(self, config: Dict[str, Any]):
+    def __init__(self, config: Dict[str, Any], endpoint_config: Dict[str, Any] = None):
         """Initialize the crimes endpoint processor.
 
         Args:
             config: Configuration dictionary containing API and storage settings.
+            endpoint_config: Optional endpoint-specific configuration.
         """
         super().__init__(config)
-        self.endpoint_config.update({
-            'name': 'crimes',
-            'url': 'https://api.torn.com/faction/{API_KEY}?selections=crimes',
-            'table': f"{config.get('dataset', 'torn')}.crimes",
-            'api_key': config.get('tc_api_key', 'default'),
-            'storage_mode': config.get('storage_mode', 'append'),
-            'frequency': 'PT15M'
-        })
+        if endpoint_config is None:
+            endpoint_config = {
+                'name': 'crimes',
+                'url': 'https://api.torn.com/faction/{API_KEY}?selections=crimes',
+                'table': f"{config.get('dataset', 'torn')}.crimes",
+                'api_key': config.get('tc_api_key', 'default'),
+                'storage_mode': config.get('storage_mode', 'append'),
+                'frequency': 'PT15M'
+            }
+        self.endpoint_config.update(endpoint_config)
 
     def get_schema(self) -> List[bigquery.SchemaField]:
         """Get the BigQuery schema for crimes data."""
@@ -142,151 +145,60 @@ class CrimesEndpointProcessor(BaseEndpointProcessor):
         
         return df
 
-    def transform_data(self, data: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Transform crimes data into a list of dictionaries.
+    def transform_data(self, data: Dict[str, Any]) -> pd.DataFrame:
+        """Transform the raw data into the required format.
 
         Args:
-            data: Dictionary containing crimes data.
+            data: Raw API response data containing crimes information
 
         Returns:
-            List of dictionaries containing transformed data.
+            DataFrame containing transformed crimes data
 
         Raises:
             DataValidationError: If data validation fails
         """
-        if not data or not isinstance(data, dict):
-            raise DataValidationError("No crimes data found in API response")
-
-        # Handle both direct crimes data and wrapped format
-        crimes_data = data.get('crimes', data)
+        if not data:
+            return pd.DataFrame()
+            
+        # Extract crimes data from the nested structure
+        crimes_data = data.get("data", {}).get("crimes", {})
         if not crimes_data:
-            raise DataValidationError("No crimes data found in API response")
-
-        # Parse server timestamp
-        server_timestamp = data.get('timestamp', pd.Timestamp.now())
-        try:
-            if isinstance(server_timestamp, (int, float)):
-                server_timestamp = pd.Timestamp.fromtimestamp(server_timestamp)
-            elif isinstance(server_timestamp, str):
-                try:
-                    # Try parsing as ISO format first
-                    server_timestamp = pd.Timestamp(server_timestamp)
-                except ValueError:
-                    # Try parsing as Unix timestamp
-                    server_timestamp = pd.Timestamp.fromtimestamp(float(server_timestamp))
-            else:
-                server_timestamp = pd.Timestamp.now()
-        except (ValueError, TypeError):
-            server_timestamp = pd.Timestamp.now()
-
-        # Parse fetched_at timestamp
-        fetched_at = data.get('fetched_at', pd.Timestamp.now())
-        try:
-            if isinstance(fetched_at, (int, float)):
-                fetched_at = pd.Timestamp.fromtimestamp(fetched_at)
-            elif isinstance(fetched_at, str):
-                try:
-                    # Try parsing as ISO format first
-                    fetched_at = pd.Timestamp(fetched_at)
-                except ValueError:
-                    # Try parsing as Unix timestamp
-                    fetched_at = pd.Timestamp.fromtimestamp(float(fetched_at))
-            else:
-                fetched_at = pd.Timestamp.now()
-        except (ValueError, TypeError):
-            fetched_at = pd.Timestamp.now()
-
-        def parse_timestamp(value):
-            """Parse timestamp value to pandas Timestamp."""
-            if value is None:
-                return None
-            try:
-                if isinstance(value, (int, float)):
-                    return pd.Timestamp.fromtimestamp(value)
-                elif isinstance(value, str):
-                    try:
-                        # Try parsing as ISO format first
-                        return pd.Timestamp(value)
-                    except ValueError:
-                        # Try parsing as Unix timestamp
-                        return pd.Timestamp.fromtimestamp(float(value))
-                elif isinstance(value, pd.Timestamp):
-                    return value
-                return None
-            except (ValueError, TypeError):
-                return None
-
-        processed_crimes = []
+            return pd.DataFrame()
+            
+        transformed_data = []
+        server_timestamp = pd.Timestamp.now()
+        
         for crime_id, crime_data in crimes_data.items():
             try:
-                if not isinstance(crime_data, dict):
-                    continue
-
-                # Create base crime record
-                processed_crime = {
-                    'server_timestamp': server_timestamp,
-                    'id': int(crime_id) if str(crime_id).isdigit() else 0,
-                    'name': crime_data.get('name', ''),
-                    'difficulty': crime_data.get('difficulty', 'unknown'),
-                    'status': crime_data.get('status', 'unknown'),
-                    'created_at': parse_timestamp(crime_data.get('created_at')) or server_timestamp,
-                    'planning_at': parse_timestamp(crime_data.get('planning_at')),
-                    'ready_at': parse_timestamp(crime_data.get('ready_at')),
-                    'executed_at': parse_timestamp(crime_data.get('executed_at')),
-                    'expired_at': parse_timestamp(crime_data.get('expired_at')),
-                    'rewards_money': int(crime_data.get('rewards', {}).get('money', 0)),
-                    'rewards_respect': float(crime_data.get('rewards', {}).get('respect', 0.0)),
-                    'rewards_payout_type': crime_data.get('rewards', {}).get('payout', {}).get('type'),
-                    'rewards_payout_percentage': float(crime_data.get('rewards', {}).get('payout', {}).get('percentage', 0.0)),
-                    'rewards_payout_paid_by': int(crime_data.get('rewards', {}).get('payout', {}).get('paid_by', 0)),
-                    'rewards_payout_paid_at': parse_timestamp(crime_data.get('rewards', {}).get('payout', {}).get('paid_at')),
-                    'fetched_at': fetched_at,
-                    'reward_item_count': 0  # Initialize counter for valid reward items
+                # Create transformed crime data matching schema exactly
+                transformed_crime = {
+                    "server_timestamp": server_timestamp,
+                    "crime_id": crime_id,
+                    "crime_name": crime_data.get("crime_name"),
+                    "participants": crime_data.get("participants"),
+                    "time_started": crime_data.get("time_started"),
+                    "time_completed": crime_data.get("time_completed"),
+                    "time_ready": crime_data.get("time_ready"),
+                    "initiated_by": crime_data.get("initiated_by"),
+                    "planned_by": crime_data.get("planned_by"),
+                    "success": crime_data.get("success"),
+                    "money_gain": crime_data.get("money_gain"),
+                    "respect_gain": crime_data.get("respect_gain"),
+                    "initiated_by_name": crime_data.get("initiated_by_name"),
+                    "planned_by_name": crime_data.get("planned_by_name"),
+                    "crime_type": crime_data.get("crime_type"),
+                    "state": crime_data.get("state")
                 }
-
-                # Process reward items
-                reward_items = crime_data.get('rewards', {}).get('items', [])
-                if isinstance(reward_items, list):
-                    item_ids = []
-                    item_quantities = []
-                    valid_item_count = 0
-                    for item in reward_items:
-                        if isinstance(item, dict):
-                            try:
-                                item_id = int(item.get('id', 0))
-                                quantity = int(item.get('quantity', 0))
-                                if item_id > 0 and quantity > 0:
-                                    item_ids.append(str(item_id))
-                                    item_quantities.append(str(quantity))
-                                    valid_item_count += 1
-                            except (ValueError, TypeError):
-                                continue
-                    processed_crime['rewards_items_id'] = ','.join(item_ids) if item_ids else None
-                    processed_crime['rewards_items_quantity'] = ','.join(item_quantities) if item_quantities else None
-                    processed_crime['reward_item_count'] = valid_item_count
-
-                # Process slots data
-                slots = crime_data.get('slots', {})
-                if isinstance(slots, dict):
-                    processed_crime.update({
-                        'slots_position': int(slots.get('position', 0)),
-                        'slots_user_id': int(slots.get('user_id', 0)),
-                        'slots_success_chance': float(slots.get('success_chance', 0.0)),
-                        'slots_crime_pass_rate': float(slots.get('crime_pass_rate', 0.0)),
-                        'slots_item_requirement_id': int(slots.get('item_requirement', {}).get('id', 0)),
-                        'slots_item_requirement_is_reusable': bool(slots.get('item_requirement', {}).get('is_reusable', False)),
-                        'slots_item_requirement_is_available': bool(slots.get('item_requirement', {}).get('is_available', False)),
-                        'slots_user_joined_at': parse_timestamp(slots.get('user_joined_at')),
-                        'slots_user_progress': float(slots.get('user_progress', 0.0))
-                    })
-
-                processed_crimes.append(processed_crime)
-
+                
+                transformed_data.append(transformed_crime)
+                
             except Exception as e:
-                self._log_error(f"Error processing crime {crime_id}: {str(e)}")
+                logging.error(f"Error processing crime {crime_id}: {str(e)}")
                 continue
-
-        return processed_crimes
+                
+        # Create DataFrame and validate
+        df = pd.DataFrame(transformed_data)
+        return df if not df.empty else pd.DataFrame(columns=self.get_schema())
 
     def process_data(self, data: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Process the crimes data.

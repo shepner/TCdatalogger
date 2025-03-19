@@ -461,9 +461,9 @@ class TestMembersProcessor:
 
     def test_members_data_processing(self, processor, sample_data):
         """Test processing members data."""
-        transformed = processor.process_data({"data": sample_data})
+        transformed = processor.transform_data(sample_data)
         assert len(transformed) == 1
-        assert transformed[0]["faction_position"] == "Member"
+        assert transformed.iloc[0]["position"] == "Member"
 
 class TestProcessorErrorHandling:
     """Test suite for processor error handling."""
