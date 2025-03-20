@@ -1,32 +1,17 @@
-"""BigQuery client for data storage operations.
+"""BigQuery client for data storage operations."""
 
-This module provides functionality for interacting with Google BigQuery:
-- Table management
-- Data upload
-- Schema management
-- Query execution
-"""
-
-from typing import Dict, List, Optional, Union, Any
-import re
+from typing import Dict, List, Union, Optional, Any
 from datetime import datetime
 import pandas as pd
 from google.cloud import bigquery
-from google.api_core import retry
-import time
-import logging
-from google.api_core import exceptions
 from google.oauth2 import service_account
+import logging
 
-from app.services.google.base import BaseGoogleClient
-from app.services.common.types import SchemaType, DataType, ConfigType, validate_schema
-
-# Remove the import from torncity.exceptions
 class BigQueryError(Exception):
     """Base exception for BigQuery operations."""
     pass
 
-class BigQueryClient(BaseGoogleClient):
+class BigQueryClient:
     """Client for Google BigQuery operations.
     
     This class provides methods for:
@@ -43,44 +28,53 @@ class BigQueryClient(BaseGoogleClient):
         'RECORD', 'STRUCT', 'NUMERIC', 'BIGNUMERIC', 'GEOGRAPHY'
     }
 
-    def __init__(self, project_id: Union[str, Dict[str, Any]], credentials: Optional[str] = None):
+    def __init__(self, credentials_file: str):
         """Initialize the BigQuery client.
         
         Args:
-            project_id: The GCP project ID or a config dictionary containing 'gcp_project_id'.
-            credentials: Path to the service account credentials file.
-        
-        Raises:
-            BigQueryError: If authentication fails.
+            credentials_file: Path to the service account credentials file.
         """
         try:
-            # Store the config if project_id is a dictionary
-            self.config = project_id if isinstance(project_id, dict) else None
-            
-            # Handle project_id being a config dictionary
-            if isinstance(project_id, dict):
-                self.project_id = project_id.get('gcp_project_id')
-                credentials = credentials or project_id.get('gcp_credentials_file')
-                self.dataset = project_id.get('dataset')
-                self.storage_mode = project_id.get('storage_mode', 'append')
-            else:
-                self.project_id = project_id
-                self.dataset = None
-                self.storage_mode = 'append'
-
-            if not self.project_id:
-                raise BigQueryError("Project ID is required")
-
-            if credentials:
-                self.client = bigquery.Client(
-                    project=self.project_id,
-                    credentials=service_account.Credentials.from_service_account_file(credentials)
-                )
-            else:
-                self.client = bigquery.Client(project=self.project_id)
+            self.credentials_path = credentials_file
+            self.credentials = service_account.Credentials.from_service_account_file(credentials_file)
+            self.project_id = self.credentials.project_id
+            self.client = bigquery.Client(credentials=self.credentials, project=self.project_id)
         except Exception as e:
-            raise BigQueryError(f"Failed to authenticate with BigQuery: {str(e)}")
+            raise BigQueryError(f"Failed to initialize BigQuery client: {str(e)}")
+
+    def _initialize_client(self) -> None:
+        """Initialize or reinitialize the BigQuery client."""
+        try:
+            self.credentials = service_account.Credentials.from_service_account_file(self.credentials_path)
+            self.project_id = self.credentials.project_id
+            self.client = bigquery.Client(credentials=self.credentials, project=self.project_id)
+        except Exception as e:
+            raise BigQueryError(f"Failed to reinitialize BigQuery client: {str(e)}")
+
+    def _validate_connection(self) -> bool:
+        """Validate the BigQuery connection is working.
         
+        Returns:
+            bool: True if connection is valid, False otherwise
+        """
+        try:
+            # Try a simple query to validate connection
+            query = "SELECT 1"
+            query_job = self.client.query(query)
+            query_job.result()
+            return True
+        except Exception as e:
+            logging.error(f"BigQuery connection validation failed: {str(e)}")
+            return False
+
+    def _ensure_valid_connection(self) -> None:
+        """Ensure the BigQuery connection is valid, reinitialize if needed."""
+        if not self._validate_connection():
+            logging.warning("BigQuery connection invalid, reinitializing client...")
+            self._initialize_client()
+            if not self._validate_connection():
+                raise BigQueryError("Failed to establish valid BigQuery connection after reinitialization")
+
     def _get_full_table_id(self, table_id: str) -> str:
         """Get the fully qualified table ID.
         
@@ -171,17 +165,15 @@ class BigQueryClient(BaseGoogleClient):
         
         Args:
             df: The DataFrame to upload
-            table_id: The table to write to
+            table_id: The table to write to (format: project.dataset.table)
             write_disposition: Write disposition (WRITE_APPEND, WRITE_TRUNCATE, WRITE_EMPTY)
         """
-        full_table_id = self._get_full_table_id(table_id)
-        job_config = bigquery.LoadJobConfig(write_disposition=write_disposition)
-        
         try:
-            job = self.client.load_table_from_dataframe(df, full_table_id, job_config=job_config)
+            job_config = bigquery.LoadJobConfig(write_disposition=write_disposition)
+            job = self.client.load_table_from_dataframe(df, table_id, job_config=job_config)
             job.result()  # Wait for the job to complete
         except Exception as e:
-            raise ValueError(f"Failed to upload data to {table_id}: {str(e)}")
+            raise BigQueryError(f"Failed to upload data to {table_id}: {str(e)}")
 
     def execute_query(self, query: str, params: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
         """Execute a BigQuery SQL query.
@@ -242,33 +234,23 @@ class BigQueryClient(BaseGoogleClient):
         table = self.client.get_table(full_table_id)
         return table.schema
 
-    def write_data(self, data: Union[List[Dict], pd.DataFrame], table_id: str, write_disposition: str = 'WRITE_APPEND', schema: List[bigquery.SchemaField] = None) -> None:
+    def write_data(self, data: Union[List[Dict], pd.DataFrame], table_id: str, write_disposition: str = 'WRITE_APPEND') -> None:
         """Write data to a BigQuery table.
         
         Args:
             data: List of dictionaries or pandas DataFrame containing the data
-            table_id: The table to write to
-            write_disposition: Write disposition (WRITE_APPEND, WRITE_TRUNCATE, WRITE_EMPTY). Defaults to WRITE_APPEND
-            schema: Optional schema to validate against
-            
-        Raises:
-            ValueError: If data is invalid or write disposition is invalid
+            table_id: The table to write to (format: project.dataset.table)
+            write_disposition: Write disposition (WRITE_APPEND, WRITE_TRUNCATE, WRITE_EMPTY)
         """
-        valid_dispositions = {'WRITE_APPEND', 'WRITE_TRUNCATE', 'WRITE_EMPTY'}
-        write_disposition = write_disposition.upper()
-        if write_disposition not in valid_dispositions:
-            raise ValueError("Invalid write disposition. Must be one of: WRITE_APPEND, WRITE_TRUNCATE, WRITE_EMPTY")
-            
-        # Convert to DataFrame if necessary
-        df = data if isinstance(data, pd.DataFrame) else pd.DataFrame.from_records(data)
-        
-        if df.empty:
-            raise ValueError("No data to write - empty DataFrame")
-            
-        if schema:
-            self.validate_data_types(df.to_dict('records'), schema)
-            
-        self.upload_dataframe(df, table_id, write_disposition)
+        try:
+            # Convert to DataFrame if necessary
+            df = data if isinstance(data, pd.DataFrame) else pd.DataFrame(data)
+            if df.empty:
+                logging.warning("No data to write - empty DataFrame")
+                return
+            self.upload_dataframe(df, table_id, write_disposition=write_disposition)
+        except Exception as e:
+            raise BigQueryError(f"Failed to write data to {table_id}: {str(e)}")
 
     def batch_write_data(self, data: List[Dict], table_id: str, batch_size: int = 1000) -> None:
         """Write data to a BigQuery table in batches.

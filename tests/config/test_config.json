@@ -19,13 +19,11 @@
     "endpoints": {
         "members": {
             "path": "faction/members",
-            "frequency": "PT15M",
-            "batch_size": 1000
+            "frequency": "PT15M"
         },
         "crimes": {
             "path": "faction/crimes",
-            "frequency": "PT15M",
-            "batch_size": 1000
+            "frequency": "PT15M"
         }
     },
     "logging": {

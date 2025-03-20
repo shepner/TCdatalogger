@@ -53,7 +53,6 @@ def test_config_dir():
                 "frequency": "daily",
                 "storage_mode": "append",
                 "selection": ["basic"],
-                "batch_size": 10,
                 "max_retries": 1,
                 "retry_delay": 1
             }

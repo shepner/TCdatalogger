@@ -20,17 +20,8 @@ class MembersEndpointProcessor(BaseEndpointProcessor):
         """
         super().__init__(config)
         if endpoint_config is None:
-            endpoint_config = {
-                'name': 'members',
-                'url': 'https://api.torn.com/faction/?selections=basic&key={key}',
-                'table': f"{config.get('dataset', 'torn')}.members",
-                'api_key': config.get('tc_api_key', 'default'),
-                'storage_mode': config.get('storage_mode', 'append'),
-                'frequency': 'PT15M'
-            }
-        # Convert selection list to comma-separated string if it's a list
-        if isinstance(endpoint_config.get('selection'), list):
-            endpoint_config['selection'] = ','.join(endpoint_config['selection'])
+            raise ValueError("endpoint_config is required for MembersEndpointProcessor")
+            
         self.endpoint_config.update(endpoint_config)
 
     def get_schema(self) -> List[bigquery.SchemaField]:
@@ -50,9 +41,9 @@ class MembersEndpointProcessor(BaseEndpointProcessor):
             bigquery.SchemaField("last_action_timestamp", "TIMESTAMP", mode="REQUIRED"),
             bigquery.SchemaField("last_action_relative", "STRING", mode="REQUIRED"),
             bigquery.SchemaField("status_description", "STRING", mode="REQUIRED"),
-            bigquery.SchemaField("status_details", "STRING", mode="REQUIRED"),
+            bigquery.SchemaField("status_details", "STRING", mode="NULLABLE"),
             bigquery.SchemaField("status_state", "STRING", mode="REQUIRED"),
-            bigquery.SchemaField("status_until", "STRING", mode="REQUIRED"),
+            bigquery.SchemaField("status_until", "INTEGER", mode="REQUIRED"),
             bigquery.SchemaField("life_current", "INTEGER", mode="REQUIRED"),
             bigquery.SchemaField("life_maximum", "INTEGER", mode="REQUIRED")
         ]
@@ -86,124 +77,106 @@ class MembersEndpointProcessor(BaseEndpointProcessor):
         return True
 
     def transform_data(self, data: Dict[str, Any]) -> pd.DataFrame:
-        """Transform the raw data into the required format.
+        """Transform raw member data into a DataFrame.
 
         Args:
-            data: Raw API response data containing member information
+            data: Raw member data from the API response.
 
         Returns:
-            DataFrame containing transformed member data
-
-        Raises:
-            DataValidationError: If data validation fails
+            DataFrame containing transformed member data.
         """
         if not data:
             return pd.DataFrame()
-            
-        # Extract members data directly from response
-        members_data = data.get("members", {})
-        if not members_data:
-            return pd.DataFrame()
-            
-        transformed_data = []
+
+        # Get current server timestamp
         server_timestamp = datetime.now(timezone.utc)
-        
-        for member_id, member_data in members_data.items():
-            try:
-                # Validate required fields
-                if not self.validate_required_fields(member_data, member_id):
-                    continue
-                
-                # Extract and validate nested data
-                status_data = member_data.get("status", {}) if isinstance(member_data.get("status"), dict) else {}
-                life_data = member_data.get("life", {}) if isinstance(member_data.get("life"), dict) else {}
-                last_action_data = member_data.get("last_action", {}) if isinstance(member_data.get("last_action"), dict) else {}
-                faction_data = member_data.get("faction", {}) if isinstance(member_data.get("faction"), dict) else {}
-                
-                # Convert timestamps
-                last_action_timestamp = None
-                if last_action_ts := last_action_data.get("timestamp"):
-                    try:
-                        last_action_timestamp = datetime.fromtimestamp(int(last_action_ts), timezone.utc)
-                    except (ValueError, TypeError):
-                        logging.warning(f"Invalid last_action_timestamp for member {member_id}: {last_action_ts}")
-                
-                # Create transformed member data matching schema exactly
-                transformed_member = {
-                    "server_timestamp": server_timestamp,
-                    "id": int(member_id),
-                    "name": str(member_data["name"]),
-                    "level": int(member_data["level"]),
-                    "days_in_faction": int(faction_data["days_in_faction"]) if faction_data.get("days_in_faction") else None,
-                    "revive_setting": str(member_data["revive_setting"]) if member_data.get("revive_setting") else None,
-                    "position": str(faction_data["position"]) if faction_data.get("position") else None,
-                    "is_revivable": bool(member_data.get("is_revivable")),
-                    "is_on_wall": bool(member_data.get("is_on_wall")),
-                    "is_in_oc": bool(member_data.get("is_in_oc")),
-                    "has_early_discharge": bool(member_data.get("has_early_discharge")),
-                    "last_action_status": str(last_action_data["status"]) if last_action_data.get("status") else None,
-                    "last_action_timestamp": last_action_timestamp,
-                    "last_action_relative": str(last_action_data["relative"]) if last_action_data.get("relative") else None,
-                    "status_description": str(status_data["description"]) if status_data.get("description") else None,
-                    "status_details": str(status_data["details"]) if status_data.get("details") else None,
-                    "status_state": str(status_data["state"]) if status_data.get("state") else None,
-                    "status_until": str(status_data["until"]) if status_data.get("until") else None,
-                    "life_current": int(life_data["current"]) if life_data.get("current") else None,
-                    "life_maximum": int(life_data["maximum"]) if life_data.get("maximum") else None
-                }
-                
-                transformed_data.append(transformed_member)
-                
-            except Exception as e:
-                logging.error(f"Error processing member {member_id}: {str(e)}")
+
+        # Handle both v1 and v2 API response formats
+        if isinstance(data, dict) and "members" in data:
+            # v1 API returns a dict with member IDs as keys
+            members_dict = data.get("members", {})
+            if not members_dict:
+                return pd.DataFrame()
+            # Convert dict values to list for v1 format
+            if isinstance(members_dict, dict):
+                members_list = [
+                    {**member, "id": int(member_id)} 
+                    for member_id, member in members_dict.items()
+                ]
+            else:
+                members_list = members_dict
+        else:
+            # v2 API returns a list directly
+            members_list = data if isinstance(data, list) else []
+
+        transformed_members = []
+        for member in members_list:
+            if not member:
                 continue
-                
-        # Create DataFrame with schema-defined column order
-        schema_fields = self.get_schema()
-        columns = [field.name for field in schema_fields]
-        df = pd.DataFrame(transformed_data, columns=columns)
-        
-        # Fill numeric fields with 0 instead of None
-        numeric_columns = ['days_in_faction', 'level', 'life_current', 'life_maximum']
-        for col in numeric_columns:
-            if col in df.columns:
-                df[col] = df[col].fillna(0)
-        
-        # Explicitly set data types
-        dtype_mapping = {
-            'server_timestamp': 'datetime64[ns, UTC]',
-            'id': 'int64',
-            'name': 'object',
-            'level': 'int64',
-            'days_in_faction': 'int64',
-            'revive_setting': 'object',
-            'position': 'object',
-            'is_revivable': 'bool',
-            'is_on_wall': 'bool',
-            'is_in_oc': 'bool',
-            'has_early_discharge': 'bool',
-            'last_action_status': 'object',
-            'last_action_timestamp': 'datetime64[ns, UTC]',
-            'last_action_relative': 'object',
-            'status_description': 'object',
-            'status_details': 'object',
-            'status_state': 'object',
-            'status_until': 'object',
-            'life_current': 'int64',
-            'life_maximum': 'int64'
-        }
-        
-        for col, dtype in dtype_mapping.items():
-            if col in df.columns:
+
+            # Extract and validate required fields
+            member_id = member.get("id")
+            if not member_id:
+                continue
+
+            # Extract nested data
+            status = member.get("status", {})
+            last_action = member.get("last_action", {})
+            life = member.get("life", {})
+
+            # Convert timestamps
+            last_action_timestamp = last_action.get("timestamp")
+            if last_action_timestamp:
                 try:
-                    if dtype.startswith('datetime64'):
-                        df[col] = pd.to_datetime(df[col], utc=True)
-                    else:
-                        df[col] = df[col].astype(dtype)
-                except Exception as e:
-                    logging.warning(f"Failed to convert column {col} to {dtype}: {str(e)}")
-        
-        return df if not df.empty else pd.DataFrame(columns=columns)
+                    last_action_timestamp = pd.to_datetime(last_action_timestamp, unit="s")
+                except (ValueError, TypeError):
+                    last_action_timestamp = pd.Timestamp.now(tz="UTC")
+            else:
+                last_action_timestamp = pd.Timestamp.now(tz="UTC")
+
+            # Create transformed member data
+            transformed_member = {
+                "server_timestamp": server_timestamp,
+                "id": member_id,
+                "name": member.get("name", ""),
+                "level": member.get("level", 0),
+                "days_in_faction": member.get("days_in_faction", 0),
+                "position": member.get("position", ""),
+                "is_revivable": member.get("is_revivable", False),
+                "is_on_wall": member.get("is_on_wall", False),
+                "is_in_oc": member.get("is_in_oc", False),
+                "has_early_discharge": member.get("has_early_discharge", False),
+                "last_action_status": last_action.get("status", ""),
+                "last_action_timestamp": last_action_timestamp,
+                "last_action_relative": last_action.get("relative", ""),
+                "status_description": status.get("description", ""),
+                "status_details": status.get("details", ""),
+                "status_state": status.get("state", ""),
+                "status_until": status.get("until", 0),
+                "life_current": life.get("current", 0),
+                "life_maximum": life.get("maximum", 0)
+            }
+            transformed_members.append(transformed_member)
+
+        if not transformed_members:
+            # Return empty DataFrame with correct schema
+            return pd.DataFrame(columns=[
+                "server_timestamp", "id", "name", "level", "days_in_faction",
+                "position", "is_revivable", "is_on_wall", "is_in_oc", "has_early_discharge",
+                "last_action_status", "last_action_timestamp", "last_action_relative",
+                "status_description", "status_details", "status_state", "status_until",
+                "life_current", "life_maximum"
+            ])
+
+        # Create DataFrame and set data types
+        df = pd.DataFrame(transformed_members)
+        df["level"] = df["level"].fillna(0).astype(int)
+        df["days_in_faction"] = df["days_in_faction"].fillna(0).astype(int)
+        df["status_until"] = df["status_until"].fillna(0).astype(int)
+        df["life_current"] = df["life_current"].fillna(0).astype(int)
+        df["life_maximum"] = df["life_maximum"].fillna(0).astype(int)
+
+        return df
 
     def process_data(self, data: Dict[str, Any]) -> pd.DataFrame:
         """Process the raw API response data.
@@ -221,9 +194,16 @@ class MembersEndpointProcessor(BaseEndpointProcessor):
             if not data:
                 return pd.DataFrame()
             
+            # Transform data to DataFrame
             df = self.transform_data(data)
+            
+            # Validate against schema
+            schema = self.get_schema()
+            df = self._validate_schema(df, schema)
+            
             if df.empty:
                 logging.warning("No valid member data found in API response")
+                
             return df
             
         except Exception as e:

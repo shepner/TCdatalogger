@@ -14,8 +14,6 @@ from dataclasses import dataclass
 @dataclass
 class GoogleConfig:
     """Google Cloud configuration settings."""
-    project_id: str
-    dataset: str
     credentials_file: Optional[Path] = None
 
     @classmethod
@@ -29,8 +27,6 @@ class GoogleConfig:
                 credentials = json.load(f)
             
             return cls(
-                project_id=credentials['project_id'],
-                dataset='torn_data',  # This is hardcoded in TC_API_config.json
                 credentials_file=credentials_file
             )
         except (json.JSONDecodeError, KeyError) as e:
@@ -88,6 +84,9 @@ class Config:
         if not self.config_dir.exists():
             raise FileNotFoundError(f"Configuration directory not found: {self.config_dir}")
         
+        # Load app config first
+        self.app_config = self._load_app_config()
+        
         # Initialize components
         self.google = GoogleConfig.from_file(self.config_dir / 'credentials.json')
         self.torn = TornConfig.from_file(self.config_dir / 'TC_API_key.json')
@@ -99,6 +98,19 @@ class Config:
         # Load endpoint configurations
         self.endpoints = self._load_endpoint_configs()
         
+    def _load_app_config(self) -> Dict[str, Any]:
+        """Load application configuration from app_config.json."""
+        config_file = self.config_dir / 'app_config.json'
+        if not config_file.exists():
+            raise FileNotFoundError(f"Application configuration file not found: {config_file}")
+            
+        try:
+            with open(config_file) as f:
+                config = json.load(f)
+            return config
+        except json.JSONDecodeError as e:
+            raise ValueError(f"Invalid application configuration JSON: {e}")
+            
     def _setup_logging(self) -> None:
         """Configure logging based on settings."""
         logging.basicConfig(
@@ -111,20 +123,28 @@ class Config:
     
     def _load_endpoint_configs(self) -> Dict[str, Any]:
         """Load endpoint configurations from JSON files."""
-        config_file = self.app.config_dir / 'endpoints.json'
+        config_file = self.app.config_dir / 'TC_API_config.json'
         if not config_file.exists():
             raise FileNotFoundError(f"Endpoint configuration file not found: {config_file}")
             
         try:
             with open(config_file) as f:
-                configs = json.load(f)
+                config = json.load(f)
             
-            # Validate endpoint configurations
-            for name, config in configs.items():
+            # Convert the endpoints list to a dictionary
+            configs = {}
+            for endpoint in config.get('endpoints', []):
+                name = endpoint.get('name')
+                if not name:
+                    raise ValueError("Endpoint missing required 'name' field")
+                
+                # Validate endpoint configurations
                 required_fields = {'table', 'frequency', 'storage_mode'}
-                missing_fields = required_fields - set(config.keys())
+                missing_fields = required_fields - set(endpoint.keys())
                 if missing_fields:
                     raise ValueError(f"Endpoint {name} missing required fields: {missing_fields}")
+                
+                configs[name] = endpoint
             
             return configs
             

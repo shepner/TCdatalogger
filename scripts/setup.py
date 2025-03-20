@@ -79,22 +79,9 @@ class EnvSetup:
         
         # Create example config files if they don't exist
         example_configs = {
-            'credentials.json.example': {
-                'type': 'service_account',
-                'project_id': 'your-project-id',
-                'private_key': 'your-private-key',
-                'client_email': 'your-service-account@example.com'
-            },
             'TC_API_key.json.example': {
                 'default': 'your-api-key',
                 'faction_40832': 'your-faction-api-key'
-            },
-            'endpoints.json.example': {
-                'members': {
-                    'table': 'torn.members',
-                    'frequency': 'PT15M',
-                    'storage_mode': 'append'
-                }
             },
             'dev_config.json': self.dev_config
         }
@@ -345,10 +332,13 @@ class EnvSetup:
         """Run the main application."""
         logger.info("Running main application...")
         try:
-            # Ensure virtual environment exists
+            # Always ensure dependencies are up to date
+            logger.info("Ensuring dependencies are up to date...")
+            self.ensure_requirements_file()
             if not self.venv_dir.exists():
-                logger.info("Virtual environment not found, running setup first...")
-                self.setup()
+                logger.info("Virtual environment not found, creating it...")
+                self.create_venv()
+            self.install_dependencies()
 
             # Get the Python executable from the virtual environment
             python = self.get_venv_python()
@@ -357,11 +347,14 @@ class EnvSetup:
             if not main_script.exists():
                 raise RuntimeError(f"Main script not found at {main_script}")
 
-            # Run the main script with proper Python path
-            self.run_in_venv(
-                [str(python), str(main_script)],
-                check=True
-            )
+            # Get any additional arguments after 'main'
+            extra_args = sys.argv[2:] if len(sys.argv) > 2 else []
+
+            # Run the main script with proper Python path and arguments
+            cmd = [str(python), str(main_script)] + extra_args
+            logger.info(f"Running command: {' '.join(cmd)}")
+            self.run_in_venv(cmd, check=True)
+            
             logger.info("Main application completed successfully")
         except subprocess.CalledProcessError as e:
             logger.error("Main application failed with exit code %d", e.returncode)

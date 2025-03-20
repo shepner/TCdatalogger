@@ -207,7 +207,7 @@ TCdatalogger/
 
 2. **Table Schemas**
   This is what the BigQuery table schemas are to look like
-  
+
    a. Members Table (`torn.members`):
    ```
    Schema for v2_faction_*_members:
@@ -226,7 +226,7 @@ TCdatalogger/
     - last_action_timestamp: datetime - Timestamp of last action
     - last_action_relative: string
     - status_description: string - Detailed status description
-    - status_details: string
+    - status_details: STRING (NULLABLE)
     - status_state: string
     - status_until: string
     - life_current: integer - Current life points

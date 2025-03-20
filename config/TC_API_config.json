@@ -24,7 +24,6 @@
     "  faction_17991 = API key for faction 17991",
     "",
     "Additional parameters:",
-    "  batch_size = Number of items to process in each batch",
     "  max_retries = Maximum number of retry attempts for failed requests",
     "  retry_delay = Delay in seconds between retry attempts",
     "  selection = Array of data selections to request from the API",
@@ -34,11 +33,16 @@
     "See: https://en.wikipedia.org/wiki/ISO_8601#Durations"
   ],
   "defaults": {
-    "batch_size": 100,
     "max_retries": 3,
     "retry_delay": 60,
     "rate_limit": 60,
-    "timeout": 30
+    "timeout": 30,
+    "pagination": {
+      "enabled": true,
+      "max_pages": null,
+      "metadata_field": "_metadata",
+      "next_url_field": "next"
+    }
   },
   "endpoints": [
     {
@@ -48,29 +52,26 @@
       "frequency": "PT15M",
       "storage_mode": "replace",
       "api_key": "faction_40832",
-      "batch_size": 1,
       "max_retries": 3,
       "retry_delay": 60
     },
     {
       "name": "v2_faction_40832_crimes",
-      "url": "https://api.torn.com/v2/faction/crimes?key={API_KEY}&cat=all&offset=0&sort=ASC",
+      "url": "https://api.torn.com/v2/faction/crimes?key={API_KEY}&cat=all&sort=ASC",
       "table": "torncity-402423.torn_data.v2_faction_40832_crimes",
       "frequency": "PT15M",
       "storage_mode": "replace",
       "api_key": "faction_40832",
-      "batch_size": 100,
       "max_retries": 3,
       "retry_delay": 60
     },
     {
       "name": "v2_faction_17991_crimes",
-      "url": "https://api.torn.com/v2/faction/crimes?key={API_KEY}&cat=all&offset=0&sort=ASC",
+      "url": "https://api.torn.com/v2/faction/crimes?key={API_KEY}&cat=all&sort=ASC",
       "table": "torncity-402423.torn_data.v2_faction_17991_crimes",
       "frequency": "PT15M",
       "storage_mode": "replace",
       "api_key": "faction_17991",
-      "batch_size": 100,
       "max_retries": 3,
       "retry_delay": 60
     },
@@ -81,10 +82,8 @@
       "frequency": "PT15M",
       "storage_mode": "replace",
       "api_key": "faction_40832",
-      "batch_size": 100,
       "max_retries": 3,
-      "retry_delay": 60,
-      "selection": ["basic", "profile", "personalstats"]
+      "retry_delay": 60
     },
     {
       "name": "v2_faction_17991_members",
@@ -93,10 +92,8 @@
       "frequency": "PT15M",
       "storage_mode": "replace",
       "api_key": "faction_17991",
-      "batch_size": 100,
       "max_retries": 3,
-      "retry_delay": 60,
-      "selection": ["basic", "profile", "personalstats"]
+      "retry_delay": 60
     },
     {
       "name": "v2_torn_items",
@@ -105,7 +102,6 @@
       "frequency": "PT24H",
       "storage_mode": "replace",
       "api_key": "faction_40832",
-      "batch_size": 100,
       "max_retries": 3,
       "retry_delay": 60
     },
@@ -116,7 +112,6 @@
       "frequency": "P1D",
       "storage_mode": "append",
       "api_key": "faction_40832",
-      "batch_size": 100,
       "max_retries": 3,
       "retry_delay": 60
     },
@@ -127,7 +122,6 @@
       "frequency": "P1D",
       "storage_mode": "append",
       "api_key": "faction_17991",
-      "batch_size": 100,
       "max_retries": 3,
       "retry_delay": 60
     },
@@ -138,7 +132,6 @@
       "frequency": "P1D",
       "storage_mode": "append",
       "api_key": "faction_40832",
-      "batch_size": 100,
       "max_retries": 3,
       "retry_delay": 60
     },
@@ -149,7 +142,6 @@
       "frequency": "P1D",
       "storage_mode": "append",
       "api_key": "faction_17991",
-      "batch_size": 100,
       "max_retries": 3,
       "retry_delay": 60
     }

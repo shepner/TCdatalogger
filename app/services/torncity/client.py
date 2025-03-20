@@ -71,6 +71,7 @@ class TornClient:
         self.logger = logging.getLogger(__name__)  # Initialize logger
         self._load_api_keys()
         self._init_session()
+        self.retry_config = self._setup_retry_config()
 
     def _init_session(self) -> None:
         """Initialize a requests session with retry configuration."""

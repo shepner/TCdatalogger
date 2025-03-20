@@ -27,16 +27,8 @@ class CrimesEndpointProcessor(BaseEndpointProcessor):
             endpoint_config: Optional endpoint-specific configuration.
         """
         super().__init__(config)
-        if endpoint_config is None:
-            endpoint_config = {
-                'name': 'crimes',
-                'url': 'https://api.torn.com/faction/{API_KEY}?selections=crimes',
-                'table': f"{config.get('dataset', 'torn')}.crimes",
-                'api_key': config.get('tc_api_key', 'default'),
-                'storage_mode': config.get('storage_mode', 'append'),
-                'frequency': 'PT15M'
-            }
-        self.endpoint_config.update(endpoint_config)
+        if endpoint_config:
+            self.endpoint_config.update(endpoint_config)
 
     def get_schema(self) -> List[bigquery.SchemaField]:
         """Get the BigQuery schema for crimes data."""
@@ -70,80 +62,6 @@ class CrimesEndpointProcessor(BaseEndpointProcessor):
             bigquery.SchemaField('rewards_payout_paid_at', 'TIMESTAMP', mode='NULLABLE')
         ]
 
-    def convert_timestamps(self, df: pd.DataFrame, exclude_cols: List[str] = None) -> pd.DataFrame:
-        """Convert timestamp columns to datetime format.
-        
-        Args:
-            df: DataFrame containing timestamp columns
-            exclude_cols: List of column names to exclude from conversion
-            
-        Returns:
-            DataFrame with converted timestamps
-        """
-        exclude_cols = exclude_cols or []
-        timestamp_cols = [col for col in df.columns if 'timestamp' in col.lower() or '_at' in col.lower()]
-        timestamp_cols = [col for col in timestamp_cols if col not in exclude_cols]
-        
-        for col in timestamp_cols:
-            try:
-                # Try multiple timestamp formats
-                timestamps = []
-                for val in df[col]:
-                    try:
-                        if pd.isna(val):
-                            timestamps.append(pd.NaT)
-                        elif isinstance(val, (int, float)):
-                            timestamps.append(pd.Timestamp.fromtimestamp(val))
-                        elif isinstance(val, str):
-                            try:
-                                # Try ISO format first
-                                timestamps.append(pd.Timestamp(val))
-                            except ValueError:
-                                # Try Unix timestamp as string
-                                timestamps.append(pd.Timestamp.fromtimestamp(float(val)))
-                        else:
-                            timestamps.append(pd.NaT)
-                    except (ValueError, TypeError):
-                        timestamps.append(pd.NaT)
-                
-                df[col] = timestamps
-            except Exception as e:
-                logging.warning(f"Failed to convert timestamps for column {col}: {str(e)}")
-                continue
-        
-        return df
-
-    def convert_column_types(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Convert column types to their expected types.
-        
-        Args:
-            df: DataFrame to convert
-            
-        Returns:
-            DataFrame with converted types
-        """
-        type_conversions = {
-            'id': lambda x: pd.to_numeric(x, errors='coerce').fillna(0).astype(int),
-            'reward_money': lambda x: pd.to_numeric(x, errors='coerce').fillna(0).astype(int),
-            'reward_respect': lambda x: pd.to_numeric(x, errors='coerce').fillna(0).astype(float),
-            'reward_item_count': lambda x: pd.to_numeric(x, errors='coerce').fillna(0).astype(int),
-            'participant_count': lambda x: pd.to_numeric(x, errors='coerce').fillna(0).astype(int)
-        }
-        
-        for col, conversion in type_conversions.items():
-            if col in df.columns:
-                try:
-                    df[col] = conversion(df[col])
-                except Exception as e:
-                    logging.warning(f"Failed to convert column {col}: {str(e)}")
-                    # Set default values based on column type
-                    if col in ['id', 'reward_money', 'reward_item_count', 'participant_count']:
-                        df[col] = 0
-                    elif col == 'reward_respect':
-                        df[col] = 0.0
-        
-        return df
-
     def transform_data(self, data: Dict[str, Any]) -> pd.DataFrame:
         """Transform the raw data into the required format.
 
@@ -156,48 +74,195 @@ class CrimesEndpointProcessor(BaseEndpointProcessor):
         Raises:
             DataValidationError: If data validation fails
         """
-        if not data:
-            return pd.DataFrame()
-            
-        # Extract crimes data from the nested structure
-        crimes_data = data.get("data", {}).get("crimes", {})
+        # Validate input data
+        if not data or not isinstance(data, dict):
+            logging.warning("Invalid data format received")
+            return pd.DataFrame(columns=[field.name for field in self.get_schema()])
+        
+        # Extract crimes data - it's directly in the root of the response
+        crimes_data = data.get("crimes", [])
         if not crimes_data:
-            return pd.DataFrame()
-            
+            logging.warning("No crimes data found in response")
+            return pd.DataFrame(columns=[field.name for field in self.get_schema()])
+        
+        # Log the number of crimes being processed
+        logging.info(f"Processing {len(crimes_data)} crimes")
+        
         transformed_data = []
         server_timestamp = pd.Timestamp.now()
         
-        for crime_id, crime_data in crimes_data.items():
+        for crime in crimes_data:
             try:
-                # Create transformed crime data matching schema exactly
+                # Validate crime object
+                if not crime or not isinstance(crime, dict):
+                    logging.warning(f"Invalid crime data format: {crime}")
+                    continue
+
+                # Extract nested data with safe defaults and validation
+                slots = []
+                if isinstance(crime.get('slots'), list) and crime['slots']:
+                    slots = crime['slots']
+
+                first_slot = {}
+                first_slot_item_req = {}
+                first_slot_user = {}
+                if slots:
+                    first_slot = slots[0] if isinstance(slots[0], dict) else {}
+                    if isinstance(first_slot.get('item_requirement'), dict):
+                        first_slot_item_req = first_slot['item_requirement']
+                    if isinstance(first_slot.get('user'), dict):
+                        first_slot_user = first_slot['user']
+
+                rewards = {}
+                payout = {}
+                items = []
+                first_item = {}
+                if isinstance(crime.get('rewards'), dict):
+                    rewards = crime['rewards']
+                    if isinstance(rewards.get('payout'), dict):
+                        payout = rewards['payout']
+                    if isinstance(rewards.get('items'), list) and rewards['items']:
+                        items = rewards['items']
+                        first_item = items[0] if isinstance(items[0], dict) else {}
+
+                # Convert timestamps with error handling
+                def safe_timestamp(ts):
+                    if not ts:
+                        return None
+                    try:
+                        return pd.Timestamp.fromtimestamp(ts)
+                    except (ValueError, TypeError, OSError) as e:
+                        logging.warning(f"Failed to convert timestamp {ts}: {str(e)}")
+                        return None
+
+                # Create transformed crime dictionary with safe type conversions
                 transformed_crime = {
-                    "server_timestamp": server_timestamp,
-                    "crime_id": crime_id,
-                    "crime_name": crime_data.get("crime_name"),
-                    "participants": crime_data.get("participants"),
-                    "time_started": crime_data.get("time_started"),
-                    "time_completed": crime_data.get("time_completed"),
-                    "time_ready": crime_data.get("time_ready"),
-                    "initiated_by": crime_data.get("initiated_by"),
-                    "planned_by": crime_data.get("planned_by"),
-                    "success": crime_data.get("success"),
-                    "money_gain": crime_data.get("money_gain"),
-                    "respect_gain": crime_data.get("respect_gain"),
-                    "initiated_by_name": crime_data.get("initiated_by_name"),
-                    "planned_by_name": crime_data.get("planned_by_name"),
-                    "crime_type": crime_data.get("crime_type"),
-                    "state": crime_data.get("state")
+                    'server_timestamp': server_timestamp,
+                    'id': int(crime.get('id', 0)),
+                    'name': str(crime.get('name', 'Unknown')),
+                    'difficulty': int(crime.get('difficulty', 0)),
+                    'status': str(crime.get('status', 'Unknown')),
+                    'created_at': safe_timestamp(crime.get('created_at')) or server_timestamp,
+                    'planning_at': safe_timestamp(crime.get('planning_at')),
+                    'executed_at': safe_timestamp(crime.get('executed_at')),
+                    'ready_at': safe_timestamp(crime.get('ready_at')),
+                    'expired_at': safe_timestamp(crime.get('expired_at')),
+                    'slots_position': str(first_slot.get('position', '')),
+                    'slots_item_requirement_id': int(first_slot_item_req.get('id')) if first_slot_item_req.get('id') is not None else None,
+                    'slots_item_requirement_is_reusable': bool(first_slot_item_req.get('is_reusable', False)),
+                    'slots_item_requirement_is_available': bool(first_slot_item_req.get('is_available', False)),
+                    'slots_user_id': int(first_slot.get('user_id')) if first_slot.get('user_id') is not None else None,
+                    'slots_user_joined_at': safe_timestamp(first_slot_user.get('joined_at')),
+                    'slots_user_progress': float(first_slot_user.get('progress', 0)),
+                    'slots_success_chance': int(first_slot.get('success_chance', 0)),
+                    'slots_crime_pass_rate': int(first_slot.get('crime_pass_rate', 0)),
+                    'rewards_money': int(rewards.get('money')) if rewards.get('money') is not None else None,
+                    'rewards_items_id': int(first_item.get('id')) if first_item.get('id') is not None else None,
+                    'rewards_items_quantity': int(first_item.get('quantity')) if first_item.get('quantity') is not None else None,
+                    'rewards_respect': int(rewards.get('respect')) if rewards.get('respect') is not None else None,
+                    'rewards_payout_type': str(payout.get('type', '')),
+                    'rewards_payout_percentage': int(payout.get('percentage')) if payout.get('percentage') is not None else None,
+                    'rewards_payout_paid_by': int(payout.get('paid_by')) if payout.get('paid_by') is not None else None,
+                    'rewards_payout_paid_at': safe_timestamp(payout.get('paid_at'))
                 }
-                
+
                 transformed_data.append(transformed_crime)
-                
+
             except Exception as e:
+                crime_id = crime.get('id', 'unknown') if isinstance(crime, dict) else 'unknown'
                 logging.error(f"Error processing crime {crime_id}: {str(e)}")
                 continue
-                
-        # Create DataFrame and validate
+
+        if not transformed_data:
+            logging.warning("No valid crimes data after transformation")
+            return pd.DataFrame(columns=[field.name for field in self.get_schema()])
+
         df = pd.DataFrame(transformed_data)
-        return df if not df.empty else pd.DataFrame(columns=self.get_schema())
+        
+        # Convert types to match schema
+        for field in self.get_schema():
+            if field.field_type == 'TIMESTAMP':
+                if field.name not in df.columns:
+                    df[field.name] = pd.NaT
+                else:
+                    df[field.name] = pd.to_datetime(df[field.name], errors='coerce')
+            elif field.field_type == 'INTEGER':
+                if field.name not in df.columns:
+                    df[field.name] = pd.NA if field.mode == 'NULLABLE' else 0
+                else:
+                    df[field.name] = pd.to_numeric(df[field.name], errors='coerce')
+                    if field.mode == 'REQUIRED':
+                        df[field.name] = df[field.name].fillna(0).astype('Int64')
+                    else:
+                        df[field.name] = df[field.name].astype('Int64')
+            elif field.field_type == 'FLOAT':
+                if field.name not in df.columns:
+                    df[field.name] = pd.NA if field.mode == 'NULLABLE' else 0.0
+                else:
+                    df[field.name] = pd.to_numeric(df[field.name], errors='coerce')
+                    if field.mode == 'REQUIRED':
+                        df[field.name] = df[field.name].fillna(0.0)
+            elif field.field_type == 'BOOLEAN':
+                if field.name not in df.columns:
+                    df[field.name] = pd.NA if field.mode == 'NULLABLE' else False
+                else:
+                    df[field.name] = df[field.name].fillna(False).astype('boolean')
+            elif field.field_type == 'STRING':
+                if field.name not in df.columns:
+                    df[field.name] = pd.NA if field.mode == 'NULLABLE' else ''
+                else:
+                    df[field.name] = df[field.name].fillna('').astype(str)
+
+        return df
+
+    def _convert_types(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Convert DataFrame columns to their proper types.
+        
+        Args:
+            df: DataFrame to convert
+            
+        Returns:
+            DataFrame with converted types
+        """
+        # Integer columns
+        int_columns = [
+            'id', 'difficulty', 'slots_item_requirement_id', 'slots_user_id',
+            'slots_success_chance', 'slots_crime_pass_rate', 'rewards_money',
+            'rewards_items_id', 'rewards_items_quantity', 'rewards_respect',
+            'rewards_payout_percentage', 'rewards_payout_paid_by'
+        ]
+        for col in int_columns:
+            if col in df.columns:
+                df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0).astype('Int64')
+
+        # Float columns
+        float_columns = ['slots_user_progress']
+        for col in float_columns:
+            if col in df.columns:
+                df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0.0).astype('float64')
+
+        # Boolean columns
+        bool_columns = ['slots_item_requirement_is_reusable', 'slots_item_requirement_is_available']
+        for col in bool_columns:
+            if col in df.columns:
+                df[col] = df[col].fillna(False).astype('boolean')
+
+        # String columns
+        string_columns = ['name', 'status', 'slots_position', 'rewards_payout_type']
+        for col in string_columns:
+            if col in df.columns:
+                df[col] = df[col].fillna('').astype(str)
+
+        # Timestamp columns
+        timestamp_columns = [
+            'server_timestamp', 'created_at', 'planning_at', 'executed_at',
+            'ready_at', 'expired_at', 'slots_user_joined_at', 'rewards_payout_paid_at'
+        ]
+        for col in timestamp_columns:
+            if col in df.columns and not pd.api.types.is_datetime64_any_dtype(df[col]):
+                df[col] = pd.to_datetime(df[col], errors='coerce')
+
+        return df
 
     def process_data(self, data: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Process the crimes data.

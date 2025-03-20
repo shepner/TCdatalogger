@@ -4,8 +4,8 @@ WITH RecentActivity AS (
     m.id,
     COUNT(DISTINCT CASE WHEN TIMESTAMP_DIFF(c.server_timestamp, c.executed_at, DAY) <= 30 THEN c.id END) as recent_participations_30d,
     COUNT(DISTINCT CASE WHEN TIMESTAMP_DIFF(c.server_timestamp, c.executed_at, DAY) <= 7 THEN c.id END) as recent_participations_7d
-  FROM `torncity-402423.torn_data.v2_faction_members` AS m
-  LEFT JOIN `torncity-402423.torn_data.v2_faction_crimes` AS c 
+  FROM `torncity-402423.torn_data.v2_faction_40832_members` AS m
+  LEFT JOIN `torncity-402423.torn_data.v2_faction_40832_crimes` AS c 
     ON c.slots_user_id = m.id
     AND c.status = 'Successful'
     AND TIMESTAMP_DIFF(c.server_timestamp, c.executed_at, DAY) <= 30
@@ -28,8 +28,8 @@ MemberSuccesses AS (
       WHEN MAX(c.slots_crime_pass_rate) >= 80 THEN GREATEST(c.difficulty, 1)
       ELSE GREATEST(COALESCE(c.difficulty - 1, 1), 1)
     END) OVER (PARTITION BY m.id ORDER BY c.difficulty DESC) as recommended_difficulty
-  FROM `torncity-402423.torn_data.v2_faction_members` AS m
-  LEFT JOIN `torncity-402423.torn_data.v2_faction_crimes` AS c 
+  FROM `torncity-402423.torn_data.v2_faction_40832_members` AS m
+  LEFT JOIN `torncity-402423.torn_data.v2_faction_40832_crimes` AS c 
     ON c.slots_user_id = m.id
     AND c.status = 'Successful'
   LEFT JOIN RecentActivity AS ra
