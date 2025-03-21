@@ -3,11 +3,13 @@
 import logging
 from datetime import datetime
 from typing import Dict, List, Any
+import json
 
 import pandas as pd
 from google.cloud import bigquery
 
 from app.services.torncity.base import BaseEndpointProcessor
+from app.services.torncity.exceptions import DataValidationError
 
 class BasicFactionEndpointProcessor(BaseEndpointProcessor):
     """Processor for Torn City basic faction data."""
@@ -19,6 +21,17 @@ class BasicFactionEndpointProcessor(BaseEndpointProcessor):
             config: Configuration dictionary containing API and storage settings.
         """
         super().__init__(config)
+        
+        # Update endpoint config with defaults
+        endpoint_config = {
+            'name': 'basic',
+            'url': config.get('url', 'https://api.torn.com/v2/faction/40832/basic'),
+            'table': config.get('table', 'torncity-402423.torn_data.v2_faction_40832_basic'),
+            'api_key': config.get('api_key', 'faction_40832'),
+            'storage_mode': config.get('storage_mode', 'append'),
+            'frequency': config.get('frequency', 'P1D')
+        }
+        self.endpoint_config.update(endpoint_config)
 
     def get_schema(self) -> List[bigquery.SchemaField]:
         """Get the BigQuery schema for basic faction data.
@@ -48,72 +61,66 @@ class BasicFactionEndpointProcessor(BaseEndpointProcessor):
         ]
 
     def transform_data(self, data: Dict) -> pd.DataFrame:
-        """Transform basic faction data into a normalized DataFrame.
-        
+        """Transform basic faction data into a DataFrame.
+
         Args:
-            data: Raw API response containing basic faction data
-            
+            data: Raw API response data.
+
         Returns:
-            pd.DataFrame: Normalized faction data
+            DataFrame containing transformed faction data.
+
+        Raises:
+            DataValidationError: If the data is invalid or missing required fields.
         """
-        try:
-            # Extract basic data
-            basic_data = data.get("basic", {})
-            if not basic_data:
-                self._log_error("No basic data found in API response")
-                return pd.DataFrame()
+        logging.info(f"API response structure: {json.dumps({k: type(v).__name__ for k, v in data.items()})}")
+        
+        # Extract basic data from response
+        basic_data = data.get('basic')
+        if not basic_data:
+            raise DataValidationError("No basic faction data found in API response")
             
-            # Create record with faction information
-            record = {
-                "faction_id": basic_data.get("ID"),
-                "name": basic_data.get("name"),
-                "tag": basic_data.get("tag"),
-                "leader_id": basic_data.get("leader"),
-                "co_leader_id": basic_data.get("co-leader"),
-                "age": basic_data.get("age"),
-                "best_chain": basic_data.get("best_chain"),
-                "total_respect": basic_data.get("respect"),
-                "capacity": basic_data.get("capacity"),
-                "territory_count": basic_data.get("territory_count"),
-                "territory_respect": basic_data.get("territory_respect"),
-                "raid_won": basic_data.get("raid_won", 0),
-                "raid_lost": basic_data.get("raid_lost", 0),
-                "peace_expiry": basic_data.get("peace", {}).get("expiry"),
-                "peace_faction_id": basic_data.get("peace", {}).get("faction_id"),
-                "server_timestamp": data.get("timestamp"),
-                "fetched_at": data.get("fetched_at")
-            }
+        # Log raw data for debugging
+        logging.info(f"Raw basic data: {json.dumps(basic_data, indent=2)}")
             
-            # Create DataFrame
-            df = pd.DataFrame([record])
-            if df.empty:
-                self._log_error("No records created from basic data")
-                return df
+        # Create a record with all required fields
+        record = {
+            'server_timestamp': datetime.now(),
+            'id': basic_data.get('id', 0),
+            'name': basic_data.get('name', ''),
+            'tag': basic_data.get('tag', ''),
+            'tag_image': basic_data.get('tag_image', ''),
+            'leader_id': basic_data.get('leader_id', 0),
+            'co_leader_id': basic_data.get('co-leader_id', 0),
+            'respect': basic_data.get('respect', 0),
+            'days_old': basic_data.get('days_old', 0),
+            'capacity': basic_data.get('capacity', 0),
+            'members': basic_data.get('members', 0),
+            'is_enlisted': basic_data.get('is_enlisted', False),
+            'rank_level': basic_data.get('rank', {}).get('level', 0),
+            'rank_name': basic_data.get('rank', {}).get('name', ''),
+            'rank_division': basic_data.get('rank', {}).get('division', 0),
+            'rank_position': basic_data.get('rank', {}).get('position', 0),
+            'rank_wins': basic_data.get('rank', {}).get('wins', 0),
+            'best_chain': basic_data.get('best_chain', 0)
+        }
+        
+        # Log transformed record for debugging
+        logging.info(f"Transformed record: {json.dumps(record, default=str, indent=2)}")
+        
+        # Convert to DataFrame
+        df = pd.DataFrame([record])
+        
+        # Ensure all numeric columns are integers
+        numeric_columns = [
+            'id', 'leader_id', 'co_leader_id', 'respect', 'days_old', 'capacity',
+            'members', 'rank_level', 'rank_division', 'rank_position', 'rank_wins',
+            'best_chain'
+        ]
+        for col in numeric_columns:
+            df[col] = df[col].astype('Int64')
             
-            # Convert timestamps
-            df = self.convert_timestamps(df, exclude_cols=[
-                "faction_id", "name", "tag", "leader_id", "co_leader_id"
-            ])
-            
-            # Convert numeric columns
-            df = self.convert_numerics(df, exclude_cols=[
-                "name", "tag", "server_timestamp", "fetched_at"
-            ])
-            
-            # Ensure ID columns are integers
-            for col in ["faction_id", "leader_id", "co_leader_id", "peace_faction_id"]:
-                if col in df.columns:
-                    df[col] = df[col].astype("Int64")
-            
-            # Log success
-            logging.info({
-                "event": "basic_transform_success",
-                "record_count": len(df),
-                "columns": list(df.columns)
-            })
-            
-            return df
-            
-        except Exception as e:
-            self._log_error(f"Error transforming basic data: {str(e)}")
-            return pd.DataFrame() 
+        # Ensure boolean columns are boolean
+        df['is_enlisted'] = df['is_enlisted'].astype('bool')
+        
+        logging.info(f"Successfully transformed basic faction data: {len(df)} rows")
+        return df 

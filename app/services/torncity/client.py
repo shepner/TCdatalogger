@@ -126,8 +126,6 @@ class TornClient:
             for key_name, api_key in self.api_keys.items():
                 if not isinstance(api_key, str) or not api_key.strip():
                     raise TornAPIKeyError(f"Invalid API key for '{key_name}'")
-                if not re.match(r'^[A-Za-z0-9]{16}$', api_key):
-                    raise TornAPIKeyError(f"API key '{key_name}' has invalid format")
 
         except TornAPIKeyError:
             raise
@@ -196,56 +194,31 @@ class TornClient:
 
     def _handle_api_response(self, response: requests.Response) -> dict:
         """Handle the API response and check for errors.
-        
+
         Args:
-            response: Response from the API
-            
+            response: The API response to handle.
+
         Returns:
-            dict: The response data
-            
+            dict: The parsed response data.
+
         Raises:
-            TornAPIError: If the response indicates an error
-            TornAPIKeyError: If the API key is invalid
-            TornAPIRateLimitError: If rate limit is exceeded
+            TornAPIError: If the response indicates an error.
         """
         try:
-            data = response.json() if hasattr(response, 'json') else response
+            data = response.json()
             
-            if isinstance(data, dict):
-                if 'error' in data and data['error'] is not None:  # Only check for errors if error is not None
-                    error = data['error']
-                    if isinstance(error, dict):
-                        code = error.get('code')
-                        message = error.get('error', '')
-                        
-                        error_mapping = {
-                            0: ("Unknown error", TornAPIError),
-                            1: ("Private endpoint", TornAPIError),
-                            2: ("Invalid API key", TornAPIKeyError),
-                            3: ("Authentication error", TornAPIKeyError),
-                            4: ("Invalid format specified", TornAPIError),
-                            5: ("Rate limit exceeded", TornAPIRateLimitError),
-                            6: ("Incorrect ID specified", TornAPIError),
-                            7: ("Incorrect ID-entity relation", TornAPIError),
-                            8: ("IP block", TornAPIError),
-                            9: ("API system disabled", TornAPIError),
-                            10: ("Key owner is in federal jail", TornAPIError),
-                            11: ("Key change error", TornAPIError),
-                            12: ("Key read error", TornAPIError),
-                            13: ("The requested selection is invalid", TornAPIError),
-                            14: ("The requested selection is disabled", TornAPIError),
-                            15: ("The requested selection is not available", TornAPIError),
-                            16: ("The requested selection is not available for the specified ID", TornAPIError)
-                        }
-                        
-                        error_msg, error_class = error_mapping.get(code, ("Unknown error", TornAPIError))
-                        error_msg = f"{error_msg}: {self._mask_api_key(message)}"
-                        self.logger.error(error_msg)
-                        raise error_class(error_msg)
-                    else:
-                        error_msg = f"API Error: {self._mask_api_key(str(error))}"
-                        self.logger.error(error_msg)
-                        raise TornAPIError(error_msg)
+            # Check for error response
+            if "error" in data:
+                error = data["error"]
+                if isinstance(error, dict):
+                    code = error.get("code", "unknown")
+                    error_msg = error.get("error", str(error))
+                    self.logger.error(f"API Error {code}: {self._mask_api_key(error_msg)}")
+                    raise TornAPIError(f"API Error {code}: {error_msg}")
+                else:
+                    error_msg = f"API Error: {self._mask_api_key(str(error))}"
+                    self.logger.error(error_msg)
+                    raise TornAPIError(error_msg)
                 
                 # Return the full response structure
                 return data
@@ -264,9 +237,11 @@ class TornClient:
             str: Message with API keys masked.
         """
         masked_message = message
-        # Mask actual API key values
+        # Mask actual API key values (both with and without 'key=' prefix)
         for key in self.api_keys.values():
+            key_without_prefix = key.replace('key=', '')
             masked_message = masked_message.replace(key, "***")
+            masked_message = masked_message.replace(key_without_prefix, "***")
         
         # Mask key identifiers
         for key_name in self.api_keys.keys():
@@ -313,47 +288,47 @@ class TornClient:
         else:
             raise ValueError("Invalid timeout configuration")
 
-    def make_request(self, endpoint: str, selection: Optional[str] = None, timeout: Optional[Union[int, Tuple[int, int]]] = None) -> Dict[str, Any]:
+    def make_request(self, url: str, api_key: str) -> Dict[str, Any]:
         """Make a request to the Torn API.
 
         Args:
-            endpoint: API endpoint to call
-            selection: Optional data selection filter
-            timeout: Optional request timeout override
+            url: The API endpoint URL
+            api_key: The API key to use (with or without key= prefix)
 
         Returns:
-            API response data
+            Dict[str, Any]: The API response data
 
         Raises:
-            TornAPIError: On API error
-            TornAPITimeoutError: On request timeout
-            TornAPIRateLimitError: On rate limit exceeded
+            TornAPIError: If the request fails or returns an error
         """
-        api_key = self.api_keys.get(selection or "default")
-        if not api_key:
-            raise TornAPIKeyError(f"API key not found for selection: {selection}")
-
-        # Build URL with base
-        url = f"{self.API_BASE_URL}/{endpoint}?key={api_key}"
-        
-        # Configure timeout
-        timeout_config = timeout or (self.DEFAULT_CONNECT_TIMEOUT, self.DEFAULT_READ_TIMEOUT)
-
         try:
-            # Enforce rate limiting
-            self._enforce_rate_limit(api_key)
-            
-            # Make request
-            response = self.session.get(url, timeout=timeout_config)
+            # Add API key to URL if not already present
+            if 'key=' not in url:
+                # Remove key= prefix if present
+                api_key = api_key.replace('key=', '')
+                url = f"{url}{'&' if '?' in url else '?'}key={api_key}"
+
+            # Log the request (with masked URL)
+            masked_url = self._mask_sensitive_url(url)
+            self.logger.debug(f"Making request to: {masked_url}")
+
+            # Make the request
+            response = self.session.get(url)
             response.raise_for_status()
-            
-            # Handle response
-            return self._handle_api_response(response)
-            
-        except requests.exceptions.Timeout:
-            raise TornAPITimeoutError("Request timed out")
+
+            # Parse and return the response
+            data = response.json()
+            if "error" in data:
+                error = data["error"]
+                raise TornAPIError(f"API Error {error.get('code')}: {error.get('error')}")
+            return data
+
         except requests.exceptions.RequestException as e:
             raise TornAPIError(f"Request failed: {str(e)}")
+        except json.JSONDecodeError as e:
+            raise TornAPIError(f"Failed to parse response: {str(e)}")
+        except Exception as e:
+            raise TornAPIError(f"Unexpected error: {str(e)}")
 
     def make_concurrent_requests(self, endpoints: List[str], selection: str = 'default', max_workers: int = 5) -> List[Dict]:
         """Make concurrent requests to multiple endpoints.

@@ -22,24 +22,11 @@ class CurrencyEndpointProcessor(BaseEndpointProcessor):
         """
         super().__init__(config)
         
-        # Default endpoint config for base currency endpoint
-        default_config = {
-            'name': 'currency',
-            'url': 'https://api.torn.com/torn/{API_KEY}?selections=currency',
-            'table': f"{config.get('dataset', 'torn')}.currency",
-            'api_key': config.get('tc_api_key', 'default'),
-            'storage_mode': config.get('storage_mode', 'append'),
-            'frequency': 'PT1H'
-        }
-        
-        # Update with endpoint-specific config if provided
-        if endpoint_config:
-            default_config.update(endpoint_config)
-        
-        self.endpoint_config.update(default_config)
-        
-        # Determine if this is a faction currency endpoint
-        self.is_faction_endpoint = 'faction' in self.endpoint_config.get('endpoint', '')
+        # Use endpoint config from the main config if not provided separately
+        self.endpoint_config = endpoint_config or config.get('endpoint_config', {})
+            
+        # Determine if this is a faction endpoint
+        self.is_faction_endpoint = 'faction' in config.get('endpoint', '')
 
     def get_schema(self) -> List[bigquery.SchemaField]:
         """Get the BigQuery schema for currency data.
@@ -155,25 +142,18 @@ class CurrencyEndpointProcessor(BaseEndpointProcessor):
             pd.DataFrame: Normalized currency data
         """
         try:
-            # Extract currency data
-            currency_data = data.get("currency", {})
-            if not currency_data:
-                self._log_error("No currency data found in API response")
-                return pd.DataFrame()
-            
             # Extract faction ID from endpoint name
             faction_id = None
-            match = re.search(r'v2_faction_(\d+)_currency', self.endpoint_config.get('name', ''))
+            match = re.search(r'v2_faction_(\d+)_currency', self.config.get('endpoint', ''))
             if match:
                 faction_id = int(match.group(1))
             
             # Create record with current balances
             record = {
                 "faction_id": faction_id,
-                "points": currency_data.get("points_balance", 0),
-                "money": currency_data.get("money_balance", 0),
-                "server_timestamp": data.get("timestamp"),
-                "fetched_at": data.get("fetched_at")
+                "points": int(data.get("points", 0)),
+                "money": int(data.get("money", 0)),
+                "server_timestamp": datetime.now().isoformat()
             }
             
             # Create DataFrame
@@ -186,7 +166,7 @@ class CurrencyEndpointProcessor(BaseEndpointProcessor):
             df = self.convert_timestamps(df, exclude_cols=["faction_id"])
             
             # Convert numeric columns
-            df = self.convert_numerics(df, exclude_cols=["server_timestamp", "fetched_at"])
+            df = self.convert_numerics(df, exclude_cols=["server_timestamp"])
             
             # Ensure faction_id is integer
             if "faction_id" in df.columns:
@@ -205,7 +185,7 @@ class CurrencyEndpointProcessor(BaseEndpointProcessor):
             self._log_error(f"Error transforming currency data: {str(e)}")
             return pd.DataFrame()
 
-    def convert_timestamps(self, df: pd.DataFrame, exclude_cols: list[str] = None) -> pd.DataFrame:
+    def convert_timestamps(self, df: pd.DataFrame, exclude_cols: List[str] = None) -> pd.DataFrame:
         """Convert timestamp columns to datetime.
         
         Args:
@@ -213,25 +193,17 @@ class CurrencyEndpointProcessor(BaseEndpointProcessor):
             exclude_cols: Columns to exclude from conversion
             
         Returns:
-            pd.DataFrame: DataFrame with converted timestamps
+            DataFrame with converted timestamps
         """
-        if exclude_cols is None:
-            exclude_cols = []
-            
-        timestamp_cols = [
-            col for col in df.columns 
-            if "timestamp" in col.lower() and col not in exclude_cols
-        ]
+        exclude_cols = exclude_cols or []
+        timestamp_cols = [col for col in df.columns if 'timestamp' in col.lower() and col not in exclude_cols]
         
         for col in timestamp_cols:
-            df[col] = pd.to_datetime(df[col], unit='s')
-            
-        if "fetched_at" in df.columns and "fetched_at" not in exclude_cols:
-            df["fetched_at"] = pd.to_datetime(df["fetched_at"])
+            df[col] = pd.to_datetime(df[col])
             
         return df
 
-    def convert_numerics(self, df: pd.DataFrame, exclude_cols: list[str] = None) -> pd.DataFrame:
+    def convert_numerics(self, df: pd.DataFrame, exclude_cols: List[str] = None) -> pd.DataFrame:
         """Convert numeric columns to appropriate types.
         
         Args:
@@ -239,20 +211,18 @@ class CurrencyEndpointProcessor(BaseEndpointProcessor):
             exclude_cols: Columns to exclude from conversion
             
         Returns:
-            pd.DataFrame: DataFrame with converted numeric types
+            DataFrame with converted numeric columns
         """
-        if exclude_cols is None:
-            exclude_cols = []
-            
-        numeric_cols = [
-            col for col in df.columns 
-            if any(t in col.lower() for t in ["id", "balance", "accumulated", "total"])
-            and col not in exclude_cols
-        ]
+        exclude_cols = exclude_cols or []
+        numeric_cols = df.select_dtypes(include=['int64', 'float64']).columns
+        numeric_cols = [col for col in numeric_cols if col not in exclude_cols]
         
         for col in numeric_cols:
-            df[col] = pd.to_numeric(df[col], errors='coerce')
-            
+            if df[col].dtype == 'float64':
+                df[col] = df[col].astype('float64')
+            else:
+                df[col] = df[col].astype('Int64')
+                
         return df
 
     def process_data(self, data: Dict[str, Any]) -> List[Dict[str, Any]]:
