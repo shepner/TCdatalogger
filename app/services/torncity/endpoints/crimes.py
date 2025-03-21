@@ -1,8 +1,9 @@
 """Processor for the Torn City crimes endpoint."""
 
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Dict, Optional, List, Any
+import json
 
 import pandas as pd
 import numpy as np
@@ -85,8 +86,11 @@ class CrimesEndpointProcessor(BaseEndpointProcessor):
             logging.warning("No crimes data found in response")
             return pd.DataFrame(columns=[field.name for field in self.get_schema()])
         
-        # Log the number of crimes being processed
-        logging.info(f"Processing {len(crimes_data)} crimes")
+        # Log detailed information about the crimes data
+        logging.info(f"Processing crimes data:")
+        logging.info(f"Total crimes in response: {len(crimes_data)}")
+        logging.info(f"Sample crime IDs: {[c.get('id') for c in list(crimes_data)[:5]]}")
+        logging.info(f"Response data structure: {json.dumps({k: type(v).__name__ for k, v in data.items()}, indent=2)}")
         
         transformed_data = []
         server_timestamp = pd.Timestamp.now()
@@ -100,30 +104,18 @@ class CrimesEndpointProcessor(BaseEndpointProcessor):
 
                 # Extract nested data with safe defaults and validation
                 slots = []
-                if isinstance(crime.get('slots'), list) and crime['slots']:
+                if isinstance(crime.get('slots'), list):
                     slots = crime['slots']
 
-                first_slot = {}
-                first_slot_item_req = {}
-                first_slot_user = {}
-                if slots:
-                    first_slot = slots[0] if isinstance(slots[0], dict) else {}
-                    if isinstance(first_slot.get('item_requirement'), dict):
-                        first_slot_item_req = first_slot['item_requirement']
-                    if isinstance(first_slot.get('user'), dict):
-                        first_slot_user = first_slot['user']
-
                 rewards = {}
-                payout = {}
                 items = []
-                first_item = {}
+                payout = {}  # Initialize payout with empty dict
                 if isinstance(crime.get('rewards'), dict):
                     rewards = crime['rewards']
+                    if isinstance(rewards.get('items'), list):
+                        items = rewards['items']
                     if isinstance(rewards.get('payout'), dict):
                         payout = rewards['payout']
-                    if isinstance(rewards.get('items'), list) and rewards['items']:
-                        items = rewards['items']
-                        first_item = items[0] if isinstance(items[0], dict) else {}
 
                 # Convert timestamps with error handling
                 def safe_timestamp(ts):
@@ -135,8 +127,8 @@ class CrimesEndpointProcessor(BaseEndpointProcessor):
                         logging.warning(f"Failed to convert timestamp {ts}: {str(e)}")
                         return None
 
-                # Create transformed crime dictionary with safe type conversions
-                transformed_crime = {
+                # Create base crime dictionary with common fields
+                base_crime = {
                     'server_timestamp': server_timestamp,
                     'id': int(crime.get('id', 0)),
                     'name': str(crime.get('name', 'Unknown')),
@@ -147,18 +139,7 @@ class CrimesEndpointProcessor(BaseEndpointProcessor):
                     'executed_at': safe_timestamp(crime.get('executed_at')),
                     'ready_at': safe_timestamp(crime.get('ready_at')),
                     'expired_at': safe_timestamp(crime.get('expired_at')),
-                    'slots_position': str(first_slot.get('position', '')),
-                    'slots_item_requirement_id': int(first_slot_item_req.get('id')) if first_slot_item_req.get('id') is not None else None,
-                    'slots_item_requirement_is_reusable': bool(first_slot_item_req.get('is_reusable', False)),
-                    'slots_item_requirement_is_available': bool(first_slot_item_req.get('is_available', False)),
-                    'slots_user_id': int(first_slot.get('user_id')) if first_slot.get('user_id') is not None else None,
-                    'slots_user_joined_at': safe_timestamp(first_slot_user.get('joined_at')),
-                    'slots_user_progress': float(first_slot_user.get('progress', 0)),
-                    'slots_success_chance': int(first_slot.get('success_chance', 0)),
-                    'slots_crime_pass_rate': int(first_slot.get('crime_pass_rate', 0)),
                     'rewards_money': int(rewards.get('money')) if rewards.get('money') is not None else None,
-                    'rewards_items_id': int(first_item.get('id')) if first_item.get('id') is not None else None,
-                    'rewards_items_quantity': int(first_item.get('quantity')) if first_item.get('quantity') is not None else None,
                     'rewards_respect': int(rewards.get('respect')) if rewards.get('respect') is not None else None,
                     'rewards_payout_type': str(payout.get('type', '')),
                     'rewards_payout_percentage': int(payout.get('percentage')) if payout.get('percentage') is not None else None,
@@ -166,7 +147,53 @@ class CrimesEndpointProcessor(BaseEndpointProcessor):
                     'rewards_payout_paid_at': safe_timestamp(payout.get('paid_at'))
                 }
 
-                transformed_data.append(transformed_crime)
+                # If no slots, create one row with base crime data
+                if not slots:
+                    transformed_data.append({
+                        **base_crime,
+                        'slots_position': '',
+                        'slots_item_requirement_id': None,
+                        'slots_item_requirement_is_reusable': None,
+                        'slots_item_requirement_is_available': None,
+                        'slots_user_id': None,
+                        'slots_user_joined_at': None,
+                        'slots_user_progress': None,
+                        'slots_success_chance': None,
+                        'slots_crime_pass_rate': None,
+                        'rewards_items_id': None,
+                        'rewards_items_quantity': None
+                    })
+                    continue
+
+                # Create a row for each slot
+                for slot in slots:
+                    if not isinstance(slot, dict):
+                        continue
+
+                    item_req = slot.get('item_requirement', {}) if isinstance(slot.get('item_requirement'), dict) else {}
+                    user = slot.get('user', {}) if isinstance(slot.get('user'), dict) else {}
+
+                    # Create a row for each item in rewards (or one row with no item if no rewards)
+                    items_to_process = items if items else [{}]
+                    for item in items_to_process:
+                        if not isinstance(item, dict):
+                            continue
+
+                        transformed_crime = {
+                            **base_crime,
+                            'slots_position': str(slot.get('position', '')),
+                            'slots_item_requirement_id': int(item_req.get('id')) if item_req.get('id') is not None else None,
+                            'slots_item_requirement_is_reusable': bool(item_req.get('is_reusable', False)),
+                            'slots_item_requirement_is_available': bool(item_req.get('is_available', False)),
+                            'slots_user_id': int(slot.get('user_id')) if slot.get('user_id') is not None else None,
+                            'slots_user_joined_at': safe_timestamp(user.get('joined_at')),
+                            'slots_user_progress': float(user.get('progress', 0)),
+                            'slots_success_chance': int(slot.get('success_chance', 0)),
+                            'slots_crime_pass_rate': int(slot.get('crime_pass_rate', 0)),
+                            'rewards_items_id': int(item.get('id')) if item.get('id') is not None else None,
+                            'rewards_items_quantity': int(item.get('quantity')) if item.get('quantity') is not None else None
+                        }
+                        transformed_data.append(transformed_crime)
 
             except Exception as e:
                 crime_id = crime.get('id', 'unknown') if isinstance(crime, dict) else 'unknown'
@@ -283,4 +310,107 @@ class CrimesEndpointProcessor(BaseEndpointProcessor):
         except Exception as e:
             error_msg = f"Error transforming crimes data: {str(e)}"
             self._log_error(error_msg)
-            raise DataValidationError(error_msg) 
+            raise DataValidationError(error_msg)
+
+    def fetch_data(self) -> Dict[str, Any]:
+        """Fetch crimes data using sliding 7-day windows.
+        
+        Returns:
+            Dictionary containing all crimes data.
+        """
+        logger = logging.getLogger(__name__)
+        logger.info("Fetching crimes data using sliding time windows")
+        
+        all_crimes = {}
+        window_count = 1
+        
+        # Get the API key from the client
+        api_key_selection = self.endpoint_config.get('api_key', 'default')
+        api_key = self.torn_client.api_keys.get(api_key_selection)
+        if not api_key:
+            raise ValueError(f"API key not found for selection: {api_key_selection}")
+        
+        # Remove any existing key= prefix
+        api_key = api_key.replace('key=', '')
+        
+        # Start from current time
+        end_time = datetime.now()
+        
+        while True:
+            # Calculate start time for this window
+            start_time = end_time - timedelta(days=7)
+            
+            # Format timestamps for API
+            from_ts = int(start_time.timestamp())
+            to_ts = int(end_time.timestamp())
+            
+            # Construct URL for this time window
+            params = {
+                "key": api_key,
+                "cat": "all",
+                "sort": "DESC",
+                "from": from_ts,
+                "to": to_ts
+            }
+            
+            logger.info(f"Fetching window {window_count}: {start_time.date()} to {end_time.date()}")
+            logger.info(f"Request URL: {self.endpoint_config['url']}")
+            logger.info(f"Request params: {params}")
+            
+            try:
+                # Use the session from the base class
+                response = self.torn_client.session.get(
+                    self.endpoint_config['url'],
+                    params=params
+                )
+                data = response.json()
+                logger.info(f"Response status code: {response.status_code}")
+                logger.info(f"Response data: {data}")
+                
+                # Check for API errors
+                if 'error' in data:
+                    error_msg = data['error'].get('error', 'Unknown API error')
+                    logger.error(f"API returned an error: {error_msg}")
+                    break
+                
+                if not data.get("crimes"):
+                    logger.info("No crimes found in this time window")
+                    break
+                    
+                crimes = data["crimes"]
+                if not crimes:
+                    logger.info("No crimes found in this time window")
+                    break
+                    
+                crime_ids = [crime['id'] for crime in crimes]
+                logger.info(f"First crime in window: ID {min(crime_ids)}")
+                logger.info(f"Last crime in window: ID {max(crime_ids)}")
+                logger.info(f"Retrieved {len(crimes)} crimes from window {window_count}")
+                
+                # Track new crimes added
+                new_crimes = {str(crime['id']): crime for crime in crimes if str(crime['id']) not in all_crimes}
+                logger.info(f"Added {len(new_crimes)} new crimes")
+                
+                if new_crimes:
+                    logger.info(f"New crime IDs: {sorted(map(int, new_crimes.keys()))}")
+                    all_crimes.update(new_crimes)
+                    
+                logger.info(f"Total crimes so far: {len(all_crimes)}")
+                
+                # Move window back in time
+                end_time = start_time
+                window_count += 1
+                
+                # If we didn't add any new crimes, we're done
+                if not new_crimes:
+                    logger.info("No new crimes found, stopping time window progression")
+                    break
+                
+                # Add a small delay to avoid hitting rate limits
+                time.sleep(1)
+                
+            except Exception as e:
+                logger.error(f"Error fetching crimes data: {str(e)}")
+                break
+        
+        return {"crimes": list(all_crimes.values())} 

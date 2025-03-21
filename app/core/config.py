@@ -138,12 +138,7 @@ class Config:
                 if not name:
                     raise ValueError("Endpoint missing required 'name' field")
                 
-                # Validate endpoint configurations
-                required_fields = {'table', 'frequency', 'storage_mode'}
-                missing_fields = required_fields - set(endpoint.keys())
-                if missing_fields:
-                    raise ValueError(f"Endpoint {name} missing required fields: {missing_fields}")
-                
+                # Store the endpoint config as is
                 configs[name] = endpoint
             
             return configs

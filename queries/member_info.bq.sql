@@ -2,13 +2,13 @@
 WITH RecentActivity AS (
   SELECT 
     m.id,
-    COUNT(DISTINCT CASE WHEN TIMESTAMP_DIFF(c.server_timestamp, c.executed_at, DAY) <= 30 THEN c.id END) as recent_participations_30d,
-    COUNT(DISTINCT CASE WHEN TIMESTAMP_DIFF(c.server_timestamp, c.executed_at, DAY) <= 7 THEN c.id END) as recent_participations_7d
+    COUNT(DISTINCT CASE WHEN TIMESTAMP_DIFF(CAST(c.server_timestamp AS DATETIME), CAST(c.executed_at AS DATETIME), DAY) <= 30 THEN c.id END) as recent_participations_30d,
+    COUNT(DISTINCT CASE WHEN TIMESTAMP_DIFF(CAST(c.server_timestamp AS DATETIME), CAST(c.executed_at AS DATETIME), DAY) <= 7 THEN c.id END) as recent_participations_7d
   FROM `torncity-402423.torn_data.v2_faction_40832_members` AS m
   LEFT JOIN `torncity-402423.torn_data.v2_faction_40832_crimes` AS c 
     ON c.slots_user_id = m.id
     AND c.status = 'Successful'
-    AND TIMESTAMP_DIFF(c.server_timestamp, c.executed_at, DAY) <= 30
+    AND TIMESTAMP_DIFF(CAST(c.server_timestamp AS DATETIME), CAST(c.executed_at AS DATETIME), DAY) <= 30
   GROUP BY m.id
 ),
 MemberSuccesses AS (
@@ -18,7 +18,7 @@ MemberSuccesses AS (
     m.level,
     m.days_in_faction,
     m.position,
-    TIMESTAMP_DIFF(m.server_timestamp, m.last_action_timestamp, DAY) as days_since_last_action,
+    TIMESTAMP_DIFF(CAST(m.server_timestamp AS DATETIME), m.last_action_timestamp, DAY) as days_since_last_action,
     m.is_in_oc,
     COALESCE(ra.recent_participations_30d, 0) as recent_participations_30d,
     COALESCE(ra.recent_participations_7d, 0) as recent_participations_7d,

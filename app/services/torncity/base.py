@@ -120,84 +120,49 @@ class BaseEndpointProcessor(ABC):
         if not config.get('api_key') and not config.get('tc_api_key_file'):
             raise ValueError("Either 'api_key' or 'tc_api_key_file' must be provided")
 
-    def fetch_torn_data(self) -> Union[Dict[str, Any], List[Any]]:
-        """Fetch data from the Torn City API using the configured endpoint and selection.
-
-        Returns:
-            Dictionary or List containing the API response data.
-
-        Raises:
-            Exception: If the API request fails.
+    def fetch_torn_data(self, url: str, api_key: str, max_pages: Optional[int] = None) -> Dict[str, Any]:
         """
-        try:
-            # Use the API key specified in the endpoint config, fallback to default
-            api_key_selection = self.endpoint_config.get('api_key', 'default')
-            api_key = self.torn_client.api_keys.get(api_key_selection)
-            if not api_key:
-                raise ValueError(f"API key not found for selection: {api_key_selection}")
+        Fetch data from the Torn API with pagination support.
+        """
+        base_url = url
+        next_url = base_url
+        all_data = {}
+        page = 1
 
-            # Get pagination settings from config
-            pagination_config = self.config.get('defaults', {}).get('pagination', {})
-            pagination_enabled = pagination_config.get('enabled', True)
-            max_pages = pagination_config.get('max_pages')
-            metadata_field = pagination_config.get('metadata_field', '_metadata')
-            next_url_field = pagination_config.get('next_url_field', 'next')
+        while True:
+            if max_pages and page > max_pages:
+                break
 
-            # Get the initial URL with API key
-            url = self.endpoint_config['url'].replace('{API_KEY}', api_key)
+            logging.info(f"Fetching page {page} from: {next_url}")
+            response = self.torn_client.session.get(next_url)
+            data = response.json()
+            
+            # Log the API response structure
+            logging.info(f"API response structure: {json.dumps({k: type(v).__name__ for k, v in data.items()})}")
+            if 'data' in data:
+                logging.info(f"Data field structure: {json.dumps({k: type(v).__name__ for k, v in data['data'].items()})}")
 
-            # Initialize data storage
-            all_data = None
-            current_url = url
-            page_count = 0
+            if not all_data:
+                all_data = data
+            else:
+                # Merge data from subsequent pages
+                for key, value in data.items():
+                    if key == '_metadata':
+                        continue
+                    if isinstance(value, list):
+                        all_data[key].extend(value)
+                    elif isinstance(value, dict):
+                        all_data[key].update(value)
 
-            while current_url:
-                # Check page limit if set
-                if max_pages is not None and page_count >= max_pages:
-                    logging.info(f"Reached maximum page limit of {max_pages}")
-                    break
+            # Check for next page
+            metadata = data.get('_metadata', {})
+            next_url = metadata.get('next')
+            if not next_url:
+                break
 
-                # Fetch data from API
-                data = self.torn_client.fetch_data(current_url)
-                logging.info(f"API Response: {json.dumps(data, indent=2)}")
+            page += 1
 
-                if all_data is None:
-                    all_data = data
-                else:
-                    # Merge data from subsequent pages
-                    if 'data' in data and 'data' in all_data:
-                        # For v2 API responses
-                        for key in data['data']:
-                            if isinstance(data['data'][key], list):
-                                all_data['data'][key].extend(data['data'][key])
-                            elif isinstance(data['data'][key], dict):
-                                all_data['data'][key].update(data['data'][key])
-                    else:
-                        # For v1 API responses
-                        if isinstance(data, dict):
-                            all_data.update(data)
-                        elif isinstance(data, list):
-                            all_data.extend(data)
-
-                # Check for next page if pagination is enabled
-                current_url = None
-                if pagination_enabled and 'error' not in data:
-                    metadata = data.get(metadata_field, {})
-                    next_url = metadata.get(next_url_field) if metadata else None
-                    if next_url:
-                        # Replace or add API key to next URL
-                        if 'key=' in next_url:
-                            current_url = re.sub(r'key=[^&]+', f'key={api_key}', next_url)
-                        else:
-                            current_url = f"{next_url}&key={api_key}"
-                        page_count += 1
-                        logging.info(f"Fetching page {page_count + 1}")
-
-            return all_data
-
-        except Exception as e:
-            self._log_error(f"Failed to fetch data from Torn API: {str(e)}")
-            raise
+        return all_data
 
     def write_to_bigquery(self, data: Union[List[Dict], pd.DataFrame], table: Optional[str] = None) -> None:
         """Write data to BigQuery.
@@ -218,7 +183,7 @@ class BaseEndpointProcessor(ABC):
         storage_mode = self.endpoint_config.get('storage_mode', 'append').lower()
         write_disposition_map = {
             'append': 'WRITE_APPEND',
-            'truncate': 'WRITE_TRUNCATE',
+            'replace': 'WRITE_TRUNCATE',  # Replace existing data with new data
             'empty': 'WRITE_EMPTY'
         }
         write_disposition = write_disposition_map.get(storage_mode, 'WRITE_APPEND')
@@ -235,13 +200,45 @@ class BaseEndpointProcessor(ABC):
     def run(self) -> None:
         """Run the processor to fetch and process data."""
         try:
-            # Fetch data from the API
-            data = self.fetch_torn_data()
+            # Get the API key from the config
+            api_key_name = self.config.get('api_key', 'default')
+
+            # Load API keys from file using the correct path
+            api_key_file = self.config.get('tc_api_key_file')
+            try:
+                with open(api_key_file) as f:
+                    api_keys = json.load(f)
+            except Exception as e:
+                raise ValueError(f"Failed to load API keys from {api_key_file}: {str(e)}")
+
+            # Get the actual API key
+            api_key = api_keys.get(api_key_name)
+            if not api_key:
+                raise ValueError(f"API key '{api_key_name}' not found in API key file")
+
+            # Check if the endpoint uses time window-based fetching
+            if self.endpoint_config.get('use_time_windows', False):
+                data = self.fetch_data()
+            else:
+                # Get pagination settings from config
+                pagination_config = self.endpoint_config.get('pagination', {})
+                max_pages = pagination_config.get('max_pages')
+                
+                # Get URL from config
+                url = self.config.get('url')
+                if not url:
+                    raise ValueError("No URL specified in config")
+                
+                # Make request using the TornClient
+                data = self.torn_client.make_request(url, api_key)
+
             if not data:
                 raise ValueError("No data received from API")
             
-            # Log the raw API response for debugging
-            logging.debug(f"Raw API response: {json.dumps(data, indent=2)}")
+            # Check for API error response
+            if isinstance(data, dict) and 'error' in data:
+                error = data['error']
+                raise EndpointError(f"API error: {error.get('error')} (code: {error.get('code')})")
             
             # Process the data
             processed_data = self.process_data(data)
@@ -253,11 +250,10 @@ class BaseEndpointProcessor(ABC):
             logging.debug(f"Processed data columns: {processed_data.columns.tolist()}")
             
             # Write the data to BigQuery
-            self.write_to_bigquery(processed_data, self.endpoint_config['table'])
-            logging.info(f"Successfully wrote {len(processed_data)} rows to {self.endpoint_config['table']}")
+            self.write_to_bigquery(processed_data)
             
         except Exception as e:
-            self.logger.error(f"Error running processor: {str(e)}")
+            logging.error(f"Error running processor: {str(e)}")
             raise
 
     def _get_current_timestamp(self) -> str:
@@ -407,52 +403,55 @@ class BaseEndpointProcessor(ABC):
             self._log_error(f"Error processing data: {str(e)}")
             raise
 
-    def process(self, data: Union[Dict[str, Any], List[Any]]) -> bool:
-        """Process data from the endpoint.
-        
-        Args:
-            data: Raw data from the API
-            
-        Returns:
-            bool: True if processing succeeded
-            
-        Raises:
-            DataValidationError: If data cannot be transformed
-        """
+    def process(self) -> None:
+        """Process the endpoint by fetching data and writing to BigQuery."""
         try:
-            # Transform data
-            transformed = self.transform_data(data)
-            
-            if not transformed:
-                self._log_error("No data to process")
-                return False
-            
-            # Convert to DataFrame if necessary
-            if isinstance(transformed, list):
-                df = pd.DataFrame(transformed)
+            # Get the API key name from the endpoint config
+            api_key_name = self.endpoint_config.get('api_key')
+            if not api_key_name:
+                raise ValueError("No API key specified in endpoint config")
+
+            # Load API keys from file
+            with open('config/TC_API_key.json') as f:
+                api_keys = json.load(f)
+
+            # Get the API key
+            api_key = api_keys.get(api_key_name)
+            if not api_key:
+                raise ValueError(f"API key '{api_key_name}' not found in API key file")
+
+            # Get the URL from the endpoint config
+            url = self.endpoint_config['url']
+            if not url:
+                raise ValueError("No URL specified in endpoint config")
+
+            # Add API key to URL
+            if '?' in url:
+                url += f'&{api_key}'
             else:
-                df = transformed
-            
-            if df.empty:
-                self._log_error("No data to process")
-                return False
-            
-            # Validate against schema
-            schema = self.get_schema()
-            df = self._validate_schema(df, schema)
-            
-            # Upload to BigQuery
-            self._upload_data(df, schema)
-            
-            return True
-            
-        except SchemaError as e:
-            self._log_error(f"Processing failed: {str(e)}")
-            return False
-            
+                url += f'?{api_key}'
+
+            # Get pagination settings from config
+            pagination_config = self.config.get('defaults', {}).get('pagination', {})
+            max_pages = pagination_config.get('max_pages')
+
+            # Fetch data from the API
+            data = self.fetch_torn_data(url, api_key, max_pages)
+            if not data:
+                raise ValueError("No data received from API")
+
+            # Transform the data
+            transformed_data = self.transform_data(data)
+            if transformed_data is None or (isinstance(transformed_data, pd.DataFrame) and transformed_data.empty):
+                logging.warning("No data to write after transformation")
+                return
+
+            # Write to BigQuery
+            self.write_to_bigquery(transformed_data)
+
         except Exception as e:
-            self._log_error(str(e))
-            return False
+            self._log_error(f"Failed to process endpoint: {str(e)}")
+            raise
 
     def _validate_schema(self, df: pd.DataFrame, schema: List[bigquery.SchemaField]) -> pd.DataFrame:
         """Validate DataFrame against schema.

@@ -19,16 +19,25 @@ class ItemsEndpointProcessor(BaseEndpointProcessor):
         Args:
             config: Configuration dictionary containing API and storage settings.
         """
+        # Initialize with base config first
+        super().__init__(config)
+        
+        # Update endpoint config with defaults
         endpoint_config = {
             'name': 'items',
-            'url': 'https://api.torn.com/torn/{API_KEY}?selections=items',
-            'table': f"{config.get('dataset', 'torn')}.items",
+            'url': 'https://api.torn.com/v2/torn/items',
+            'table': f"torncity-402423.torn_data.v2_torn_items",
             'api_key': config.get('tc_api_key', 'default'),
             'storage_mode': config.get('storage_mode', 'append'),
-            'frequency': 'PT1H'
+            'frequency': 'PT24H'
         }
-        super().__init__(config)
         self.endpoint_config.update(endpoint_config)
+        
+        # Override with any provided endpoint config
+        if 'table' in config:
+            self.endpoint_config['table'] = config['table']
+        if 'url' in config:
+            self.endpoint_config['url'] = config['url']
 
     def get_schema(self) -> List[bigquery.SchemaField]:
         """Get the BigQuery schema for items data.
@@ -82,41 +91,190 @@ class ItemsEndpointProcessor(BaseEndpointProcessor):
         Raises:
             DataValidationError: If the response is empty or missing required fields.
         """
-        if not data:
-            raise DataValidationError("Empty response from API")
+        logging.info(f"Raw API response type: {type(data)}")
+        logging.info(f"Raw API response structure: {data}")
+
+        if not data or not isinstance(data, dict):
+            raise DataValidationError("Empty or invalid response from API")
+
+        # Get the items list from the response
+        items_data = data.get('items', [])
+        logging.info(f"Items data type: {type(items_data)}")
+        logging.info(f"Items data structure: {items_data}")
+
+        if not items_data:
+            raise DataValidationError("No items data found in API response")
 
         transformed_data = []
-        for item_id, item_data in data.items():
+        for item_data in items_data:
             if not isinstance(item_data, dict):
                 continue
 
-            transformed_item = {
-                'item_id': int(item_id),
-                'name': item_data.get('name', ''),
-                'description': item_data.get('description', ''),
-                'type': item_data.get('type', ''),
-                'buy_price': item_data.get('buy_price', 0),
-                'sell_price': item_data.get('sell_price', 0),
-                'market_value': item_data.get('market_value', 0),
-                'circulation': item_data.get('circulation', 0),
-                'timestamp': datetime.now().strftime('%Y-%m-%dT%H:%M:%S')
-            }
-            transformed_data.append(transformed_item)
+            try:
+                value = item_data.get('value', {})
+                if isinstance(value, dict):
+                    vendor = value.get('vendor', {})
+                    if isinstance(vendor, dict):
+                        vendor_country = vendor.get('country', '')
+                        vendor_name = vendor.get('name', '')
+                    else:
+                        vendor_country = ''
+                        vendor_name = ''
+                    buy_price = value.get('buy_price', 0)
+                    sell_price = value.get('sell_price', 0)
+                    market_price = value.get('market_price', 0)
+                else:
+                    vendor_country = ''
+                    vendor_name = ''
+                    buy_price = 0
+                    sell_price = 0
+                    market_price = 0
+
+                transformed_item = {
+                    'server_timestamp': datetime.now().strftime('%Y-%m-%dT%H:%M:%S'),
+                    'id': int(item_data.get('id', 0)),
+                    'name': str(item_data.get('name', '')),
+                    'description': str(item_data.get('description', '')),
+                    'effect': str(item_data.get('effect', '')),
+                    'requirement': str(item_data.get('requirement', '')),
+                    'image': str(item_data.get('image', '')),
+                    'type': str(item_data.get('type', '')),
+                    'sub_type': str(item_data.get('sub_type', '')),
+                    'is_masked': bool(item_data.get('is_masked', False)),
+                    'is_tradable': bool(item_data.get('is_tradable', True)),
+                    'is_found_in_city': bool(item_data.get('is_found_in_city', True)),
+                    'value_vendor_country': str(vendor_country),
+                    'value_vendor_name': str(vendor_name),
+                    'value_buy_price': int(buy_price or 0),
+                    'value_sell_price': int(sell_price or 0),
+                    'value_market_price': int(market_price or 0),
+                    'circulation': int(item_data.get('circulation', 0)),
+                }
+
+                details = item_data.get('details', {})
+                if details and isinstance(details, dict):
+                    coverage = details.get('coverage', [])
+                    if coverage and isinstance(coverage, list) and len(coverage) > 0:
+                        transformed_item.update({
+                            'details_coverage_name': str(coverage[0].get('name', '')),
+                            'details_coverage_value': float(coverage[0].get('value', 0.0))
+                        })
+                    else:
+                        transformed_item.update({
+                            'details_coverage_name': '',
+                            'details_coverage_value': 0.0
+                        })
+
+                    base_stats = details.get('base_stats', {})
+                    if base_stats and isinstance(base_stats, dict):
+                        transformed_item.update({
+                            'details_base_stats_damage': int(base_stats.get('damage', 0)),
+                            'details_base_stats_accuracy': int(base_stats.get('accuracy', 0)),
+                            'details_base_stats_armor': int(base_stats.get('armor', 0))
+                        })
+                    else:
+                        transformed_item.update({
+                            'details_base_stats_damage': 0,
+                            'details_base_stats_accuracy': 0,
+                            'details_base_stats_armor': 0
+                        })
+
+                    transformed_item.update({
+                        'details_category': str(details.get('category', '')),
+                        'details_stealth_level': float(details.get('stealth_level', 0.0))
+                    })
+
+                    ammo = details.get('ammo', {})
+                    if ammo and isinstance(ammo, dict):
+                        rate_of_fire = ammo.get('rate_of_fire', {})
+                        if rate_of_fire and isinstance(rate_of_fire, dict):
+                            transformed_item.update({
+                                'details_ammo_rate_of_fire_minimum': int(rate_of_fire.get('minimum', 0)),
+                                'details_ammo_rate_of_fire_maximum': int(rate_of_fire.get('maximum', 0))
+                            })
+                        else:
+                            transformed_item.update({
+                                'details_ammo_rate_of_fire_minimum': 0,
+                                'details_ammo_rate_of_fire_maximum': 0
+                            })
+
+                        transformed_item.update({
+                            'details_ammo_id': int(ammo.get('id', 0)),
+                            'details_ammo_name': str(ammo.get('name', '')),
+                            'details_ammo_magazine_rounds': int(ammo.get('magazine_rounds', 0))
+                        })
+                    else:
+                        transformed_item.update({
+                            'details_ammo_id': 0,
+                            'details_ammo_name': '',
+                            'details_ammo_magazine_rounds': 0,
+                            'details_ammo_rate_of_fire_minimum': 0,
+                            'details_ammo_rate_of_fire_maximum': 0
+                        })
+
+                    mods = details.get('mods', [])
+                    transformed_item['details_mods'] = len(mods) if isinstance(mods, list) else 0
+                else:
+                    transformed_item.update({
+                        'details_coverage_name': '',
+                        'details_coverage_value': 0.0,
+                        'details_category': '',
+                        'details_stealth_level': 0.0,
+                        'details_base_stats_damage': 0,
+                        'details_base_stats_accuracy': 0,
+                        'details_base_stats_armor': 0,
+                        'details_ammo_id': 0,
+                        'details_ammo_name': '',
+                        'details_ammo_magazine_rounds': 0,
+                        'details_ammo_rate_of_fire_minimum': 0,
+                        'details_ammo_rate_of_fire_maximum': 0,
+                        'details_mods': 0
+                    })
+
+                transformed_data.append(transformed_item)
+                logging.info(f"Successfully transformed item {transformed_item['id']}")
+
+            except Exception as e:
+                logging.warning(f"Error transforming item: {e}")
+                continue
 
         if not transformed_data:
-            raise DataValidationError("No valid items data found")
+            raise DataValidationError("No valid items data after transformation")
 
         return transformed_data
 
-    def process_data(self, data: Dict[str, Any]) -> List[Dict[str, Any]]:
+    def process_data(self, data: Dict[str, Any]) -> pd.DataFrame:
         """Process the items data.
         
         Args:
             data: Raw data from the API response
             
         Returns:
-            List[Dict[str, Any]]: List of processed data records
+            pd.DataFrame: DataFrame containing processed data records
         """
         transformed_data = self.transform_data(data)
-        self.validate_schema(transformed_data)
-        return transformed_data 
+        df = pd.DataFrame(transformed_data)
+        
+        # Convert server_timestamp to datetime
+        df['server_timestamp'] = pd.to_datetime(df['server_timestamp'])
+        
+        # Ensure all required columns are present
+        schema_fields = {field.name: field for field in self.get_schema()}
+        for field_name, field in schema_fields.items():
+            if field_name not in df.columns:
+                # Add missing column with appropriate default value based on field type
+                if field.field_type == 'STRING':
+                    df[field_name] = ''
+                elif field.field_type == 'INTEGER':
+                    df[field_name] = 0
+                elif field.field_type == 'FLOAT':
+                    df[field_name] = 0.0
+                elif field.field_type == 'BOOLEAN':
+                    df[field_name] = False
+                elif field.field_type == 'TIMESTAMP':
+                    df[field_name] = pd.Timestamp.now()
+        
+        # Validate schema
+        self.validate_schema(df)
+        
+        return df 

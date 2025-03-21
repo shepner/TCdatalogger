@@ -49,15 +49,21 @@ def main() -> None:
             # Get the processor directly from registry
             processor_class = registry.get_processor(endpoint_name)
             
-            # Create processor config by combining scheduler config and endpoint config
+            # Create processor config by merging scheduler config and endpoint config
             processor_config = {
                 'gcp_credentials_file': scheduler_config['gcp_credentials_file'],
                 'endpoint': endpoint_name,
                 'storage_mode': endpoint_config.get('storage_mode', 'append'),
-                'tc_api_key_file': scheduler_config['tc_api_key_file']
+                'tc_api_key_file': scheduler_config['tc_api_key_file'],
+                'endpoint_config': endpoint_config,  # Add the full endpoint config
+                'url': endpoint_config.get('url'),  # Add the URL from endpoint config
+                'table': endpoint_config.get('table'),  # Add the table from endpoint config
+                'frequency': endpoint_config.get('frequency'),  # Add the frequency from endpoint config
+                'api_key': endpoint_config.get('api_key', 'default')  # Add the API key name
             }
             
-            processor = processor_class(processor_config, endpoint_config)
+            # Create processor with merged config
+            processor = processor_class(processor_config)
             
             # Process the endpoint
             logging.info(f"Starting {endpoint_name} processing...")

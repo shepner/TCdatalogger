@@ -38,8 +38,6 @@
     "rate_limit": 60,
     "timeout": 30,
     "pagination": {
-      "enabled": true,
-      "max_pages": null,
       "metadata_field": "_metadata",
       "next_url_field": "next"
     }
@@ -47,7 +45,7 @@
   "endpoints": [
     {
       "name": "server_timestamp",
-      "url": "https://api.torn.com/torn/?selections=timestamp&key={API_KEY}",
+      "url": "https://api.torn.com/torn/?selections=timestamp",
       "table": "torncity-402423.torn_data.server_timestamp",
       "frequency": "PT15M",
       "storage_mode": "replace",
@@ -57,27 +55,29 @@
     },
     {
       "name": "v2_faction_40832_crimes",
-      "url": "https://api.torn.com/v2/faction/crimes?key={API_KEY}&cat=all&sort=ASC",
+      "url": "https://api.torn.com/v2/faction/crimes",
       "table": "torncity-402423.torn_data.v2_faction_40832_crimes",
       "frequency": "PT15M",
       "storage_mode": "replace",
       "api_key": "faction_40832",
       "max_retries": 3,
-      "retry_delay": 60
+      "retry_delay": 60,
+      "use_time_windows": true
     },
     {
       "name": "v2_faction_17991_crimes",
-      "url": "https://api.torn.com/v2/faction/crimes?key={API_KEY}&cat=all&sort=ASC",
+      "url": "https://api.torn.com/v2/faction/crimes",
       "table": "torncity-402423.torn_data.v2_faction_17991_crimes",
       "frequency": "PT15M",
       "storage_mode": "replace",
       "api_key": "faction_17991",
       "max_retries": 3,
-      "retry_delay": 60
+      "retry_delay": 60,
+      "use_time_windows": true
     },
     {
       "name": "v2_faction_40832_members",
-      "url": "https://api.torn.com/v2/faction/members?key={API_KEY}&striptags=true",
+      "url": "https://api.torn.com/v2/faction/members?striptags=true",
       "table": "torncity-402423.torn_data.v2_faction_40832_members",
       "frequency": "PT15M",
       "storage_mode": "replace",
@@ -87,7 +87,7 @@
     },
     {
       "name": "v2_faction_17991_members",
-      "url": "https://api.torn.com/v2/faction/members?key={API_KEY}&striptags=true",
+      "url": "https://api.torn.com/v2/faction/members?striptags=true",
       "table": "torncity-402423.torn_data.v2_faction_17991_members",
       "frequency": "PT15M",
       "storage_mode": "replace",
@@ -97,7 +97,7 @@
     },
     {
       "name": "v2_torn_items",
-      "url": "https://api.torn.com/v2/torn/items?key={API_KEY}",
+      "url": "https://api.torn.com/v2/torn/items",
       "table": "torncity-402423.torn_data.v2_torn_items",
       "frequency": "PT24H",
       "storage_mode": "replace",
@@ -107,7 +107,7 @@
     },
     {
       "name": "v2_faction_40832_basic",
-      "url": "https://api.torn.com/v2/faction/40832/basic?key={API_KEY}",
+      "url": "https://api.torn.com/v2/faction/40832/basic",
       "table": "torncity-402423.torn_data.v2_faction_40832_basic",
       "frequency": "P1D",
       "storage_mode": "append",
@@ -117,7 +117,7 @@
     },
     {
       "name": "v2_faction_17991_basic",
-      "url": "https://api.torn.com/v2/faction/17991/basic?key={API_KEY}",
+      "url": "https://api.torn.com/v2/faction/17991/basic",
       "table": "torncity-402423.torn_data.v2_faction_17991_basic",
       "frequency": "P1D",
       "storage_mode": "append",
@@ -127,7 +127,7 @@
     },
     {
       "name": "v2_faction_40832_currency",
-      "url": "https://api.torn.com/v2/faction?selections=currency&key={API_KEY}",
+      "url": "https://api.torn.com/v2/faction?selections=currency",
       "table": "torncity-402423.torn_data.v2_faction_40832_currency",
       "frequency": "P1D",
       "storage_mode": "append",
@@ -137,7 +137,7 @@
     },
     {
       "name": "v2_faction_17991_currency",
-      "url": "https://api.torn.com/v2/faction?selections=currency&key={API_KEY}",
+      "url": "https://api.torn.com/v2/faction?selections=currency",
       "table": "torncity-402423.torn_data.v2_faction_17991_currency",
       "frequency": "P1D",
       "storage_mode": "append",

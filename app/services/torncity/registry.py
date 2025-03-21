@@ -9,6 +9,7 @@ import importlib
 import inspect
 import logging
 import pkgutil
+import re
 from typing import Dict, Type, Optional
 
 from app.services.torncity.base import BaseEndpointProcessor
@@ -46,7 +47,7 @@ class EndpointRegistry:
         """Get the appropriate processor class for an endpoint.
         
         Args:
-            endpoint_name: Name of the endpoint
+            endpoint_name: Name of the endpoint (e.g., 'v2_torn_items', 'v2_faction_40832_crimes')
             
         Returns:
             Type[BaseEndpointProcessor]: The processor class to use
@@ -54,9 +55,22 @@ class EndpointRegistry:
         Raises:
             ValueError: If no processor is found for the endpoint
         """
-        for endpoint_type, processor_class in self._processors.items():
-            if endpoint_type in endpoint_name.lower():
-                return processor_class
+        # Extract base endpoint type from versioned name
+        # Example: 'v2_torn_items' -> 'items', 'v2_faction_40832_crimes' -> 'crimes'
+        parts = endpoint_name.lower().split('_')
+        
+        # For faction endpoints, look for the type after the faction ID
+        if 'faction' in parts:
+            faction_index = parts.index('faction')
+            if faction_index + 2 < len(parts):  # Ensure we have parts after faction ID
+                endpoint_type = parts[faction_index + 2]  # Skip the faction ID
+                if endpoint_type in self._processors:
+                    return self._processors[endpoint_type]
+        
+        # Try each part as a fallback
+        for part in parts:
+            if part in self._processors:
+                return self._processors[part]
         
         raise ValueError(f"No processor found for endpoint: {endpoint_name}")
     
@@ -84,9 +98,8 @@ class EndpointRegistry:
                             issubclass(item, BaseEndpointProcessor) and 
                             item != BaseEndpointProcessor):
                             
-                            # Register the processor
-                            # Remove 'EndpointProcessor' from class name to get type
-                            endpoint_type = name.replace('_', '')  # Convert snake_case to lowercase
+                            # Register the processor using the module name as the type
+                            endpoint_type = name
                             self.register(endpoint_type, item)
                             
                 except Exception as e:

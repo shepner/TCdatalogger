@@ -86,17 +86,29 @@ class MembersEndpointProcessor(BaseEndpointProcessor):
             DataFrame containing transformed member data.
         """
         if not data:
+            logging.warning("Empty data received in transform_data")
             return pd.DataFrame()
+
+        # Log raw data structure
+        logging.info(f"Raw data structure: {type(data)}")
+        logging.info(f"Raw data keys: {data.keys() if isinstance(data, dict) else 'Not a dict'}")
 
         # Get current server timestamp
         server_timestamp = datetime.now(timezone.utc)
 
         # Handle both v1 and v2 API response formats
-        if isinstance(data, dict) and "members" in data:
-            # v1 API returns a dict with member IDs as keys
-            members_dict = data.get("members", {})
+        if isinstance(data, dict):
+            if "members" in data:
+                # v1 API returns a dict with member IDs as keys
+                members_dict = data.get("members", {})
+            else:
+                # Try to get data from v2 API format
+                members_dict = data.get("data", {}).get("members", {})
+            
             if not members_dict:
+                logging.warning(f"No members found in data: {data}")
                 return pd.DataFrame()
+                
             # Convert dict values to list for v1 format
             if isinstance(members_dict, dict):
                 members_list = [
@@ -108,6 +120,10 @@ class MembersEndpointProcessor(BaseEndpointProcessor):
         else:
             # v2 API returns a list directly
             members_list = data if isinstance(data, list) else []
+
+        if not members_list:
+            logging.warning(f"No members list found after processing data: {data}")
+            return pd.DataFrame()
 
         transformed_members = []
         for member in members_list:
@@ -192,7 +208,11 @@ class MembersEndpointProcessor(BaseEndpointProcessor):
         """
         try:
             if not data:
+                logging.warning("Empty data received in process_data")
                 return pd.DataFrame()
+            
+            # Log raw API response
+            logging.info(f"Raw API response: {data}")
             
             # Transform data to DataFrame
             df = self.transform_data(data)
