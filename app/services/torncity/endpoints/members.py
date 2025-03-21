@@ -1,15 +1,22 @@
-"""Members endpoint processor."""
+"""Processor for the Torn City faction members endpoint."""
 
-from typing import Dict, List, Any, Optional
+import logging
+from datetime import datetime
+from typing import Dict, Optional, List, Any
+import json
+
 import pandas as pd
 from google.cloud import bigquery
-import logging
-from datetime import datetime, timezone
 
-from ..base import BaseEndpointProcessor, DataValidationError
+from app.services.torncity.base import BaseEndpointProcessor, DataValidationError
 
 class MembersEndpointProcessor(BaseEndpointProcessor):
-    """Processor for members endpoint data."""
+    """Processor for the faction members endpoint.
+    
+    This processor handles data from the /v2/faction/members endpoint.
+    It transforms the member data into normalized rows with proper
+    data types and timestamps.
+    """
 
     def __init__(self, config: Dict[str, Any], endpoint_config: Dict[str, Any] = None):
         """Initialize the members endpoint processor.
@@ -19,178 +26,149 @@ class MembersEndpointProcessor(BaseEndpointProcessor):
             endpoint_config: Optional endpoint-specific configuration.
         """
         super().__init__(config)
-        if endpoint_config is None:
-            raise ValueError("endpoint_config is required for MembersEndpointProcessor")
-            
-        self.endpoint_config.update(endpoint_config)
+        
+        # Initialize endpoint configuration with defaults
+        self.endpoint_config.update({
+            'name': config['endpoint'],
+            'url': config.get('url'),
+            'table': config.get('table'),  # Get table from config
+            'storage_mode': config.get('storage_mode', 'append'),
+            'frequency': config.get('frequency')
+        })
+        
+        # Update endpoint configuration with any provided overrides
+        if endpoint_config:
+            self.endpoint_config.update(endpoint_config)
 
     def get_schema(self) -> List[bigquery.SchemaField]:
         """Get the BigQuery schema for faction members data."""
         return [
-            bigquery.SchemaField("server_timestamp", "TIMESTAMP", mode="REQUIRED"),
-            bigquery.SchemaField("id", "INTEGER", mode="REQUIRED"),
-            bigquery.SchemaField("name", "STRING", mode="REQUIRED"),
-            bigquery.SchemaField("level", "INTEGER", mode="REQUIRED"),
-            bigquery.SchemaField("days_in_faction", "INTEGER", mode="REQUIRED"),
-            bigquery.SchemaField("position", "STRING", mode="REQUIRED"),
-            bigquery.SchemaField("is_revivable", "BOOLEAN", mode="REQUIRED"),
-            bigquery.SchemaField("is_on_wall", "BOOLEAN", mode="REQUIRED"),
-            bigquery.SchemaField("is_in_oc", "BOOLEAN", mode="REQUIRED"),
-            bigquery.SchemaField("has_early_discharge", "BOOLEAN", mode="REQUIRED"),
-            bigquery.SchemaField("last_action_status", "STRING", mode="REQUIRED"),
-            bigquery.SchemaField("last_action_timestamp", "TIMESTAMP", mode="REQUIRED"),
-            bigquery.SchemaField("last_action_relative", "STRING", mode="REQUIRED"),
-            bigquery.SchemaField("status_description", "STRING", mode="REQUIRED"),
-            bigquery.SchemaField("status_details", "STRING", mode="NULLABLE"),
-            bigquery.SchemaField("status_state", "STRING", mode="REQUIRED"),
-            bigquery.SchemaField("status_until", "INTEGER", mode="REQUIRED"),
-            bigquery.SchemaField("life_current", "INTEGER", mode="REQUIRED"),
-            bigquery.SchemaField("life_maximum", "INTEGER", mode="REQUIRED")
+            bigquery.SchemaField('server_timestamp', 'TIMESTAMP', mode='REQUIRED'),
+            bigquery.SchemaField('user_id', 'INTEGER', mode='REQUIRED'),
+            bigquery.SchemaField('name', 'STRING', mode='REQUIRED'),
+            bigquery.SchemaField('level', 'INTEGER', mode='REQUIRED'),
+            bigquery.SchemaField('days_in_faction', 'INTEGER', mode='REQUIRED'),
+            bigquery.SchemaField('last_action_status', 'STRING', mode='REQUIRED'),
+            bigquery.SchemaField('last_action_timestamp', 'TIMESTAMP', mode='REQUIRED'),
+            bigquery.SchemaField('status_description', 'STRING', mode='NULLABLE'),
+            bigquery.SchemaField('position', 'STRING', mode='NULLABLE'),
+            bigquery.SchemaField('faction_id', 'INTEGER', mode='NULLABLE'),
+            bigquery.SchemaField('life_current', 'INTEGER', mode='NULLABLE'),
+            bigquery.SchemaField('life_maximum', 'INTEGER', mode='NULLABLE'),
+            bigquery.SchemaField('status_until', 'TIMESTAMP', mode='NULLABLE'),
+            bigquery.SchemaField('last_login_timestamp', 'TIMESTAMP', mode='NULLABLE'),
+            bigquery.SchemaField('special_rank', 'STRING', mode='NULLABLE'),
+            bigquery.SchemaField('activity_status', 'STRING', mode='NULLABLE')
         ]
 
-    def validate_required_fields(self, member_data: Dict[str, Any], member_id: str) -> bool:
-        """Validate required fields are present and of correct type.
-
-        Args:
-            member_data: Raw member data
-            member_id: Member ID for error reporting
-
-        Returns:
-            bool: True if validation passes, False otherwise
-        """
-        required_fields = {
-            'name': str,
-            'level': int
-        }
-
-        for field, field_type in required_fields.items():
-            value = member_data.get(field)
-            if value is None:
-                logging.error(f"Missing required field '{field}' for member {member_id}")
-                return False
-            try:
-                if not isinstance(value, field_type):
-                    field_type(value)  # Try to convert
-            except (ValueError, TypeError):
-                logging.error(f"Invalid type for field '{field}' for member {member_id}. Expected {field_type.__name__}")
-                return False
-        return True
-
     def transform_data(self, data: Dict[str, Any]) -> pd.DataFrame:
-        """Transform raw member data into a DataFrame.
+        """Transform the raw data into the required format.
 
         Args:
-            data: Raw member data from the API response.
+            data: Raw API response data containing member information
 
         Returns:
-            DataFrame containing transformed member data.
+            DataFrame containing transformed member data
+
+        Raises:
+            DataValidationError: If data validation fails
         """
-        if not data:
-            logging.warning("Empty data received in transform_data")
-            return pd.DataFrame()
+        # Validate input data
+        if not data or not isinstance(data, dict):
+            logging.warning("Invalid data format received")
+            return pd.DataFrame(columns=[field.name for field in self.get_schema()])
+        
+        # Extract members data - it's a list in the members field
+        members_data = data.get("members", [])
+        if not members_data:
+            logging.warning("No members data found in response")
+            return pd.DataFrame(columns=[field.name for field in self.get_schema()])
+        
+        # Log detailed information about the members data
+        logging.info(f"Processing members data:")
+        logging.info(f"Total members in response: {len(members_data)}")
+        logging.info(f"Sample member IDs: {[m.get('id') for m in members_data[:5] if m]}")
+        
+        transformed_data = []
+        server_timestamp = pd.Timestamp.now()
+        
+        for member in members_data:
+            try:
+                # Validate member object
+                if not member or not isinstance(member, dict):
+                    logging.warning(f"Invalid member data format")
+                    continue
 
-        # Log raw data structure
-        logging.info(f"Raw data structure: {type(data)}")
-        logging.info(f"Raw data keys: {data.keys() if isinstance(data, dict) else 'Not a dict'}")
+                # Convert timestamps with error handling
+                def safe_timestamp(ts):
+                    if not ts:
+                        return None
+                    try:
+                        return pd.Timestamp.fromtimestamp(ts)
+                    except (ValueError, TypeError, OSError) as e:
+                        logging.warning(f"Failed to convert timestamp {ts}: {str(e)}")
+                        return None
 
-        # Get current server timestamp
-        server_timestamp = datetime.now(timezone.utc)
+                # Extract status information
+                status = member.get('status', {})
+                if not isinstance(status, dict):
+                    status = {}
 
-        # Handle both v1 and v2 API response formats
-        if isinstance(data, dict):
-            if "members" in data:
-                # v1 API returns a dict with member IDs as keys
-                members_dict = data.get("members", {})
-            else:
-                # Try to get data from v2 API format
-                members_dict = data.get("data", {}).get("members", {})
-            
-            if not members_dict:
-                logging.warning(f"No members found in data: {data}")
-                return pd.DataFrame()
-                
-            # Convert dict values to list for v1 format
-            if isinstance(members_dict, dict):
-                members_list = [
-                    {**member, "id": int(member_id)} 
-                    for member_id, member in members_dict.items()
-                ]
-            else:
-                members_list = members_dict
-        else:
-            # v2 API returns a list directly
-            members_list = data if isinstance(data, list) else []
+                # Create member record
+                member_record = {
+                    'server_timestamp': server_timestamp,
+                    'user_id': int(member.get('id', 0)),
+                    'name': str(member.get('name', 'Unknown')),
+                    'level': int(member.get('level', 0)),
+                    'days_in_faction': int(member.get('days_in_faction', 0)),
+                    'last_action_status': str(member.get('last_action', {}).get('status', 'Unknown')),
+                    'last_action_timestamp': safe_timestamp(member.get('last_action', {}).get('timestamp')) or server_timestamp,
+                    'status_description': str(status.get('description', '')),
+                    'position': str(member.get('position', '')),
+                    'faction_id': int(member.get('faction', {}).get('faction_id')) if member.get('faction') else None,
+                    'life_current': int(member.get('life', {}).get('current')) if member.get('life') else None,
+                    'life_maximum': int(member.get('life', {}).get('maximum')) if member.get('life') else None,
+                    'status_until': safe_timestamp(status.get('until')),
+                    'last_login_timestamp': safe_timestamp(member.get('last_login', {}).get('timestamp')),
+                    'special_rank': str(member.get('rank', '')),
+                    'activity_status': str(member.get('status', {}).get('state', '')) if isinstance(member.get('status'), dict) else ''
+                }
 
-        if not members_list:
-            logging.warning(f"No members list found after processing data: {data}")
-            return pd.DataFrame()
+                transformed_data.append(member_record)
 
-        transformed_members = []
-        for member in members_list:
-            if not member:
+            except Exception as e:
+                logging.error(f"Error processing member: {str(e)}")
                 continue
 
-            # Extract and validate required fields
-            member_id = member.get("id")
-            if not member_id:
-                continue
+        if not transformed_data:
+            logging.warning("No valid members data after transformation")
+            return pd.DataFrame(columns=[field.name for field in self.get_schema()])
 
-            # Extract nested data
-            status = member.get("status", {})
-            last_action = member.get("last_action", {})
-            life = member.get("life", {})
-
-            # Convert timestamps
-            last_action_timestamp = last_action.get("timestamp")
-            if last_action_timestamp:
-                try:
-                    last_action_timestamp = pd.to_datetime(last_action_timestamp, unit="s")
-                except (ValueError, TypeError):
-                    last_action_timestamp = pd.Timestamp.now(tz="UTC")
-            else:
-                last_action_timestamp = pd.Timestamp.now(tz="UTC")
-
-            # Create transformed member data
-            transformed_member = {
-                "server_timestamp": server_timestamp,
-                "id": member_id,
-                "name": member.get("name", ""),
-                "level": member.get("level", 0),
-                "days_in_faction": member.get("days_in_faction", 0),
-                "position": member.get("position", ""),
-                "is_revivable": member.get("is_revivable", False),
-                "is_on_wall": member.get("is_on_wall", False),
-                "is_in_oc": member.get("is_in_oc", False),
-                "has_early_discharge": member.get("has_early_discharge", False),
-                "last_action_status": last_action.get("status", ""),
-                "last_action_timestamp": last_action_timestamp,
-                "last_action_relative": last_action.get("relative", ""),
-                "status_description": status.get("description", ""),
-                "status_details": status.get("details", ""),
-                "status_state": status.get("state", ""),
-                "status_until": status.get("until", 0),
-                "life_current": life.get("current", 0),
-                "life_maximum": life.get("maximum", 0)
-            }
-            transformed_members.append(transformed_member)
-
-        if not transformed_members:
-            # Return empty DataFrame with correct schema
-            return pd.DataFrame(columns=[
-                "server_timestamp", "id", "name", "level", "days_in_faction",
-                "position", "is_revivable", "is_on_wall", "is_in_oc", "has_early_discharge",
-                "last_action_status", "last_action_timestamp", "last_action_relative",
-                "status_description", "status_details", "status_state", "status_until",
-                "life_current", "life_maximum"
-            ])
-
-        # Create DataFrame and set data types
-        df = pd.DataFrame(transformed_members)
-        df["level"] = df["level"].fillna(0).astype(int)
-        df["days_in_faction"] = df["days_in_faction"].fillna(0).astype(int)
-        df["status_until"] = df["status_until"].fillna(0).astype(int)
-        df["life_current"] = df["life_current"].fillna(0).astype(int)
-        df["life_maximum"] = df["life_maximum"].fillna(0).astype(int)
+        df = pd.DataFrame(transformed_data)
+        
+        # Convert types to match schema
+        for field in self.get_schema():
+            if field.field_type == 'TIMESTAMP':
+                if field.name not in df.columns:
+                    df[field.name] = pd.NaT
+                else:
+                    df[field.name] = pd.to_datetime(df[field.name], errors='coerce')
+                    if field.mode == 'REQUIRED':
+                        df[field.name] = df[field.name].fillna(pd.Timestamp.now())
+            elif field.field_type == 'INTEGER':
+                if field.name not in df.columns:
+                    df[field.name] = pd.NA if field.mode == 'NULLABLE' else 0
+                else:
+                    df[field.name] = pd.to_numeric(df[field.name], errors='coerce')
+                    if field.mode == 'REQUIRED':
+                        df[field.name] = df[field.name].fillna(0).astype('Int64')
+                    else:
+                        df[field.name] = df[field.name].astype('Int64')
+            elif field.field_type == 'STRING':
+                if field.name not in df.columns:
+                    df[field.name] = pd.NA if field.mode == 'NULLABLE' else ''
+                else:
+                    df[field.name] = df[field.name].fillna('').astype(str)
 
         return df
 

@@ -59,7 +59,15 @@ def main() -> None:
                 'url': endpoint_config.get('url'),  # Add the URL from endpoint config
                 'table': endpoint_config.get('table'),  # Add the table from endpoint config
                 'frequency': endpoint_config.get('frequency'),  # Add the frequency from endpoint config
-                'api_key': endpoint_config.get('api_key', 'default')  # Add the API key name
+                'api_key': endpoint_config.get('api_key', 'default'),  # Add the API key name
+                'app_config': {  # Add app config settings
+                    'log_level': config.app.log_level,
+                    'enable_metrics': config.app.enable_metrics,
+                    'metric_prefix': config.app.metric_prefix,
+                    'google_cloud': {
+                        'credentials_file': str(config.google.credentials_file)
+                    }
+                }
             }
             
             # Create processor with merged config

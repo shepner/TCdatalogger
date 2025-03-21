@@ -44,6 +44,7 @@ class BaseEndpointProcessor(ABC):
                 - storage_mode: Storage mode (either 'append' or 'replace')
                 - api_key: Torn City API key (optional)
                 - tc_api_key_file: Path to Torn City API keys file (optional)
+                - app_config: Application configuration settings (optional)
                 At least one of api_key or tc_api_key_file must be provided.
 
         Raises:
@@ -51,7 +52,12 @@ class BaseEndpointProcessor(ABC):
         """
         self.validate_config(config)
         self.config = config
+        
+        # Set up logging based on app config if provided
+        app_config = config.get('app_config', {})
+        log_level = app_config.get('log_level', 'INFO')
         self.logger = logging.getLogger(__name__)
+        self.logger.setLevel(log_level)
         
         # Initialize endpoint configuration with default values
         self.endpoint_config = {
@@ -60,7 +66,9 @@ class BaseEndpointProcessor(ABC):
             'table': None, # Set by child classes
             'endpoint': config['endpoint'],
             'storage_mode': config.get('storage_mode', 'append'),
-            'frequency': None  # Set by child classes
+            'frequency': None,  # Set by child classes
+            'enable_metrics': app_config.get('enable_metrics', True),
+            'metric_prefix': app_config.get('metric_prefix', 'custom.googleapis.com/tcdatalogger')
         }
 
         # Add selection to endpoint config if present
@@ -192,6 +200,10 @@ class BaseEndpointProcessor(ABC):
             data = pd.DataFrame(data)
             
         try:
+            # Ensure table is a fully qualified table ID (project.dataset.table)
+            if not any(table.startswith(prefix) for prefix in ['torncity-', 'torn_data.']):
+                raise ValueError(f"Table ID '{table}' must be fully qualified (project.dataset.table)")
+                
             self.bq_client.write_data(data, table, write_disposition=write_disposition)
         except Exception as e:
             self.logger.error(f"Failed to write data to BigQuery: {str(e)}")

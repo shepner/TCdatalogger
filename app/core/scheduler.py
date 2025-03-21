@@ -65,6 +65,9 @@ class EndpointScheduler:
         self.registry = registry
         self._load_api_config()
         
+        # Extract app config from main config
+        self.app_config = self.config.get('app_config', {})
+        
         # Setup multiprocessing resources
         self.manager = Manager()
         self.processes: Dict[str, Process] = {}
@@ -151,7 +154,7 @@ class EndpointScheduler:
                 "correlation_id": correlation_id
             }
             
-            # Initialize processor
+            # Get the processor class and create instance within this process
             processor_class = self.registry.get_processor(endpoint_config["name"])
             processor = processor_class(self.config, endpoint_config)
             
@@ -267,12 +270,21 @@ class EndpointScheduler:
             duration = isodate.parse_duration(frequency)
             minutes = int(duration.total_seconds() / 60)
             
+            # Create a copy of the configuration to avoid pickling the entire scheduler
+            endpoint_data = {
+                "config": self.config.copy(),
+                "endpoint_config": endpoint_config.copy()
+            }
+            
             def schedule_wrapper():
                 """Wrapper to handle processor scheduling."""
                 try:
-                    self.process_endpoint(endpoint_config)
+                    # Get the processor class directly in this process
+                    processor_class = self.registry.get_processor(endpoint_data["endpoint_config"]["name"])
+                    processor = processor_class(endpoint_data["config"], endpoint_data["endpoint_config"])
+                    processor.process()
                 except Exception as e:
-                    logging.error(f"Error scheduling endpoint {endpoint_config['name']}: {str(e)}")
+                    logging.error(f"Error scheduling endpoint {endpoint_data['endpoint_config']['name']}: {str(e)}")
             
             # Schedule the job
             schedule.every(minutes).minutes.do(schedule_wrapper)
@@ -415,4 +427,26 @@ class EndpointScheduler:
                 - error: Error message (if failed)
                 - correlation_id: Request correlation ID
         """
-        return dict(self.status.get(endpoint_name, {})) 
+        return dict(self.status.get(endpoint_name, {}))
+
+    def _create_processor_config(self, endpoint_config: Dict) -> Dict:
+        """Create configuration for a processor instance.
+        
+        Args:
+            endpoint_config: Endpoint-specific configuration
+            
+        Returns:
+            Dict: Complete processor configuration
+        """
+        return {
+            'gcp_credentials_file': self.config['gcp_credentials_file'],
+            'endpoint': endpoint_config['name'],
+            'storage_mode': endpoint_config.get('storage_mode', 'append'),
+            'tc_api_key_file': self.config['tc_api_key_file'],
+            'endpoint_config': endpoint_config,
+            'url': endpoint_config.get('url'),
+            'table': endpoint_config.get('table'),
+            'frequency': endpoint_config.get('frequency'),
+            'api_key': endpoint_config.get('api_key', 'default'),
+            'app_config': self.app_config
+        } 

@@ -28,6 +28,17 @@ class CrimesEndpointProcessor(BaseEndpointProcessor):
             endpoint_config: Optional endpoint-specific configuration.
         """
         super().__init__(config)
+        
+        # Initialize endpoint configuration with defaults
+        self.endpoint_config.update({
+            'name': config['endpoint'],
+            'url': config.get('url'),
+            'table': config.get('table'),  # Get table from config
+            'storage_mode': config.get('storage_mode', 'append'),
+            'frequency': config.get('frequency')
+        })
+        
+        # Update endpoint configuration with any provided overrides
         if endpoint_config:
             self.endpoint_config.update(endpoint_config)
 

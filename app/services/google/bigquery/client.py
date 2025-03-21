@@ -170,6 +170,7 @@ class BigQueryClient:
         """
         try:
             job_config = bigquery.LoadJobConfig(write_disposition=write_disposition)
+            # Use table_id directly since it should be fully qualified
             job = self.client.load_table_from_dataframe(df, table_id, job_config=job_config)
             job.result()  # Wait for the job to complete
         except Exception as e:
@@ -248,6 +249,7 @@ class BigQueryClient:
             if df.empty:
                 logging.warning("No data to write - empty DataFrame")
                 return
+            # Use table_id directly since it should be fully qualified
             self.upload_dataframe(df, table_id, write_disposition=write_disposition)
         except Exception as e:
             raise BigQueryError(f"Failed to write data to {table_id}: {str(e)}")
