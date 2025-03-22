@@ -1,0 +1,18 @@
+{
+  "/*": [
+    "Application-wide configuration for TCdatalogger",
+    "",
+    "This file contains global settings that apply across the entire application.",
+    "For API endpoint-specific configurations, see TC_API_config.json"
+  ],
+  "google_cloud": {
+    "credentials_file": "config/credentials.json"
+  },
+  "application": {
+    "log_level": "INFO"  // Valid values: DEBUG, INFO, WARNING, ERROR, CRITICAL
+  },
+  "monitoring": {
+    "enable_metrics": true,
+    "metric_prefix": "custom.googleapis.com/tcdatalogger"
+  }
+} 

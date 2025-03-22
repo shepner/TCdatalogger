@@ -1,0 +1,58 @@
+{
+  "/*": [
+    "Configuration for Torn City API endpoints",
+    "",
+    "Frequency format follows ISO 8601 duration standard:",
+    "  P = Period designator",
+    "  T = Time designator",
+    "  nM = n Minutes",
+    "  nH = n Hours",
+    "  nD = n Days",
+    "",
+    "Examples:",
+    "  PT15M = 15 minutes",
+    "  PT1H  = 1 hour",
+    "  P1D   = 1 day",
+    "  PT1H30M = 1 hour and 30 minutes",
+    "",
+    "Storage modes:",
+    "  append = Add new records to existing data (default)",
+    "  replace = Replace all existing data with new data",
+    "",
+    "API Keys:",
+    "  faction_40832 = API key for faction 40832",
+    "  faction_17991 = API key for faction 17991",
+    "",
+    "Additional parameters:",
+    "  max_retries = Maximum number of retry attempts for failed requests",
+    "  retry_delay = Delay in seconds between retry attempts",
+    "  selection = Array of data selections to request from the API",
+    "  rate_limit = Maximum API requests per minute",
+    "  timeout = API request timeout in seconds",
+    "",
+    "See: https://en.wikipedia.org/wiki/ISO_8601#Durations"
+  ],
+  "defaults": {
+    "max_retries": 3,
+    "retry_delay": 60,
+    "rate_limit": 60,
+    "timeout": 30,
+    "pagination": {
+      "metadata_field": "_metadata",
+      "next_url_field": "next"
+    }
+  },
+  "endpoints": [
+    {
+      "name": "example_endpoint",
+      "url": "https://api.torn.com/v2/faction/crimes",
+      "table": "your-project.dataset.table",
+      "frequency": "PT15M",
+      "storage_mode": "replace",
+      "api_key": "faction_key_name",
+      "max_retries": 3,
+      "retry_delay": 60,
+      "use_time_windows": true
+    }
+  ]
+} 

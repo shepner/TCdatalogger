@@ -1,13 +1,22 @@
-google-cloud-bigquery
-google-api-python-client
-google-auth-httplib2
-google-auth-oauthlib
-pyarrow
-pandas-gbq
-pandas
-requests
-schedule
-isodate
-tenacity
-google-cloud-monitoring>=2.0.0
-google-cloud-storage 
+# TCdatalogger Python Dependencies
+# These packages are required for the TCdatalogger application.
+# Version constraints are specified where necessary for compatibility.
+
+# Google Cloud dependencies
+google-cloud-bigquery>=3.0.0  # BigQuery client
+google-api-python-client>=2.0.0  # Google API client
+google-auth-httplib2>=0.1.0  # Auth for HTTP/2
+google-auth-oauthlib>=1.0.0  # OAuth2 support
+google-cloud-monitoring>=2.0.0  # Cloud Monitoring
+google-cloud-storage>=2.0.0  # Cloud Storage
+
+# Data processing
+pyarrow>=10.0.0  # Required for pandas-gbq
+pandas-gbq>=0.19.0  # BigQuery integration for pandas
+pandas>=2.0.0  # Data manipulation
+
+# HTTP and scheduling
+requests>=2.25.0  # HTTP client
+schedule>=1.0.0  # Task scheduling
+isodate>=0.6.0  # ISO 8601 duration parsing
+tenacity>=8.0.0  # Retry handling 
