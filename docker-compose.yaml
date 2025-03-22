@@ -5,9 +5,16 @@ services:
       dockerfile: docker/Dockerfile
     container_name: tcdatalogger
     volumes:
-      - ./config:/app/config:ro
-      - ./var/log:/app/var/log
-      - ./var/data:/app/var/data
+      - type: bind
+        source: ${PWD}/config
+        target: /app/config
+        read_only: true
+      - type: bind
+        source: ${PWD}/var/log
+        target: /app/var/log
+      - type: bind
+        source: ${PWD}/var/data
+        target: /app/var/data
     environment:
       - PYTHONDONTWRITEBYTECODE=1
       - GOOGLE_APPLICATION_CREDENTIALS=/app/config/credentials.json

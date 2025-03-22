@@ -58,7 +58,7 @@ var/
 config/TC_API_key.json
 config/credentials.json
 config/crontab
-!config/TC_API_config.json
+config/TC_API_config.json
 
 ### System Files ###
 # macOS

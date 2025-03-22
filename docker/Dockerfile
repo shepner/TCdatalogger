@@ -7,22 +7,21 @@ ENV PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1
 
 # Create app directory and venv, install dependencies
-WORKDIR /build
+WORKDIR /opt/tcdatalogger
 COPY app/requirements.txt .
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         gcc \
         python3-dev \
         && \
-    python -m venv /opt/venv && \
-    . /opt/venv/bin/activate && \
+    python -m venv .venv && \
+    . .venv/bin/activate && \
     pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt && \
     # Cleanup
     apt-get purge -y gcc python3-dev && \
     apt-get autoremove -y && \
     rm -rf /var/lib/apt/lists/* && \
-    rm -rf /build/* && \
     rm -rf /root/.cache/pip/*
 
 # Runtime stage
@@ -31,17 +30,18 @@ FROM python:3.13-slim-bullseye
 # Set runtime environment variables
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    PATH="/opt/venv/bin:$PATH" \
-    VIRTUAL_ENV="/opt/venv" \
+    PATH="/opt/tcdatalogger/.venv/bin:$PATH" \
+    VIRTUAL_ENV="/opt/tcdatalogger/.venv" \
     PYTHONPATH=/opt/tcdatalogger
 
-# Copy virtual environment and application files
-COPY --from=builder /opt/venv /opt/venv
-COPY --chown=tcdatalogger:tcdatalogger --chmod=755 app /opt/tcdatalogger/app
-COPY --chown=tcdatalogger:tcdatalogger --chmod=755 scripts /opt/tcdatalogger/scripts
-COPY --chown=root:root --chmod=755 docker/start-container.sh /opt/tcdatalogger/scripts/
+# Create user and group first
+RUN groupadd -r tcdatalogger && \
+    useradd -r -g tcdatalogger tcdatalogger && \
+    mkdir -p /app/{config,var/log,var/data} && \
+    chown -R tcdatalogger:tcdatalogger /app && \
+    chmod -R 755 /app
 
-# Install runtime dependencies, setup cron, create user and directories
+# Install runtime dependencies and setup cron
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         tzdata \
@@ -50,22 +50,29 @@ RUN apt-get update && \
         rsyslog \
         && \
     rm -rf /var/lib/apt/lists/* && \
-    # Setup cron directories and logging
+    # Setup cron directories
     rm -rf /etc/cron.*/* && \
     mkdir -p /var/spool/cron/crontabs && \
     chown root:crontab /var/spool/cron/crontabs && \
     chmod 1730 /var/spool/cron/crontabs && \
-    # Configure rsyslog for cron
-    echo "cron.*    /var/log/cron.log" > /etc/rsyslog.d/cron.conf && \
-    touch /var/log/cron.log && \
-    # Create user and setup directories
-    groupadd -r tcdatalogger && \
-    useradd -r -g tcdatalogger tcdatalogger && \
     usermod -a -G crontab tcdatalogger && \
-    mkdir -p /app/{config,var/log,var/data} && \
-    # Set ownership and permissions for /app directory only
-    chown -R tcdatalogger:tcdatalogger /app && \
-    chmod -R 755 /app
+    # Setup logging
+    rm -f /etc/rsyslog.conf && \
+    touch /var/log/cron.log /var/log/syslog && \
+    chown tcdatalogger:tcdatalogger /var/log/cron.log /var/log/syslog && \
+    chmod 644 /var/log/cron.log /var/log/syslog
+
+# Copy rsyslog configuration
+COPY --chown=root:root --chmod=644 docker/rsyslog.conf /etc/rsyslog.conf
+
+# Copy virtual environment and application files
+COPY --from=builder /opt/tcdatalogger/.venv /opt/tcdatalogger/.venv
+COPY --chown=tcdatalogger:tcdatalogger --chmod=755 app /opt/tcdatalogger/app
+COPY --chown=tcdatalogger:tcdatalogger --chmod=755 scripts /opt/tcdatalogger/scripts
+COPY --chown=root:root --chmod=755 docker/start-container.sh /opt/tcdatalogger/scripts/
+
+# Set ownership of .venv directory
+RUN chown -R tcdatalogger:tcdatalogger /opt/tcdatalogger/.venv
 
 # Set working directory
 WORKDIR /opt/tcdatalogger
@@ -73,10 +80,5 @@ WORKDIR /opt/tcdatalogger
 # Health check
 HEALTHCHECK --interval=5m --timeout=3s \
   CMD ps aux | grep "[c]ron" || exit 1
-
-# Define volume mount points for external data
-VOLUME ["/app/config"]     # For configuration files (mounted read-only)
-VOLUME ["/app/var/log"]    # For log files
-VOLUME ["/app/var/data"]   # For persistent data
 
 CMD ["/opt/tcdatalogger/scripts/start-container.sh"]

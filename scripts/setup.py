@@ -3,13 +3,14 @@
 Setup script for TCdatalogger development environment.
 
 This script handles:
-1. Virtual environment creation and activation
-2. Dependency installation
-3. Environment configuration
-4. Test environment setup
-5. Script permissions
-6. Directory structure verification
-7. Virtual environment activation and command execution
+1. Virtual environment creation and activation (in development)
+2. Using existing virtual environment (in Docker)
+3. Dependency installation
+4. Environment configuration
+5. Test environment setup
+6. Script permissions
+7. Directory structure verification
+8. Virtual environment activation and command execution
 """
 
 import os
@@ -36,7 +37,8 @@ class EnvSetup:
     def __init__(self, base_dir: Optional[Path] = None):
         """Initialize setup with base directory."""
         self.base_dir = Path(base_dir) if base_dir else Path(__file__).parent.parent
-        self.venv_dir = self.base_dir / '.venv'
+        self.in_docker = os.environ.get('VIRTUAL_ENV') == '/opt/venv'
+        self.venv_dir = Path('/opt/venv') if self.in_docker else self.base_dir / '.venv'
         self.requirements_file = self.base_dir / 'app' / 'requirements.txt'
         self.scripts_dir = self.base_dir / 'scripts'
         self.tests_dir = self.base_dir / 'tests'
@@ -117,7 +119,11 @@ class EnvSetup:
         return self.venv_dir / "bin" / "activate"
         
     def create_venv(self) -> None:
-        """Create virtual environment if it doesn't exist."""
+        """Create virtual environment if it doesn't exist and we're not in Docker."""
+        if self.in_docker:
+            logger.info("Using existing virtual environment at %s", self.venv_dir)
+            return
+            
         if not self.venv_dir.exists():
             logger.info("Creating virtual environment...")
             venv.create(self.venv_dir, with_pip=True)
@@ -167,13 +173,14 @@ class EnvSetup:
         """Run a command in the virtual environment."""
         env = os.environ.copy()
         
-        # Set virtual environment paths
-        if sys.platform == "win32":
-            env["PATH"] = f"{self.venv_dir / 'Scripts'};{env['PATH']}"
-            env["VIRTUAL_ENV"] = str(self.venv_dir)
-        else:
-            env["PATH"] = f"{self.venv_dir / 'bin'}:{env['PATH']}"
-            env["VIRTUAL_ENV"] = str(self.venv_dir)
+        if not self.in_docker:
+            # Set virtual environment paths for development
+            if sys.platform == "win32":
+                env["PATH"] = f"{self.venv_dir / 'Scripts'};{env['PATH']}"
+                env["VIRTUAL_ENV"] = str(self.venv_dir)
+            else:
+                env["PATH"] = f"{self.venv_dir / 'bin'}:{env['PATH']}"
+                env["VIRTUAL_ENV"] = str(self.venv_dir)
         
         # Add project root and app directory to PYTHONPATH
         python_path = str(self.base_dir)
