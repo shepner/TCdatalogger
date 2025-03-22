@@ -4,27 +4,21 @@ services:
       context: .
       dockerfile: docker/Dockerfile
     container_name: tcdatalogger
-    restart: unless-stopped
     volumes:
-      - ./config:/config:ro  # Move sensitive configs outside app directory
-      - ./var/log:/var/log/tcdatalogger  # Simplified log path
+      - ./config:/app/config:ro
+      - ./var/log:/app/var/log
+      - ./var/data:/app/var/data
     environment:
-      - TZ=UTC
-      - PYTHONUNBUFFERED=1
-      - COLUMNS=200
-      - CONFIG_DIR=/config
-      - GCP_PROJECT_ID=${GCP_PROJECT_ID}
-      - BIGQUERY_DATASET=${BIGQUERY_DATASET}
-      - LOG_LEVEL=${LOG_LEVEL:-INFO}
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-        tag: "{{.Name}}"
-        mode: "non-blocking"
+      - PYTHONDONTWRITEBYTECODE=1
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/config/credentials.json
+    init: true
+    cap_add:
+      - SYS_PTRACE
+    security_opt:
+      - no-new-privileges:true
     healthcheck:
-      test: ["CMD", "ps", "aux", "|", "grep", "[p]ython"]
+      test: ["CMD", "pgrep", "-f", "python.*main.py"]
       interval: 5m
-      timeout: 10s
-      retries: 3 
+      timeout: 3s
+      retries: 3
+    restart: unless-stopped 

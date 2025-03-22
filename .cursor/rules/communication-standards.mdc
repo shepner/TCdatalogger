@@ -1,0 +1,68 @@
+# Communication Standards
+
+Rules for clear and direct communication, especially during error handling.
+
+<rule>
+name: direct-error-communication
+description: Standards for communicating about errors and issues
+filters:
+  # Match all responses
+  - type: content
+    pattern: "(error|issue|problem|fail|wrong|incorrect|bug)"
+
+actions:
+  - type: reject
+    conditions:
+      # Reject apologetic phrases
+      - pattern: "(sorry|apologize|apologies|regret|forgive|excuse)"
+        message: "State the issue and solution directly without apologizing"
+      # Reject hedging language
+      - pattern: "(might have|possibly|perhaps|maybe|I think)"
+        message: "Be direct about what happened and what needs to be done"
+      # Reject passive voice in error descriptions
+      - pattern: "(was|were|has been|have been)\\s+(caused|created|made)"
+        message: "Use active voice to describe issues"
+
+  - type: suggest
+    message: |
+      When handling errors:
+
+      1. State what went wrong directly:
+         - "The build failed because..."
+         - "Found an error in..."
+         - "The command failed with..."
+
+      2. Describe the fix:
+         - "Fixing by..."
+         - "Updating the code to..."
+         - "Changing X to Y to resolve..."
+
+      3. Verify the solution:
+         - "Running the build again with fixes..."
+         - "Testing the updated code..."
+         - "Verifying the changes..."
+
+examples:
+  - input: |
+      # Bad: Apologetic and indirect
+      I apologize for the error in the previous build. It seems that there might have been an issue with the permissions.
+
+      # Good: Direct and clear
+      The build failed due to incorrect permissions. Setting correct permissions and rebuilding.
+
+  - input: |
+      # Bad: Hedging and passive
+      I'm sorry, but it looks like an error was caused by the configuration.
+
+      # Good: Direct and active
+      The configuration contains an invalid setting. Updating the config and retrying.
+
+metadata:
+  priority: high
+  version: 1.0
+  tags:
+    - communication
+    - error-handling
+    - clarity
+  changelog:
+    - 1.0: Initial version with direct communication guidelines 

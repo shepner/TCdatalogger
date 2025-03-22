@@ -44,21 +44,25 @@ class MembersEndpointProcessor(BaseEndpointProcessor):
         """Get the BigQuery schema for faction members data."""
         return [
             bigquery.SchemaField('server_timestamp', 'TIMESTAMP', mode='REQUIRED'),
-            bigquery.SchemaField('user_id', 'INTEGER', mode='REQUIRED'),
+            bigquery.SchemaField('id', 'INTEGER', mode='REQUIRED'),
             bigquery.SchemaField('name', 'STRING', mode='REQUIRED'),
             bigquery.SchemaField('level', 'INTEGER', mode='REQUIRED'),
             bigquery.SchemaField('days_in_faction', 'INTEGER', mode='REQUIRED'),
-            bigquery.SchemaField('last_action_status', 'STRING', mode='REQUIRED'),
-            bigquery.SchemaField('last_action_timestamp', 'TIMESTAMP', mode='REQUIRED'),
-            bigquery.SchemaField('status_description', 'STRING', mode='NULLABLE'),
+            bigquery.SchemaField('revive_setting', 'STRING', mode='NULLABLE'),
             bigquery.SchemaField('position', 'STRING', mode='NULLABLE'),
-            bigquery.SchemaField('faction_id', 'INTEGER', mode='NULLABLE'),
+            bigquery.SchemaField('is_revivable', 'BOOLEAN', mode='NULLABLE'),
+            bigquery.SchemaField('is_on_wall', 'BOOLEAN', mode='NULLABLE'),
+            bigquery.SchemaField('is_in_oc', 'BOOLEAN', mode='NULLABLE'),
+            bigquery.SchemaField('has_early_discharge', 'BOOLEAN', mode='NULLABLE'),
+            bigquery.SchemaField('last_action_status', 'STRING', mode='NULLABLE'),
+            bigquery.SchemaField('last_action_timestamp', 'TIMESTAMP', mode='NULLABLE'),
+            bigquery.SchemaField('last_action_relative', 'STRING', mode='NULLABLE'),
+            bigquery.SchemaField('status_description', 'STRING', mode='NULLABLE'),
+            bigquery.SchemaField('status_details', 'STRING', mode='NULLABLE'),
+            bigquery.SchemaField('status_state', 'STRING', mode='NULLABLE'),
+            bigquery.SchemaField('status_until', 'STRING', mode='NULLABLE'),
             bigquery.SchemaField('life_current', 'INTEGER', mode='NULLABLE'),
-            bigquery.SchemaField('life_maximum', 'INTEGER', mode='NULLABLE'),
-            bigquery.SchemaField('status_until', 'TIMESTAMP', mode='NULLABLE'),
-            bigquery.SchemaField('last_login_timestamp', 'TIMESTAMP', mode='NULLABLE'),
-            bigquery.SchemaField('special_rank', 'STRING', mode='NULLABLE'),
-            bigquery.SchemaField('activity_status', 'STRING', mode='NULLABLE')
+            bigquery.SchemaField('life_maximum', 'INTEGER', mode='NULLABLE')
         ]
 
     def transform_data(self, data: Dict[str, Any]) -> pd.DataFrame:
@@ -117,21 +121,25 @@ class MembersEndpointProcessor(BaseEndpointProcessor):
                 # Create member record
                 member_record = {
                     'server_timestamp': server_timestamp,
-                    'user_id': int(member.get('id', 0)),
+                    'id': int(member.get('id', 0)),
                     'name': str(member.get('name', 'Unknown')),
                     'level': int(member.get('level', 0)),
                     'days_in_faction': int(member.get('days_in_faction', 0)),
+                    'revive_setting': str(member.get('revive_setting', '')),
+                    'position': str(member.get('position', '')),
+                    'is_revivable': bool(member.get('is_revivable', False)),
+                    'is_on_wall': bool(member.get('is_on_wall', False)),
+                    'is_in_oc': bool(member.get('is_in_oc', False)),
+                    'has_early_discharge': bool(member.get('has_early_discharge', False)),
                     'last_action_status': str(member.get('last_action', {}).get('status', 'Unknown')),
                     'last_action_timestamp': safe_timestamp(member.get('last_action', {}).get('timestamp')) or server_timestamp,
+                    'last_action_relative': str(member.get('last_action', {}).get('relative', '')),
                     'status_description': str(status.get('description', '')),
-                    'position': str(member.get('position', '')),
-                    'faction_id': int(member.get('faction', {}).get('faction_id')) if member.get('faction') else None,
+                    'status_details': str(status.get('details', '')),
+                    'status_state': str(status.get('state', '')),
+                    'status_until': str(status.get('until', '')),
                     'life_current': int(member.get('life', {}).get('current')) if member.get('life') else None,
-                    'life_maximum': int(member.get('life', {}).get('maximum')) if member.get('life') else None,
-                    'status_until': safe_timestamp(status.get('until')),
-                    'last_login_timestamp': safe_timestamp(member.get('last_login', {}).get('timestamp')),
-                    'special_rank': str(member.get('rank', '')),
-                    'activity_status': str(member.get('status', {}).get('state', '')) if isinstance(member.get('status'), dict) else ''
+                    'life_maximum': int(member.get('life', {}).get('maximum')) if member.get('life') else None
                 }
 
                 transformed_data.append(member_record)

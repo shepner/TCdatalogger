@@ -40,7 +40,7 @@ class TestMembersEndpointProcessor(MembersEndpointProcessor):
             bigquery.SchemaField("id", "INTEGER", mode="REQUIRED"),
             bigquery.SchemaField("name", "STRING", mode="REQUIRED"),
             bigquery.SchemaField("level", "INTEGER", mode="REQUIRED"),
-            bigquery.SchemaField("days_in_faction", "INTEGER", mode="NULLABLE"),
+            bigquery.SchemaField("days_in_faction", "INTEGER", mode="REQUIRED"),
             bigquery.SchemaField("revive_setting", "STRING", mode="NULLABLE"),
             bigquery.SchemaField("position", "STRING", mode="NULLABLE"),
             bigquery.SchemaField("is_revivable", "BOOLEAN", mode="NULLABLE"),
@@ -125,6 +125,7 @@ class TestMembersEndpointProcessor(MembersEndpointProcessor):
             return []
             
         transformed_data = []
+        server_timestamp = pd.Timestamp.now()
         
         for member_id, member_data in members_data.items():
             try:
@@ -161,80 +162,43 @@ class TestMembersEndpointProcessor(MembersEndpointProcessor):
                 if not isinstance(status_data, dict):
                     status_data = {}
                 
-                # Extract life data
-                life_data = member_data.get("life", {})
-                if not isinstance(life_data, dict):
-                    life_data = {}
-                life_current = life_data.get("current")
-                life_maximum = life_data.get("maximum")
+                # Extract last action data
+                last_action_data = member_data.get("last_action", {})
+                if not isinstance(last_action_data, dict):
+                    last_action_data = {}
                 
                 # Extract faction data
                 faction_data = member_data.get("faction", {})
                 if not isinstance(faction_data, dict):
                     faction_data = {}
-                faction_position = faction_data.get("position")
-                days_in_faction = faction_data.get("days_in_faction")
                 
-                # Extract last action data
-                last_action_data = member_data.get("last_action", {})
-                if not isinstance(last_action_data, dict):
-                    last_action_data = {}
-                last_action = last_action_data.get("status")
-                last_action_timestamp = last_action_data.get("timestamp")
-                
-                # Validate timestamp
-                if last_action_timestamp is not None:
-                    try:
-                        if isinstance(last_action_timestamp, str):
-                            pd.to_datetime(last_action_timestamp)
-                        elif not isinstance(last_action_timestamp, (int, float)):
-                            error_msg = f"Invalid timestamp format for member {member_id}: {last_action_timestamp}"
-                            self._log_error(error_msg)
-                            raise DataValidationError(error_msg)
-                    except (ValueError, TypeError):
-                        error_msg = f"Invalid timestamp format for member {member_id}: {last_action_timestamp}"
-                        self._log_error(error_msg)
-                        raise DataValidationError(error_msg)
-                
-                # Use last_action_timestamp as the record timestamp if available, otherwise use member timestamp
-                timestamp = last_action_timestamp if last_action_timestamp else member_data.get("timestamp")
-                
-                # Validate timestamp
-                if timestamp is not None:
-                    try:
-                        if isinstance(timestamp, str):
-                            pd.to_datetime(timestamp)
-                        elif not isinstance(timestamp, (int, float)):
-                            error_msg = f"Invalid timestamp format for member {member_id}: {timestamp}"
-                            self._log_error(error_msg)
-                            raise DataValidationError(error_msg)
-                    except (ValueError, TypeError):
-                        error_msg = f"Invalid timestamp format for member {member_id}: {timestamp}"
-                        self._log_error(error_msg)
-                        raise DataValidationError(error_msg)
+                # Extract life data
+                life_data = member_data.get("life", {})
+                if not isinstance(life_data, dict):
+                    life_data = {}
                 
                 # Create transformed member data
                 transformed_member = {
                     "id": int(member_id),
                     "name": name,
                     "level": level,
-                    "status_state": status_data.get("state"),
-                    "status_description": status_data.get("description"),
-                    "status_details": status_data.get("details"),
-                    "status_until": status_data.get("until"),
-                    "last_action_status": last_action,
-                    "last_action_timestamp": last_action_timestamp,
-                    "last_action_relative": last_action_data.get("relative"),
-                    "position": faction_position,
-                    "days_in_faction": int(days_in_faction) if days_in_faction is not None else None,
-                    "life_current": life_current,
-                    "life_maximum": life_maximum,
-                    "revive_setting": member_data.get("revive_setting"),
-                    "is_revivable": member_data.get("is_revivable"),
-                    "is_on_wall": member_data.get("is_on_wall"),
-                    "is_in_oc": member_data.get("is_in_oc"),
-                    "has_early_discharge": member_data.get("has_early_discharge"),
-                    "server_timestamp": pd.Timestamp(timestamp)
+                    "days_in_faction": int(faction_data.get("days_in_faction", 0)),
+                    "revive_setting": member_data.get("revive_setting", ""),
+                    "position": faction_data.get("position", ""),
+                    "is_revivable": bool(member_data.get("is_revivable", False)),
+                    "is_on_wall": bool(member_data.get("is_on_wall", False)),
+                    "is_in_oc": bool(member_data.get("is_in_oc", False)),
+                    "has_early_discharge": bool(member_data.get("has_early_discharge", False)),
+                    "last_action_status": last_action_data.get("status", ""),
+                    "last_action_timestamp": pd.Timestamp.fromtimestamp(last_action_data.get("timestamp", 0)) if last_action_data.get("timestamp") else None,
+                    "last_action_relative": last_action_data.get("relative", ""),
+                    "status_description": status_data.get("description", ""),
+                    "status_details": status_data.get("details", ""),
+                    "status_state": status_data.get("state", ""),
+                    "status_until": str(status_data.get("until", "")),
+                    "life_current": int(life_data.get("current", 0)) if life_data.get("current") is not None else None,
+                    "life_maximum": int(life_data.get("maximum", 0)) if life_data.get("maximum") is not None else None,
+                    "server_timestamp": server_timestamp
                 }
                 
                 transformed_data.append(transformed_member)
@@ -306,6 +270,7 @@ def members_processor(test_config_dir):
     config = {
         'gcp_project_id': 'test-project',
         'gcp_credentials_file': str(test_config_dir / 'credentials.json'),
+        'tc_api_key_file': str(test_config_dir / 'TC_API_key.json'),
         'dataset': 'test_dataset',
         'endpoint': 'members',
         'selection': 'default',
@@ -398,18 +363,38 @@ def bq_client(mock_credentials, sample_config):
 def mock_members_response():
     """Mock response from members endpoint."""
     return {
-        "members": {
-            "1": {
-                "id": 1,
-                "name": "Test Member",
-                "level": 50,
-                "days_in_faction": 100,
-                "last_action": 1646960400,
-                "status": "Okay"
+        "data": {
+            "members": {
+                "1": {
+                    "name": "Test Member",
+                    "level": 50,
+                    "status": {
+                        "state": "Okay",
+                        "description": "Online",
+                        "details": "Active",
+                        "until": ""
+                    },
+                    "last_action": {
+                        "status": "Online",
+                        "timestamp": 1646960400,
+                        "relative": "1 hour ago"
+                    },
+                    "faction": {
+                        "position": "Member",
+                        "days_in_faction": 100
+                    },
+                    "life": {
+                        "current": 100,
+                        "maximum": 100
+                    },
+                    "revive_setting": "friends",
+                    "is_revivable": True,
+                    "is_on_wall": False,
+                    "is_in_oc": True,
+                    "has_early_discharge": False
+                }
             }
-        },
-        "timestamp": 1646960400,
-        "fetched_at": datetime.now()
+        }
     }
 
 @pytest.fixture
@@ -763,4 +748,36 @@ class TestMembersPull:
         
         with pytest.raises(DataValidationError):
             members_processor.transform_data(mock_response)
-        mock_log_error.assert_called_once() 
+        mock_log_error.assert_called_once()
+
+    def test_transform_data(self, mock_members_response):
+        """Test data transformation."""
+        processor = MembersEndpointProcessor({})
+        result = processor.transform_data(mock_members_response)
+        
+        assert len(result) == 1
+        member = result[0]
+        
+        # Check required fields
+        assert member["id"] == 1
+        assert member["name"] == "Test Member"
+        assert member["level"] == 50
+        assert member["days_in_faction"] == 100
+        assert isinstance(member["server_timestamp"], pd.Timestamp)
+        
+        # Check nullable fields
+        assert member["revive_setting"] == "friends"
+        assert member["position"] == "Member"
+        assert member["is_revivable"] is True
+        assert member["is_on_wall"] is False
+        assert member["is_in_oc"] is True
+        assert member["has_early_discharge"] is False
+        assert member["last_action_status"] == "Online"
+        assert isinstance(member["last_action_timestamp"], pd.Timestamp)
+        assert member["last_action_relative"] == "1 hour ago"
+        assert member["status_description"] == "Online"
+        assert member["status_details"] == "Active"
+        assert member["status_state"] == "Okay"
+        assert member["status_until"] == ""
+        assert member["life_current"] == 100
+        assert member["life_maximum"] == 100 

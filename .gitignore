@@ -50,11 +50,15 @@ var/
 
 ### Secrets and Configuration ###
 # API Keys and Credentials
-config/TC_API_key.json
-config/credentials.json
 *.pem
 *.key
 *.crt
+
+# Config files
+config/TC_API_key.json
+config/credentials.json
+config/crontab
+!config/TC_API_config.json
 
 ### System Files ###
 # macOS
@@ -77,8 +81,6 @@ Desktop.ini
 # BigQuery and JSON files
 # Ignore all JSON files by default
 *.json
-# But track these specific JSON files
-!config/TC_API_config.json
 !package.json
 !package-lock.json
 !tsconfig.json
