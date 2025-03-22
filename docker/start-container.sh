@@ -15,7 +15,13 @@ ln -sf /usr/share/zoneinfo/UTC /etc/localtime
 log "Setting up log directory"
 mkdir -p /app/var/log
 chown tcdatalogger:tcdatalogger /app/var/log
-chmod 755 /var/log/cron.log
+chmod 755 /app/var/log
+
+# Ensure cron directories exist with correct permissions
+log "Setting up cron directories"
+mkdir -p /var/run/crond
+chown root:root /var/run/crond
+chmod 755 /var/run/crond
 
 # Start rsyslog
 log "Starting rsyslog daemon"
@@ -32,6 +38,12 @@ if ! su -s /bin/bash tcdatalogger -c "crontab -l" > /dev/null 2>&1; then
     exit 1
 fi
 
-# Start cron daemon
+# Ensure log files exist with correct permissions
+log "Setting up log files"
+touch /app/var/log/cron.log /app/var/log/syslog
+chown tcdatalogger:tcdatalogger /app/var/log/cron.log /app/var/log/syslog
+chmod 644 /app/var/log/cron.log /app/var/log/syslog
+
+# Start cron daemon with debugging enabled
 log "Starting cron daemon"
 exec cron -f -L 15 

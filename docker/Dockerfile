@@ -32,7 +32,9 @@ ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PATH="/opt/tcdatalogger/.venv/bin:$PATH" \
     VIRTUAL_ENV="/opt/tcdatalogger/.venv" \
-    PYTHONPATH=/opt/tcdatalogger
+    PYTHONPATH=/opt/tcdatalogger \
+    LANG=C.UTF-8 \
+    LC_ALL=C.UTF-8
 
 # Create user and group first
 RUN groupadd -r tcdatalogger && \
@@ -48,19 +50,26 @@ RUN apt-get update && \
         cron \
         procps \
         rsyslog \
+        locales \
         && \
+    # Setup locales
+    echo "en_US.UTF-8 UTF-8" > /etc/locale.gen && \
+    locale-gen && \
+    # Create locale environment file
+    mkdir -p /etc/default && \
+    echo "LANG=C.UTF-8\nLC_ALL=C.UTF-8" > /etc/default/locale && \
+    # Cleanup
     rm -rf /var/lib/apt/lists/* && \
-    # Setup cron directories
-    rm -rf /etc/cron.*/* && \
+    # Setup cron directories with proper permissions
+    mkdir -p /var/run/crond && \
+    chown root:root /var/run/crond && \
+    chmod 755 /var/run/crond && \
     mkdir -p /var/spool/cron/crontabs && \
     chown root:crontab /var/spool/cron/crontabs && \
     chmod 1730 /var/spool/cron/crontabs && \
     usermod -a -G crontab tcdatalogger && \
-    # Setup logging
-    rm -f /etc/rsyslog.conf && \
-    touch /var/log/cron.log /var/log/syslog && \
-    chown tcdatalogger:tcdatalogger /var/log/cron.log /var/log/syslog && \
-    chmod 644 /var/log/cron.log /var/log/syslog
+    # Setup logging directories
+    rm -f /etc/rsyslog.conf
 
 # Copy rsyslog configuration
 COPY --chown=root:root --chmod=644 docker/rsyslog.conf /etc/rsyslog.conf
