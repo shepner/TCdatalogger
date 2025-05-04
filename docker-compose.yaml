@@ -23,9 +23,4 @@ services:
       - SYS_PTRACE
     security_opt:
       - no-new-privileges:true
-    healthcheck:
-      test: ["CMD", "pgrep", "-f", "python.*main.py"]
-      interval: 5m
-      timeout: 3s
-      retries: 3
     restart: unless-stopped 

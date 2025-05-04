@@ -89,7 +89,7 @@
       "name": "v2_torn_items",
       "url": "https://api.torn.com/v2/torn/items",
       "table": "torncity-402423.torn_data.v2_torn_items",
-      "frequency": "P1D",
+      "frequency": "PT6H",
       "storage_mode": "replace",
       "api_key": "faction_40832",
       "max_retries": 3,

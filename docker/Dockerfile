@@ -86,8 +86,7 @@ RUN chown -R tcdatalogger:tcdatalogger /opt/tcdatalogger/.venv
 # Set working directory
 WORKDIR /opt/tcdatalogger
 
-# Health check
-HEALTHCHECK --interval=5m --timeout=3s \
-  CMD ps aux | grep "[c]ron" || exit 1
+# Disable any inherited health check
+HEALTHCHECK NONE
 
 CMD ["/opt/tcdatalogger/scripts/start-container.sh"]
