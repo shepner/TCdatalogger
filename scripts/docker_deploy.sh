@@ -25,6 +25,8 @@ log() {
 check_config_files() {
     local config_path="$1"
     log "Checking configuration files..."
+    log "config_path: ${config_path}"
+
     for file in "credentials.json" "TC_API_key.json" "TC_API_config.json"; do
         if [ ! -f "${config_path}/config/$file" ]; then
             log "ERROR: Required file ${file} not found in config directory"
@@ -43,9 +45,11 @@ create_directories() {
     local cmd_prefix=""
     
     if [ "$is_remote" = true ]; then
-        log "Creating directories on ${REMOTE_HOST}..."
+        log "Creating directories on ${REMOTE_HOST}"
+        log "base_path: ${base_path}"
+
         ssh ${REMOTE_HOST} << ENDSSH
-        doas mkdir -p ${base_path}/{config,var/{log,data}}
+        doas mkdir -p ${base_path}/config ${base_path}/var/log ${base_path}/var/data
         doas chown -R ${REMOTE_USER}:${REMOTE_GROUP} ${base_path}
         doas chmod -R 775 ${base_path}
 ENDSSH
@@ -65,19 +69,22 @@ deploy_application() {
     if [ "$is_remote" = true ]; then
         # Sync application files to remote host
         log "Syncing files to ${REMOTE_HOST}..."
+        log "base_path: ${base_path}"
+
         rsync -av --force \
             --exclude '.git' \
             --exclude '__pycache__' \
             --exclude '*.pyc' \
             --exclude 'var' \
-            --exclude 'config' \
             --rsync-path="doas rsync" \
             app \
             docker \
             scripts \
+            config \
             docker-compose.yaml \
+            .env \
             ${REMOTE_HOST}:${base_path}/
-            
+        
         docker_cmd="doas docker"
     else
         docker_cmd="docker"
@@ -86,30 +93,22 @@ deploy_application() {
     # Deploy and start the application
     if [ "$is_remote" = true ]; then
         log "Deploying application on ${REMOTE_HOST}..."
-        ssh ${REMOTE_HOST} << ENDSSH
-        # Change to application directory
-        cd ${base_path}
+        log "base_path: ${base_path}"
 
-        # Ensure correct permissions
-        doas chown -R ${REMOTE_USER}:${REMOTE_GROUP} .
-        doas chmod -R 775 .
-
-        # Stop existing containers
-        ${docker_cmd} compose down
-
-        # Build and start containers
-        ${docker_cmd} compose build --no-cache --pull
-        ${docker_cmd} compose up -d
-
-        # Check container status
-        sleep 5
-        if ! ${docker_cmd} compose ps | grep -q "tcdatalogger.*Up"; then
-            echo "ERROR: Container failed to start. Check logs with: docker compose logs"
-            exit 1
-        fi
-
-        echo "Deployment completed successfully"
-ENDSSH
+        ssh ${REMOTE_HOST} "sh -lc '
+            cd ${base_path}
+            doas chown -R ${REMOTE_USER}:${REMOTE_GROUP} .
+            doas chmod -R 775 .
+            ${docker_cmd} compose down
+            env DOCKER_BUILDKIT=1 ${docker_cmd} compose build --no-cache --pull
+            ${docker_cmd} compose up -d
+            sleep 5
+            if ! ${docker_cmd} compose ps | grep -q \"tcdatalogger.*Up\"; then
+                echo \"ERROR: Container failed to start. Check logs with: docker compose logs\"
+                exit 1
+            fi
+            echo \"Deployment completed successfully\"
+        '"
     else
         log "Deploying application locally..."
         cd "${base_path}"
@@ -155,8 +154,8 @@ esac
 
 # Main deployment process
 create_directories "${DEPLOY_PATH}" "${IS_REMOTE}"
-check_config_files "${DEPLOY_PATH}"
 deploy_application "${DEPLOY_PATH}" "${IS_REMOTE}"
+# check_config_files "${DEPLOY_PATH}"
 
 # Show final instructions
 if [ "${IS_REMOTE}" = true ]; then
