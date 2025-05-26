@@ -252,6 +252,12 @@ class CrimesEndpointProcessor(BaseEndpointProcessor):
                 else:
                     df[field.name] = df[field.name].fillna('').astype(str)
 
+        # Debug logging for slots_user_id before upload
+        logging.debug('slots_user_id sample:')
+        logging.debug(f"{df[['slots_user_id']].head(10)}")
+        logging.debug('DataFrame dtypes:')
+        logging.debug(f"{df.dtypes}")
+
         return df
 
     def _convert_types(self, df: pd.DataFrame) -> pd.DataFrame:
